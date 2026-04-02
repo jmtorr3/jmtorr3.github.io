@@ -21,7 +21,7 @@
   flex-basis: auto;
   max-width: 46%;
   overflow: hidden;
-  font-family: var(--font-mono);
+  font-family: 'Noto Sans Symbols 2', 'DejaVu Sans Mono', 'FreeMono', monospace;
   font-size: 0.75rem;
   line-height: 1.2;
   color: var(--accent);
