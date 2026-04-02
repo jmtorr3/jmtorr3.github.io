@@ -110,12 +110,11 @@
 
 @media (max-width: 640px) {
   .navbar {
-    padding: calc(1.1rem + env(safe-area-inset-top)) 1.5rem 1.1rem;
-    background: rgba(13, 21, 32, 0.97);
-    backdrop-filter: blur(8px);
+    padding: calc(1.1rem + max(env(safe-area-inset-top), 20px)) 1.5rem 1.1rem;
+    background: rgba(13, 21, 32, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-color: var(--border);
-    /* Extend background above navbar to cover iOS overscroll gap */
-    box-shadow: 0 -200px 0 200px rgba(13, 21, 32, 0.97);
   }
 
   .navbar.menu-open {
