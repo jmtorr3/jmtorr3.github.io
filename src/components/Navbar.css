@@ -18,10 +18,11 @@
   border-color: var(--border);
 }
 
-.navbar.scrolled.menu-open {
-  background: transparent;
-  backdrop-filter: none;
-  border-color: transparent;
+@media (max-width: 640px) {
+  .navbar.scrolled.menu-open {
+    background: rgba(13, 21, 32, 0.97);
+    backdrop-filter: blur(8px);
+  }
 }
 
 .navbar-logo {
@@ -119,9 +120,8 @@
   }
 
   .navbar.menu-open {
-    background: transparent;
-    backdrop-filter: none;
-    border-color: transparent;
+    background: rgba(13, 21, 32, 0.97);
+    backdrop-filter: blur(8px);
   }
 
   .hamburger {
