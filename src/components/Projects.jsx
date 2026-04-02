@@ -1,6 +1,10 @@
 import FadeIn from './FadeIn'
 import './Projects.css'
 import { projects } from '../data/projects'
+import { FeaturedCard, ProjectCard } from './ProjectCard'
+
+const featured = projects.filter((p) => p.featured)
+const grid = projects.filter((p) => !p.featured)
 
 export default function Projects() {
   return (
@@ -8,95 +12,19 @@ export default function Projects() {
       <p className="section-label"><span className="nf">{'\uf126'} </span>Work</p>
       <h2 className="section-title">Technical <span>Projects</span></h2>
 
-      <div className="projects-list">
-        {projects.map((p, i) => (
+      {featured.map((p, i) => (
+        <FadeIn key={p.title}>
+          <FeaturedCard project={p} index={i} />
+        </FadeIn>
+      ))}
+
+      <div className="projects-grid">
+        {grid.map((p, i) => (
           <FadeIn key={p.title} delay={i * 80}>
-          <div className="project-card">
-
-            {/* Badges */}
-            <div className="card-chrome">
-              {p.featured && <span className="badge-featured">featured</span>}
-              <span className={`badge-status status-${p.status}`}>{p.status}</span>
-            </div>
-
-            {/* Faded project number */}
-            <span className="project-number" aria-hidden="true">
-              {String(i + 1).padStart(2, '0')}
-            </span>
-
-            <div className="project-header">
-              <div className="project-header-left">
-                {p.logo && (
-                  <img src={p.logo} alt={`${p.title} logo`} className="project-logo" loading="lazy" />
-                )}
-                <div>
-                  <h3 className="project-title">{p.title}</h3>
-                  <p className="project-subtitle">{p.subtitle}</p>
-                </div>
-              </div>
-              <div className="project-meta">
-                <span className="project-date">{p.date}</span>
-                {p.demo && (
-                  <a
-                    href={p.demo}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="demo-link"
-                  >
-                    Demo ↗
-                  </a>
-                )}
-                {p.github && (
-                  <a
-                    href={p.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="github-link"
-                    aria-label={`${p.title} on GitHub`}
-                  >
-                    <GitHubIcon />
-                  </a>
-                )}
-              </div>
-            </div>
-
-            <ul className="project-bullets">
-              {p.bullets.map((b, j) => (
-                <li key={j}>{b}</li>
-              ))}
-            </ul>
-
-            {p.images && (
-              <div className="project-images">
-                {p.images.map((img) => (
-                  <img
-                    key={img.alt}
-                    src={img.src}
-                    alt={img.alt}
-                    loading="lazy"
-                    className="project-img"
-                  />
-                ))}
-              </div>
-            )}
-
-            <div className="project-tech">
-              {p.tech.map((t) => (
-                <span key={t} className="tech-tag">{t}</span>
-              ))}
-            </div>
-          </div>
+            <ProjectCard project={p} index={featured.length + i} />
           </FadeIn>
         ))}
       </div>
     </section>
-  )
-}
-
-function GitHubIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
-    </svg>
   )
 }
