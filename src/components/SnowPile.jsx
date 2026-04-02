@@ -1,17 +1,20 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { pileQueue } from './pileQueue'
 
 const PIXEL = 2
 const MAX_HEIGHT = 140
 const B = 4 // snowman block size in px
 
+const SCARF_COLORS = ['#4aafd4', '#ff6b6b', '#ffd93d', '#6bcb77', '#a29bfe', '#fd79a8', '#e17055']
+
 // Color palette
 const H = '#0f1923'  // hat
 const W = '#c8dce8'  // body (pale blue-white)
 const E = '#0f1923'  // eyes / buttons
-const S = '#4aafd4'  // scarf (accent)
 const N = '#e07840'  // nose (orange)
 const _ = null       // transparent
+
+const S = 'S' // scarf placeholder — replaced at draw time
 
 const SNOWMAN = [
   // Hat
@@ -47,6 +50,19 @@ const SM_H = SM_ROWS * B           // 80px
 
 export default function SnowPile() {
   const canvasRef = useRef(null)
+  const scarfIdxRef = useRef(0)
+
+  const handleClick = useCallback((e) => {
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    const cx = e.clientX - rect.left
+    const cy = e.clientY - rect.top
+    const sx = Math.floor((canvas.width - SM_W) / 2)
+    const sy = MAX_HEIGHT - SM_H
+    if (cx >= sx && cx <= sx + SM_W && cy >= sy && cy <= sy + SM_H) {
+      scarfIdxRef.current = (scarfIdxRef.current + 1) % SCARF_COLORS.length
+    }
+  }, [])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -73,11 +89,13 @@ export default function SnowPile() {
     }
 
     const drawSnowman = (sx, sy, blink) => {
+      const scarfColor = SCARF_COLORS[scarfIdxRef.current]
       ctx.globalAlpha = 1
       for (let row = 0; row < SM_ROWS; row++) {
         for (let col = 0; col < SM_COLS; col++) {
           let color = SNOWMAN[row][col]
           if (color === null) continue
+          if (color === 'S') color = scarfColor
           // Blink: replace eyes with body color
           if (blink && row === 6 && (col === 2 || col === 6)) color = W
           ctx.fillStyle = color
@@ -148,11 +166,12 @@ export default function SnowPile() {
   return (
     <canvas
       ref={canvasRef}
+      onClick={handleClick}
       style={{
         display: 'block',
         width: '100%',
         height: `${MAX_HEIGHT}px`,
-        pointerEvents: 'none',
+        cursor: 'pointer',
       }}
       aria-hidden="true"
     />
