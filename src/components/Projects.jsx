@@ -1,3 +1,4 @@
+import FadeIn from './FadeIn'
 import './Projects.css'
 
 const projects = [
@@ -58,8 +59,9 @@ export default function Projects() {
       <h2 className="section-title">Technical <span>Projects</span></h2>
 
       <div className="projects-list">
-        {projects.map((p) => (
-          <div key={p.title} className="project-card">
+        {projects.map((p, i) => (
+          <FadeIn key={p.title} delay={i * 80}>
+          <div className="project-card">
             <div className="project-header">
               <div>
                 <h3 className="project-title">{p.title}</h3>
@@ -93,6 +95,7 @@ export default function Projects() {
               ))}
             </div>
           </div>
+          </FadeIn>
         ))}
       </div>
     </section>

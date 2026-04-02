@@ -1,3 +1,4 @@
+import FadeIn from './FadeIn'
 import './Skills.css'
 
 const skillGroups = [
@@ -32,8 +33,9 @@ export default function Skills() {
       <h2 className="section-title">Skills &amp; <span>Tools</span></h2>
 
       <div className="skills-grid">
-        {skillGroups.map((g) => (
-          <div key={g.category} className="skill-group">
+        {skillGroups.map((g, i) => (
+          <FadeIn key={g.category} delay={i * 80}>
+          <div className="skill-group">
             <div className="skill-group-header">
               <span className="skill-icon">{g.icon}</span>
               <span className="skill-category">{g.category}</span>
@@ -44,6 +46,7 @@ export default function Skills() {
               ))}
             </div>
           </div>
+          </FadeIn>
         ))}
       </div>
 
