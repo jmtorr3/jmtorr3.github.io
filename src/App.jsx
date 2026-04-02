@@ -6,11 +6,13 @@ import Skills from './components/Skills'
 import Other from './components/Other'
 import Contact from './components/Contact'
 import FadeIn from './components/FadeIn'
+import Snow from './components/Snow'
 import './App.css'
 
 export default function App() {
   return (
     <>
+      <Snow />
       <Navbar />
       <main>
         <Hero />
