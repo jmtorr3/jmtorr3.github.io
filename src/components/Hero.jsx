@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './Hero.css'
 
-const ROLE_TEXT = 'Systems & Full-Stack Engineer'
+const ROLE_TEXT = 'Systems & Full-Stack Engineer | CS @ VT'
 
 function useTyping(text, speed = 48) {
   const [displayed, setDisplayed] = useState('')
@@ -52,7 +52,7 @@ export default function Hero() {
         </p>
         <p className="hero-bio">
           Systems programmer and full-stack developer with a focus on low-level security,
-          infrastructure, and just making things that I personally enjoy.
+          infrastructure. I like building things that I'll end up using.
         </p>
         <div className="hero-cta">
           <a href="#projects" className="btn btn-primary">View Projects</a>

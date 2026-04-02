@@ -26,7 +26,9 @@ export default function About() {
           </p>
           <p>
             When I'm not in class or doing more technical things,
-            I really like working on art/design
+            I really like working on art/design. I spend a lot of
+            my time tinkering with my homelab, messing with
+            PICO-8, or just hanging out with my dogs.
           </p>
         </div>
 
