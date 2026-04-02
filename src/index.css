@@ -1,0 +1,59 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #0d0d0f;
+  --bg-card: #13131a;
+  --bg-card-hover: #1a1a24;
+  --border: #1e1e2e;
+  --accent: #7c6af7;
+  --accent-dim: #4e45a0;
+  --accent-glow: rgba(124, 106, 247, 0.15);
+  --text: #e2e2ec;
+  --text-muted: #8888aa;
+  --text-faint: #55556a;
+  --green: #4af09a;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #a89cf9;
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: white;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
