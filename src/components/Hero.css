@@ -22,10 +22,30 @@
   font-size: 0.75rem;
   line-height: 1.2;
   color: var(--accent);
-  opacity: 0.18;
   pointer-events: none;
   user-select: none;
   white-space: pre;
+  
+  /* The breathing animation: 3 seconds, eases in and out, loops back and forth */
+  animation: ascii-breathe 4s ease-in-out infinite alternate;
+}
+
+@keyframes ascii-breathe {
+  0% {
+    /* Slightly brighter baseline so it doesn't disappear */
+    opacity: 0.25; 
+    text-shadow: 
+      0 0 4px var(--accent);
+  }
+  100% {
+    /* Much brighter peak */
+    opacity: 0.75; 
+    text-shadow: 
+      0 0 2px #ffffff, /* Adds a "hot" white core to the light */
+      0 0 8px var(--accent),
+      0 0 20px var(--accent),
+      0 0 40px var(--accent-glow); /* Wider, stronger bloom */
+  }
 }
 
 @media (max-width: 780px) {
