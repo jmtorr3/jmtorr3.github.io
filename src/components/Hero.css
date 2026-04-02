@@ -51,33 +51,15 @@
 
 @media (max-width: 780px) {
   .hero {
+    flex-direction: column;
     align-items: flex-start;
     min-height: auto;
     padding-top: 6rem;
     padding-bottom: 2rem;
   }
 
-  .hero-content {
-    grid-template-columns: auto 1fr;
-  }
-
   .hero-ascii {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: start;
-    max-width: none;
-    font-size: 0.38rem;
-    line-height: 1.1;
-  }
-
-  .status-badge,
-  .hero-greeting,
-  .hero-name,
-  .hero-role,
-  .hero-working,
-  .hero-bio,
-  .hero-cta {
-    grid-column: 1 / span 2;
+    display: none;
   }
 }
 
@@ -111,6 +93,7 @@
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--border);
+  margin-bottom: 1rem;
   box-shadow: 0 0 30px var(--accent-glow);
 }
 
