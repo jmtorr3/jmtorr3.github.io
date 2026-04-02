@@ -10,6 +10,73 @@
   border-radius: 10px;
   padding: 1.75rem;
   transition: border-color 0.2s, background 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Terminal chrome bar */
+.card-chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 1.25rem;
+}
+
+.chrome-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-red    { background: #ff5f57; }
+.dot-yellow { background: #ffbd2e; }
+.dot-green  { background: #28c840; }
+
+.chrome-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.badge-featured {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+}
+
+.badge-status {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+}
+
+.status-active    { color: #28c840; border: 1px solid rgba(40, 200, 64, 0.3); }
+.status-completed { color: var(--text-faint); border: 1px solid var(--border); }
+.status-ongoing   { color: #ffbd2e; border: 1px solid rgba(255, 189, 46, 0.3); }
+
+/* Faded background number */
+.project-number {
+  position: absolute;
+  top: 0.5rem;
+  right: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 5.5rem;
+  font-weight: 700;
+  color: var(--text);
+  opacity: 0.04;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
 }
 
 .project-card:hover {

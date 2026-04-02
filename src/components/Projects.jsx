@@ -6,6 +6,8 @@ const projects = [
     title: 'Garage64',
     subtitle: 'Custom Entity Model Studio',
     date: 'Spring 2026',
+    status: 'active',
+    featured: true,
     tech: ['React', 'Three.js', 'Django', 'SQLite', 'Docker'],
     github: 'https://github.com/jmtorr3/Garage64',
     logo: 'https://raw.githubusercontent.com/jmtorr3/Garage64/main/assets/Logo.png',
@@ -22,6 +24,7 @@ const projects = [
     title: 'ParkGrid',
     subtitle: 'Campus Parking Solution',
     date: 'Winter 2025',
+    status: 'completed',
     tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Python', 'Django Channels', 'JWT'],
     github: 'https://github.com/jmtorr3/smart-parking',
     demo: 'https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing',
@@ -39,6 +42,7 @@ const projects = [
     title: 'Nintendo DS Security Analysis',
     subtitle: 'Reverse Engineering Research',
     date: 'Winter 2024',
+    status: 'completed',
     tech: ['Assembly', 'DeSmuME', 'Ghidra', 'Python'],
     github: null,
     bullets: [
@@ -51,6 +55,7 @@ const projects = [
     title: 'Proxmox Home Lab',
     subtitle: 'Self-Hosted Infrastructure',
     date: '2021 – Present',
+    status: 'ongoing',
     tech: ['Proxmox', 'NixOS', 'Debian', 'Docker', 'OPNsense'],
     github: null,
     bullets: [
@@ -71,6 +76,23 @@ export default function Projects() {
         {projects.map((p, i) => (
           <FadeIn key={p.title} delay={i * 80}>
           <div className="project-card">
+
+            {/* Terminal chrome bar */}
+            <div className="card-chrome">
+              <span className="chrome-dot dot-red" />
+              <span className="chrome-dot dot-yellow" />
+              <span className="chrome-dot dot-green" />
+              <div className="chrome-badges">
+                {p.featured && <span className="badge-featured">featured</span>}
+                <span className={`badge-status status-${p.status}`}>{p.status}</span>
+              </div>
+            </div>
+
+            {/* Faded project number */}
+            <span className="project-number" aria-hidden="true">
+              {String(i + 1).padStart(2, '0')}
+            </span>
+
             <div className="project-header">
               <div className="project-header-left">
                 {p.logo && (
@@ -108,8 +130,8 @@ export default function Projects() {
             </div>
 
             <ul className="project-bullets">
-              {p.bullets.map((b, i) => (
-                <li key={i}>{b}</li>
+              {p.bullets.map((b, j) => (
+                <li key={j}>{b}</li>
               ))}
             </ul>
 
