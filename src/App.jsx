@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Hero from './components/Hero'
 import About from './components/About'
@@ -11,6 +12,25 @@ import SnowPile from './components/SnowPile'
 import './App.css'
 
 export default function App() {
+  useEffect(() => {
+    const sections = document.querySelectorAll('section[id]')
+    let current = null
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            if (current) current.classList.remove('is-active')
+            e.target.classList.add('is-active')
+            current = e.target
+          }
+        })
+      },
+      { rootMargin: '-30% 0px -60% 0px' }
+    )
+    sections.forEach((s) => observer.observe(s))
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <>
       <Snow />

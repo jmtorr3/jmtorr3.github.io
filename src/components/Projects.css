@@ -9,12 +9,13 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1.75rem;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, background 0.2s, transform 0.2s;
 }
 
 .project-card:hover {
   border-color: var(--accent-dim);
   background: var(--bg-card-hover);
+  transform: translateY(-2px);
 }
 
 .project-header {

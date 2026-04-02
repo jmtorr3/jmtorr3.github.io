@@ -55,7 +55,7 @@ export default function Contact() {
       <footer className="footer">
         <span className="mono">© 2026 Jorge Manuel Torre</span>
       </footer>
-    </section>
+    </section >
   )
 }
 

@@ -68,6 +68,19 @@
   padding-bottom: 2rem;
   color: var(--text-faint);
   font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.footer-sep {
+  color: var(--border);
+}
+
+.footer-built .nf {
+  color: #e07070;
+  font-size: 0.75rem;
 }
 
 .mono {

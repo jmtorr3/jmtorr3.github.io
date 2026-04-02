@@ -105,6 +105,34 @@
   color: var(--accent);
 }
 
+.cursor {
+  display: inline;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  margin-left: 1px;
+  line-height: 1;
+}
+
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.hero-working {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.hero-working a {
+  color: var(--accent);
+}
+
 .hero-bio {
   max-width: 520px;
   color: var(--text-muted);

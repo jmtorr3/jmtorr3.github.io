@@ -1,6 +1,33 @@
+import { useState, useEffect } from 'react'
 import './Hero.css'
 
+const ROLE_TEXT = 'Computer Science @ Virginia Tech'
+
+function useTyping(text, speed = 48) {
+  const [displayed, setDisplayed] = useState('')
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    let i = 0
+    setDisplayed('')
+    setDone(false)
+    const id = setInterval(() => {
+      i++
+      setDisplayed(text.slice(0, i))
+      if (i >= text.length) {
+        clearInterval(id)
+        setDone(true)
+      }
+    }, speed)
+    return () => clearInterval(id)
+  }, [text, speed])
+
+  return { displayed, done }
+}
+
 export default function Hero() {
+  const { displayed, done } = useTyping(ROLE_TEXT)
+
   return (
     <section id="hero" className="hero">
       <div className="hero-content">
@@ -10,14 +37,18 @@ export default function Hero() {
           className="hero-avatar"
           loading="lazy"
         />
-        {/*<div className="status-badge">
+        <div className="status-badge">
           <span className="status-dot" />
-          Open to Summer 2026 roles
-        </div>*/}
+          Open to opportunities
+        </div>
         <p className="hero-greeting">Hellooo, I'm</p>
         <h1 className="hero-name">Jorge Manuel Torre</h1>
         <p className="hero-role">
-          <span className="mono accent">{'>'}</span> Computer Science @ Virginia Tech
+          <span className="mono accent">{'>'}</span> {displayed}
+          <span className={`cursor${done ? ' cursor-blink' : ''}`}>█</span>
+        </p>
+        <p className="hero-working">
+          <span className="mono accent">$</span> currently building <a href="#projects">Garage64</a>
         </p>
         <p className="hero-bio">
           Systems programmer and full-stack developer with a focus on low-level security,
