@@ -32,7 +32,7 @@ export default function Hero() {
     <section id="hero" className="hero">
       <div className="hero-content">
         <img
-          src="/avatar.jpg"
+          src={`${import.meta.env.BASE_URL}avatar.jpg`}
           alt="Jorge Manuel Torre"
           className="hero-avatar"
           loading="lazy"
@@ -58,7 +58,7 @@ export default function Hero() {
           <a href="#projects" className="btn btn-primary">View Projects</a>
           <a href="#contact" className="btn btn-ghost">Get in Touch</a>
           <a
-            href="/Jorge_Manuel_Torre_Resume.pdf"
+            href={`${import.meta.env.BASE_URL}Jorge_Manuel_Torre_Resume.pdf`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-ghost"
