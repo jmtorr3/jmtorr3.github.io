@@ -257,3 +257,40 @@
   font-size: 0.65rem;
   top: 0.15rem;
 }
+
+@media (max-width: 640px) {
+  .project-card {
+    padding: 1.25rem;
+  }
+
+  .project-header {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .project-meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .project-images {
+    grid-template-columns: 1fr;
+  }
+
+  .project-number {
+    font-size: 4rem;
+    top: 0.25rem;
+    right: 0.75rem;
+  }
+
+  .chrome-badges {
+    gap: 0.35rem;
+  }
+
+  .badge-featured,
+  .badge-status {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.35rem;
+  }
+}

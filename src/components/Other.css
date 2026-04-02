@@ -132,12 +132,23 @@
 }
 
 @media (max-width: 640px) {
+  .other-card {
+    padding: 1.25rem;
+  }
+
   .media-grid {
     grid-template-columns: 1fr;
   }
 
   .media-screenshots {
     flex-direction: row;
+    overflow-x: auto;
+    gap: 0.5rem;
+  }
+
+  .screenshot-img {
+    min-width: 140px;
+    flex: 1;
   }
 
   .other-header {
