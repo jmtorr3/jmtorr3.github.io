@@ -32,10 +32,10 @@ export default function Skills() {
         {skillGroups.map((g, i) => (
           <FadeIn key={g.category} delay={i * 80}>
             <div className="skill-group">
-              <div className="skill-group-header">
-                <span className="skill-icon nf">{g.icon}</span>
-                <span className="skill-category">{g.category}</span>
+              <div className="skill-icon-wrap">
+                <span className="skill-icon">{g.icon}</span>
               </div>
+              <span className="skill-category">{g.category}</span>
               <div className="skill-tags">
                 {g.skills.map((s) => (
                   <span key={s} className="skill-tag">{s}</span>

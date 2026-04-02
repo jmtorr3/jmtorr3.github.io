@@ -1,44 +1,92 @@
 .skills-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 3rem;
+  gap: 1.25rem;
 }
 
 .skill-group {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1.5rem;
+  border-radius: 12px;
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+  position: relative;
+  overflow: hidden;
 }
 
-.skill-group-header {
+.skill-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.skill-group:hover {
+  border-color: var(--accent-dim);
+  background: var(--bg-card-hover);
+  box-shadow: 0 0 30px var(--accent-glow);
+}
+
+.skill-group:hover::before {
+  opacity: 1;
+}
+
+/* Icon */
+.skill-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: rgba(74, 175, 212, 0.1);
+  border: 1px solid rgba(74, 175, 212, 0.2);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  justify-content: center;
+  transition: background 0.25s, box-shadow 0.25s;
+}
+
+.skill-group:hover .skill-icon-wrap {
+  background: rgba(74, 175, 212, 0.18);
+  box-shadow: 0 0 16px var(--accent-glow);
 }
 
 .skill-icon {
   font-family: 'MonocraftNF', monospace;
-  font-size: 0.9rem;
+  font-size: 1.4rem;
   color: var(--accent);
+  line-height: 1;
 }
 
+/* Category */
 .skill-category {
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
+/* Tags */
 .skill-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.4rem;
+  justify-content: center;
 }
 
 .skill-tag {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
   color: var(--text-muted);
   background: var(--bg);
   border: 1px solid var(--border);
@@ -48,39 +96,8 @@
 }
 
 .skill-group:hover .skill-tag {
-  border-color: rgba(124, 106, 247, 0.25);
+  border-color: rgba(74, 175, 212, 0.3);
   color: var(--text);
-}
-
-.community-block {
-  padding-top: 1rem;
-}
-
-.community-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
-  border-radius: 6px;
-  padding: 1.25rem 1.5rem;
-  margin-top: 0.75rem;
-}
-
-.community-title {
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 0.4rem;
-  font-size: 0.95rem;
-}
-
-.community-desc {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  line-height: 1.65;
-}
-
-.community-desc strong {
-  color: var(--green);
-  font-weight: 600;
 }
 
 @media (max-width: 640px) {
