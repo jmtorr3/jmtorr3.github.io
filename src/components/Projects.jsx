@@ -79,10 +79,8 @@ export default function Projects() {
 
             {/* Badges */}
             <div className="card-chrome">
-              <div className="chrome-badges">
-                {p.featured && <span className="badge-featured">featured</span>}
-                <span className={`badge-status status-${p.status}`}>{p.status}</span>
-              </div>
+              {p.featured && <span className="badge-featured">featured</span>}
+              <span className={`badge-status status-${p.status}`}>{p.status}</span>
             </div>
 
             {/* Faded project number */}

@@ -18,26 +18,8 @@
 .card-chrome {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 1.25rem;
-}
-
-.chrome-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dot-red    { background: #ff5f57; }
-.dot-yellow { background: #ffbd2e; }
-.dot-green  { background: #28c840; }
-
-.chrome-badges {
-  display: flex;
-  align-items: center;
   gap: 0.5rem;
-  margin-left: auto;
+  margin-bottom: 1.25rem;
 }
 
 .badge-featured {
