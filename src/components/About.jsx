@@ -3,9 +3,11 @@ import './About.css'
 const coursework = [
   'Linux Kernel Programming',
   'Software Reverse Engineering',
-  'Security of AI',
-  'Computer Architecture',
   'Computer Systems',
+  'Security of AI',
+  'Machine Learning',
+  'Principles of Computer Security',
+  'Computer Architecture',
   'Data Structures & Algorithms',
 ]
 

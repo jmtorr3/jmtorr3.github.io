@@ -48,7 +48,7 @@ export default function Hero() {
           <span className={`cursor${done ? ' cursor-blink' : ''}`}>█</span>
         </p>
         <p className="hero-working">
-          <span className="mono accent">$</span> currently building <a href="#projects">Garage64</a>
+          <span className="mono accent">$</span> currently working on <a href="#projects">Garage64</a>
         </p>
         <p className="hero-bio">
           Systems programmer and full-stack developer with a focus on low-level security,
