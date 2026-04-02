@@ -1,3 +1,27 @@
+@font-face {
+  font-family: 'Monocraft';
+  src: url('/fonts/Monocraft-ttf/Monocraft.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Monocraft';
+  src: url('/fonts/Monocraft-ttf/weights/Monocraft-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MonocraftNF';
+  src: url('/fonts/MonocraftNF.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -16,7 +40,7 @@
   --text-muted: #7a9dba;
   --text-faint: #3a5872;
   --green: #78d4f0;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-mono: 'Monocraft', 'JetBrains Mono', monospace;
   --font-sans: 'Inter', sans-serif;
 }
 
@@ -56,4 +80,10 @@ a:hover {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 3px;
+}
+
+.nf {
+  font-family: 'MonocraftNF', monospace;
+  font-style: normal;
+  line-height: 1;
 }

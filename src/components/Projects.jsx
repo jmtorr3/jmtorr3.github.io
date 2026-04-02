@@ -64,7 +64,7 @@ const projects = [
 export default function Projects() {
   return (
     <section id="projects">
-      <p className="section-label">Work</p>
+      <p className="section-label"><span className="nf">{'\uf126'} </span>Work</p>
       <h2 className="section-title">Technical <span>Projects</span></h2>
 
       <div className="projects-list">

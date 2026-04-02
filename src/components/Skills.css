@@ -20,7 +20,7 @@
 }
 
 .skill-icon {
-  font-family: var(--font-mono);
+  font-family: 'MonocraftNF', monospace;
   font-size: 0.9rem;
   color: var(--accent);
 }

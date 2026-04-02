@@ -4,24 +4,21 @@ import './Skills.css'
 const skillGroups = [
   {
     category: 'Languages',
-    icon: '{ }',
-    skills: ['C', 'C++', 'Python', 'Java', 'JavaScript', 'SQL', 'Assembly (ARM)'],
+    icon: '\uf121',  // fa-code </>
+    skills: ['C', 'C++', 'React', 'Python', 'Java', 'JavaScript', 'SQL', 'Assembly (ARM)'],
   },
   {
     category: 'Systems & Security',
-    icon: '🔒',
+    icon: '\uf023',  // fa-lock
     skills: [
       'Reverse Engineering',
       'Ghidra',
       'Linux Kernel',
-      'Cryptography (LCG)',
-      'ACID Transactions',
-      'Concurrency',
     ],
   },
   {
     category: 'Infrastructure & Tooling',
-    icon: '⚙',
+    icon: '\uf085',  // fa-gears
     skills: ['Docker', 'Proxmox', 'NixOS', 'PostgreSQL', 'Git', 'CI/CD', 'LaTeX'],
   },
 ]
@@ -36,7 +33,7 @@ export default function Skills() {
           <FadeIn key={g.category} delay={i * 80}>
             <div className="skill-group">
               <div className="skill-group-header">
-                <span className="skill-icon">{g.icon}</span>
+                <span className="skill-icon nf">{g.icon}</span>
                 <span className="skill-category">{g.category}</span>
               </div>
               <div className="skill-tags">

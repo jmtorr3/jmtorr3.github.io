@@ -12,7 +12,7 @@ const coursework = [
 export default function About() {
   return (
     <section id="about">
-      <p className="section-label">Background</p>
+      <p className="section-label"><span className="nf">{'\uf19d'} </span>Background</p>
       <h2 className="section-title">About <span>Me</span></h2>
 
       <div className="about-grid">
