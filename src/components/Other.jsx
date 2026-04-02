@@ -1,4 +1,5 @@
 import './Other.css'
+import { otherProjects } from '../data/other'
 
 function GitHubIcon() {
   return (
@@ -8,84 +9,63 @@ function GitHubIcon() {
   )
 }
 
-const BASE = 'https://raw.githubusercontent.com/slumpy666/Garage32/main/.assets'
-
-const screenshots = [
-  { src: `${BASE}/screenshots/roster.png`, alt: 'Car roster' },
-  { src: `${BASE}/screenshots/office.png`, alt: 'Office interior' },
-  { src: `${BASE}/screenshots/mcd.png`,    alt: "McDonald's build" },
-]
-
-const previews = [
-  { src: `${BASE}/gifs/TakumiAE86.gif`, label: 'Takumi AE86' },
-]
-
 export default function Other() {
   return (
     <section id="other">
       <h2 className="section-title">Other <span>Projects</span></h2>
 
-      <div className="other-card">
+      {otherProjects.map((p) => (
+        <div key={p.title} className="other-card">
 
-        {/* Header */}
-        <div className="other-header">
-          <div className="other-header-left">
-            <img
-              src={`${BASE}/logos/Garage32.png`}
-              alt="Garage32 logo"
-              className="garage-logo"
-              loading="lazy"
-            />
-            <div>
-              <h3 className="other-title">Garage32</h3>
-              <p className="other-subtitle">Minecraft CEM Texture Pack</p>
+          <div className="other-header">
+            <div className="other-header-left">
+              <img src={p.logo} alt={`${p.title} logo`} className="garage-logo" loading="lazy" />
+              <div>
+                <h3 className="other-title">{p.title}</h3>
+                <p className="other-subtitle">{p.subtitle}</p>
+              </div>
+            </div>
+            <div className="other-meta">
+              <span className="other-role">{p.role}</span>
+              <span className="other-stat">{p.stat}</span>
+              {p.github && (
+                <a
+                  href={p.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="github-link"
+                  aria-label={`${p.title} on GitHub`}
+                >
+                  <GitHubIcon />
+                </a>
+              )}
             </div>
           </div>
-          <div className="other-meta">
-            <span className="other-role">Project Lead</span>
-            <span className="other-stat">500+ downloads</span>
-            <a
-              href="https://github.com/jmtorr3/Garage32"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="github-link"
-              aria-label="Garage32 on GitHub"
-            >
-              <GitHubIcon />
-            </a>
+
+          <p className="other-desc">
+            {p.description}{' '}
+            <a href={p.collaborator.href} target="_blank" rel="noopener noreferrer">
+              {p.collaborator.name}
+            </a>.
+          </p>
+
+          <div className="media-grid">
+            <img src={p.previews[0].src} alt={p.previews[0].alt} loading="lazy" className="media-gif" />
+            <div className="media-screenshots">
+              {p.screenshots.map((s) => (
+                <img key={s.alt} src={s.src} alt={s.alt} loading="lazy" className="screenshot-img" />
+              ))}
+            </div>
           </div>
-        </div>
 
-        <p className="other-desc">
-          A custom Minecraft texture pack that transforms boats into fully modeled cars using
-          Custom Entity Models (CEM). Multiple car models across wood type variants — designed
-          in collaboration with{' '}
-          <a href="https://www.instagram.com/slug_7/" target="_blank" rel="noopener noreferrer">
-            Tim Kang
-          </a>.
-        </p>
-
-        <div className="media-grid">
-          <img
-            src={previews[0].src}
-            alt={previews[0].label}
-            loading="lazy"
-            className="media-gif"
-          />
-          <div className="media-screenshots">
-            {screenshots.map((s) => (
-              <img key={s.alt} src={s.src} alt={s.alt} loading="lazy" className="screenshot-img" />
+          <div className="other-tags">
+            {p.tags.map((t) => (
+              <span key={t} className="tech-tag">{t}</span>
             ))}
           </div>
-        </div>
 
-        <div className="other-tags">
-          {['Minecraft', 'OptiFine CEM', 'Asset Design', 'Community'].map((t) => (
-            <span key={t} className="tech-tag">{t}</span>
-          ))}
         </div>
-
-      </div>
+      ))}
     </section>
   )
 }

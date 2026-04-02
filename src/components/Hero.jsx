@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import './Hero.css'
-
-const ROLE_TEXT = 'Systems & Full-Stack Engineer | CS @ VT'
+import { roleText as ROLE_TEXT, heroBio, currentProject } from '../data/hero'
 
 function useTyping(text, speed = 48) {
   const [displayed, setDisplayed] = useState('')
@@ -48,12 +47,9 @@ export default function Hero() {
           <span className={`cursor${done ? ' cursor-blink' : ''}`}>█</span>
         </p>
         <p className="hero-working">
-          <span className="mono accent">$</span> currently working on <a href="#projects">Garage64</a>
+          <span className="mono accent">$</span> currently working on <a href={currentProject.href}>{currentProject.label}</a>
         </p>
-        <p className="hero-bio">
-          Systems programmer and full-stack developer with a focus on low-level security,
-          infrastructure. I like building things that I'll end up using.
-        </p>
+        <p className="hero-bio">{heroBio}</p>
         <div className="hero-cta">
           <a href="#projects" className="btn btn-primary">View Projects</a>
           <a href="#contact" className="btn btn-ghost">Get in Touch</a>

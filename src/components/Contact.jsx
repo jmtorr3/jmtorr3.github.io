@@ -1,4 +1,5 @@
 import './Contact.css'
+import { contactLinks } from '../data/contact'
 
 export default function Contact() {
   return (
@@ -13,42 +14,20 @@ export default function Contact() {
         </p>
 
         <div className="contact-links">
-          <a
-            href="mailto:jmt1006@vt.edu"
-            className="contact-item"
-          >
-            <span className="contact-icon nf">{'\uf0e0'}</span>
-            <div>
-              <span className="contact-label">Email</span>
-              <span className="contact-value">jmt1006@vt.edu</span>
-            </div>
-          </a>
-
-          <a
-            href="https://www.linkedin.com/in/jmt1006/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="contact-item"
-          >
-            <span className="contact-icon nf">{'\uf08c'}</span>
-            <div>
-              <span className="contact-label">LinkedIn</span>
-              <span className="contact-value">linkedin.com/in/jmt1006</span>
-            </div>
-          </a>
-
-          <a
-            href="https://github.com/jmtorr3"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="contact-item"
-          >
-            <span className="contact-icon nf">{'\uf09b'}</span>
-            <div>
-              <span className="contact-label">GitHub</span>
-              <span className="contact-value">github.com/jmtorr3</span>
-            </div>
-          </a>
+          {contactLinks.map(({ label, value, href, icon }) => (
+            <a
+              key={label}
+              href={href}
+              className="contact-item"
+              {...(href.startsWith('mailto') ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
+            >
+              <span className="contact-icon nf">{icon}</span>
+              <div>
+                <span className="contact-label">{label}</span>
+                <span className="contact-value">{value}</span>
+              </div>
+            </a>
+          ))}
         </div>
       </div>
 
