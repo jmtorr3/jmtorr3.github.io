@@ -7,6 +7,7 @@ import Other from './components/Other'
 import Contact from './components/Contact'
 import FadeIn from './components/FadeIn'
 import Snow from './components/Snow'
+import SnowPile from './components/SnowPile'
 import './App.css'
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
         <FadeIn><Other /></FadeIn>
         <FadeIn><Contact /></FadeIn>
       </main>
+      <SnowPile />
     </>
   )
 }

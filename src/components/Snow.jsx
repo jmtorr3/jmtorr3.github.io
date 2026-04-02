@@ -1,49 +1,86 @@
-import { useMemo } from 'react'
-import './Snow.css'
+import { useEffect, useRef } from 'react'
+import { pileQueue } from './pileQueue'
 
-// NixOS colorscheme
-const COLORS = [
-  '#5277c3', // nix blue
-  '#7ebae4', // nix light blue
-  '#4169b8', // darker nix blue
-  '#9ecfee', // pale nix blue
-  '#3a5aab', // deep blue
-]
-
-const SIZES = [2, 2, 4, 4, 4, 6] // pixel multiples, weighted small
+const COLORS = ['#5277c3', '#7ebae4', '#4169b8', '#9ecfee', '#3a5aab']
+const SIZES = [2, 2, 4, 4, 4, 6]
+const PIXEL = 2
 
 export default function Snow({ count = 60 }) {
-  const flakes = useMemo(() => (
-    Array.from({ length: count }, (_, i) => ({
-      id: i,
-      left: Math.random() * 100,
+  const canvasRef = useRef(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext('2d')
+
+    let W = window.innerWidth
+    let H = window.innerHeight
+    canvas.width = W
+    canvas.height = H
+
+    const mkFlake = (scatter = false) => ({
+      x: Math.random() * W,
+      y: scatter ? Math.random() * H : -10,
       size: SIZES[Math.floor(Math.random() * SIZES.length)],
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      duration: 10 + Math.random() * 14,
-      delay: -Math.random() * 24,
-      opacity: 0.25 + Math.random() * 0.45,
-      drift: (Math.random() - 0.5) * 60,
-    }))
-  ), [count])
+      speed: 0.7 + Math.random() * 1.4,
+      drift: (Math.random() - 0.5) * 0.5,
+      opacity: 0.3 + Math.random() * 0.45,
+    })
+
+    const flakes = Array.from({ length: count }, () => mkFlake(true))
+
+    const onResize = () => {
+      W = window.innerWidth
+      H = window.innerHeight
+      canvas.width = W
+      canvas.height = H
+    }
+    window.addEventListener('resize', onResize)
+
+    let raf
+
+    const tick = () => {
+      ctx.clearRect(0, 0, W, H)
+
+      for (const f of flakes) {
+        f.x += f.drift
+        f.y += f.speed
+
+        if (f.x < -f.size) f.x = W
+        if (f.x > W + f.size) f.x = 0
+
+        if (f.y + f.size >= H) {
+          // Hand off to the pile at the page bottom
+          pileQueue.push({ x: f.x, size: f.size })
+          Object.assign(f, mkFlake(false))
+        } else {
+          ctx.globalAlpha = f.opacity
+          ctx.fillStyle = f.color
+          ctx.fillRect(
+            Math.round(f.x / PIXEL) * PIXEL,
+            Math.round(f.y / PIXEL) * PIXEL,
+            f.size,
+            f.size,
+          )
+        }
+      }
+
+      raf = requestAnimationFrame(tick)
+    }
+
+    tick()
+
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', onResize)
+    }
+  }, [count])
 
   return (
-    <div className="snow-container" aria-hidden="true">
-      {flakes.map((f) => (
-        <div
-          key={f.id}
-          className="snow-flake"
-          style={{
-            left: `${f.left}%`,
-            width: `${f.size}px`,
-            height: `${f.size}px`,
-            background: f.color,
-            opacity: f.opacity,
-            animationDuration: `${f.duration}s`,
-            animationDelay: `${f.delay}s`,
-            '--drift': `${f.drift}px`,
-          }}
-        />
-      ))}
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}
+      aria-hidden="true"
+    />
   )
 }
