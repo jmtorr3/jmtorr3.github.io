@@ -35,6 +35,19 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* iOS status bar area — solid black cover */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background: #000;
+  z-index: 200;
+  pointer-events: none;
+}
+
 body::after {
   content: '';
   position: fixed;
