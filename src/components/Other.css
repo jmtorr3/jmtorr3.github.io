@@ -136,28 +136,48 @@
     padding: 1.25rem;
   }
 
-  .media-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .media-screenshots {
-    flex-direction: row;
-    overflow-x: auto;
-    gap: 0.5rem;
-  }
-
-  .screenshot-img {
-    min-width: 140px;
-    flex: 1;
-  }
-
   .other-header {
     flex-direction: column;
+    gap: 0.75rem;
   }
 
   .other-meta {
     align-items: flex-start;
     flex-direction: row;
     gap: 1rem;
+  }
+
+  /* Stack GIF above screenshots */
+  .media-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .media-gif {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  /* Screenshots scroll horizontally */
+  .media-screenshots {
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 0.5rem;
+    padding-bottom: 2px;
+  }
+
+  .media-screenshots::-webkit-scrollbar {
+    display: none;
+  }
+
+  .screenshot-img {
+    min-width: 200px;
+    flex-shrink: 0;
+    height: auto;
+    aspect-ratio: 16 / 9;
   }
 }

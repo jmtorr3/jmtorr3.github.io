@@ -18,6 +18,12 @@
   border-color: var(--border);
 }
 
+.navbar.scrolled.menu-open {
+  background: transparent;
+  backdrop-filter: none;
+  border-color: transparent;
+}
+
 .navbar-logo {
   font-size: 1.2rem;
   font-weight: 700;

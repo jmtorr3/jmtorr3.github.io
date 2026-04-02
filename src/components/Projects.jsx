@@ -77,11 +77,8 @@ export default function Projects() {
           <FadeIn key={p.title} delay={i * 80}>
           <div className="project-card">
 
-            {/* Terminal chrome bar */}
+            {/* Badges */}
             <div className="card-chrome">
-              <span className="chrome-dot dot-red" />
-              <span className="chrome-dot dot-yellow" />
-              <span className="chrome-dot dot-green" />
               <div className="chrome-badges">
                 {p.featured && <span className="badge-featured">featured</span>}
                 <span className={`badge-status status-${p.status}`}>{p.status}</span>
