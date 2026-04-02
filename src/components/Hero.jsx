@@ -10,18 +10,18 @@ export default function Hero() {
           className="hero-avatar"
           loading="lazy"
         />
-        <div className="status-badge">
+        {/*<div className="status-badge">
           <span className="status-dot" />
           Open to Summer 2026 roles
-        </div>
-        <p className="hero-greeting">Hi, I'm</p>
+        </div>*/}
+        <p className="hero-greeting">Hellooo, I'm</p>
         <h1 className="hero-name">Jorge Manuel Torre</h1>
         <p className="hero-role">
           <span className="mono accent">{'>'}</span> Computer Science @ Virginia Tech
         </p>
         <p className="hero-bio">
           Systems programmer and full-stack developer with a focus on low-level security,
-          infrastructure, and building things that work.
+          infrastructure, and just making things that I personally enjoy.
         </p>
         <div className="hero-cta">
           <a href="#projects" className="btn btn-primary">View Projects</a>
@@ -36,6 +36,28 @@ export default function Hero() {
           </a>
         </div>
       </div>
+      <pre className="hero-ascii" aria-hidden="true">{`⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⢿⣿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⣠⣤⣤⠀⠀⠀⠀⠀⣠⣴⣶⣾⣿⣿⣿⣿⣿⣶⣦⣄⡀⠀⠀⠀⠀⣠⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⡿⠀⠀⢀⣴⣿⣿⣿⣿⣿⡿⠿⠿⠿⣿⣿⣿⣿⣿⣶⣄⠀⠀⢻⣿⣿⣿⣦⡀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⣴⣿⣿⣿⡿⠋⠀⠀⣰⣿⣿⣿⡿⠟⠉⠀⠀⠀⠀⠀⠀⠉⠛⢿⣿⣿⣿⣦⡀⠀⠙⢿⣿⣿⣿⣧⡀⠀⠀⠀
+⠀⢀⣴⣿⣿⣿⡿⠋⠀⠀⠀⣼⣿⣿⣿⠟⠀⠀⠀⢀⣀⣤⣤⣄⡀⠀⠀⠀⠙⣿⣿⣿⣷⠀⠀⠀⠙⢿⣿⣿⣿⣦⡀⠀
+⢠⣾⣿⣿⡿⠋⠀⠀⠀⠀⢠⣿⣿⣿⠏⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿⣶⡀⠀⠀⠘⣿⣿⣿⡇⠀⠀⠀⠀⠙⢿⣿⣿⣿⣆
+⣿⣿⣿⡟⠁⠀⠀⠀⠀⠀⢸⣿⣿⣿⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⠀⠀⢻⣿⣿⣿⠀⠀⠀⠀⠀⠀⠹⣿⣿⣿
+⢻⣿⣿⣷⡀⠀⠀⠀⠀⠀⢸⣿⣿⣿⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⡿⠀⠀⠀⣸⣿⣿⣿⠀⠀⠀⠀⠀⢀⣼⣿⣿⡿
+⠀⠻⣿⣿⣿⣦⡀⠀⠀⠀⠸⣿⣿⣿⡆⠀⠀⠀⢻⣿⣿⣿⣿⣿⣿⡿⠁⠀⠀⢠⣿⣿⣿⡇⠀⠀⠀⠀⣠⣾⣿⣿⡟⠁
+⠀⠀⠘⢿⣿⣿⣿⣦⡀⠀⠀⢻⣿⣿⣿⣆⠀⠀⠀⠈⠙⠛⠛⠛⠁⠀⠀⠀⣠⣿⣿⣿⡿⠀⠀⢀⣴⣿⣿⣿⡿⠋⠀⠀
+⠀⢀⣀⣀⡙⠻⣿⣿⣿⣷⣄⠀⠻⣿⣿⣿⣷⣤⡀⠀⠀⠀⠀⠀⠀⢀⣠⣾⣿⣿⣿⡟⠁⢠⣴⣿⣿⣿⡿⢋⣠⣤⣀⠀
+⢠⣿⣿⣿⣿⠀⠈⠛⠿⣿⡿⠀⠀⠘⠻⣿⣿⣿⣿⣷⡄⠀⠀⢀⣾⣿⣿⣿⣿⡿⠋⠀⠀⢻⣿⡿⠟⠉⠀⣾⣿⣿⣿⡇
+⠈⠿⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⣿⣿⣿⡇⠀⠀⢸⣿⣿⣿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠹⠿⠿⠿⠃
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⡇⠀⠀⢸⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⡇⠀⠀⢸⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⣄⠀⠀⠀⠀⠀⠀⣿⣿⣿⡇⠀⠀⢸⣿⣿⣿⠀⠀⠀⠀⠀⠀⣀⣤⡄⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣦⣄⣀⣀⣴⣿⣿⣿⡇⠀⠀⢸⣿⣿⣿⣧⣀⢀⣠⣴⣾⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠁⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠛⠿⠿⠛⠛⠉⠀⠀⠀⠀⠀⠀⠈⠛⠛⠿⠿⠟⠛⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`}</pre>
     </section>
   )
 }

@@ -8,6 +8,10 @@ const projects = [
     date: 'Spring 2026',
     tech: ['React', 'Three.js', 'Django', 'SQLite', 'Docker'],
     github: 'https://github.com/jmtorr3/Garage64',
+    logo: 'https://raw.githubusercontent.com/jmtorr3/Garage64/main/assets/Logo.png',
+    images: [
+      { src: 'https://raw.githubusercontent.com/jmtorr3/Garage64/main/assets/cover.png', alt: 'Garage64 cover' },
+    ],
     bullets: [
       'Full-stack web application serving as a complete suite for designing and exporting custom Minecraft car models (OptiFine CEM) and texture packs.',
       'Engineered a React + Three.js frontend for a real-time 3D workspace — users dynamically compose vehicles by swapping parts and applying custom paint textures.',
@@ -18,8 +22,13 @@ const projects = [
     title: 'ParkGrid',
     subtitle: 'Campus Parking Solution',
     date: 'Winter 2025',
-    tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Python'],
+    tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Python', 'Django Channels', 'JWT'],
     github: 'https://github.com/jmtorr3/smart-parking',
+    demo: 'https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing',
+    images: [
+      { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/dashboard.png', alt: 'Dashboard preview' },
+      { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/Database_Diagram.png', alt: 'ER Diagram' },
+    ],
     bullets: [
       'Served as technical lead for a 5-person team, directing project milestones and owning the core full-stack application.',
       'Co-designed the relational database architecture and led the transition from prototype to a polished production version.',
@@ -63,12 +72,27 @@ export default function Projects() {
           <FadeIn key={p.title} delay={i * 80}>
           <div className="project-card">
             <div className="project-header">
-              <div>
-                <h3 className="project-title">{p.title}</h3>
-                <p className="project-subtitle">{p.subtitle}</p>
+              <div className="project-header-left">
+                {p.logo && (
+                  <img src={p.logo} alt={`${p.title} logo`} className="project-logo" loading="lazy" />
+                )}
+                <div>
+                  <h3 className="project-title">{p.title}</h3>
+                  <p className="project-subtitle">{p.subtitle}</p>
+                </div>
               </div>
               <div className="project-meta">
                 <span className="project-date">{p.date}</span>
+                {p.demo && (
+                  <a
+                    href={p.demo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="demo-link"
+                  >
+                    Demo ↗
+                  </a>
+                )}
                 {p.github && (
                   <a
                     href={p.github}
@@ -88,6 +112,20 @@ export default function Projects() {
                 <li key={i}>{b}</li>
               ))}
             </ul>
+
+            {p.images && (
+              <div className="project-images">
+                {p.images.map((img) => (
+                  <img
+                    key={img.alt}
+                    src={img.src}
+                    alt={img.alt}
+                    loading="lazy"
+                    className="project-img"
+                  />
+                ))}
+              </div>
+            )}
 
             <div className="project-tech">
               {p.tech.map((t) => (

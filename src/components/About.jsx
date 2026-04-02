@@ -20,13 +20,11 @@ export default function About() {
           <p>
             I'm a Computer Science student at{' '}
             <strong>Virginia Tech</strong> graduating in May 2026, based in Ashburn, VA.
-            I'm drawn to the intersection of systems programming and security — from reverse
-            engineering proprietary encryption to building reproducible infrastructure with NixOS
-            and Proxmox.
+            I'm drawn to how software interacts with hardware
           </p>
           <p>
-            When I'm not in class or poking at my home lab, I build full-stack web apps and
-            lead community-driven projects.
+            When I'm not in class or doing more technical things,
+            I really like working on art/design
           </p>
         </div>
 

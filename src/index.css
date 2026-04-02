@@ -5,17 +5,17 @@
 }
 
 :root {
-  --bg: #0d0d0f;
-  --bg-card: #13131a;
-  --bg-card-hover: #1a1a24;
-  --border: #1e1e2e;
-  --accent: #7c6af7;
-  --accent-dim: #4e45a0;
-  --accent-glow: rgba(124, 106, 247, 0.15);
-  --text: #e2e2ec;
-  --text-muted: #8888aa;
-  --text-faint: #55556a;
-  --green: #4af09a;
+  --bg: #0d1520;
+  --bg-card: #111e2e;
+  --bg-card-hover: #162538;
+  --border: #1c3050;
+  --accent: #4aafd4;
+  --accent-dim: #255e80;
+  --accent-glow: rgba(74, 175, 212, 0.15);
+  --text: #ddeaf5;
+  --text-muted: #7a9dba;
+  --text-faint: #3a5872;
+  --green: #78d4f0;
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Inter', sans-serif;
 }
@@ -39,7 +39,7 @@ a {
 }
 
 a:hover {
-  color: #a89cf9;
+  color: #7ecce8;
 }
 
 ::selection {

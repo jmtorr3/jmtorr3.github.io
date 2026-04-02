@@ -29,39 +29,26 @@ const skillGroups = [
 export default function Skills() {
   return (
     <section id="skills">
-      <p className="section-label">Capabilities</p>
       <h2 className="section-title">Skills &amp; <span>Tools</span></h2>
 
       <div className="skills-grid">
         {skillGroups.map((g, i) => (
           <FadeIn key={g.category} delay={i * 80}>
-          <div className="skill-group">
-            <div className="skill-group-header">
-              <span className="skill-icon">{g.icon}</span>
-              <span className="skill-category">{g.category}</span>
+            <div className="skill-group">
+              <div className="skill-group-header">
+                <span className="skill-icon">{g.icon}</span>
+                <span className="skill-category">{g.category}</span>
+              </div>
+              <div className="skill-tags">
+                {g.skills.map((s) => (
+                  <span key={s} className="skill-tag">{s}</span>
+                ))}
+              </div>
             </div>
-            <div className="skill-tags">
-              {g.skills.map((s) => (
-                <span key={s} className="skill-tag">{s}</span>
-              ))}
-            </div>
-          </div>
           </FadeIn>
         ))}
       </div>
 
-      <div className="community-block">
-        <div className="community-header">
-          <span className="section-label">Leadership</span>
-        </div>
-        <div className="community-card">
-          <div className="community-title">Garage32 — Community Project Lead</div>
-          <p className="community-desc">
-            Managed development and distribution of a graphical asset pack for a gaming community,
-            reaching <strong>500+ downloads</strong> and sustained positive reception.
-          </p>
-        </div>
-      </div>
     </section>
   )
 }
