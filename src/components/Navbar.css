@@ -111,7 +111,17 @@
 @media (max-width: 640px) {
   .navbar {
     padding: calc(1.1rem + env(safe-area-inset-top)) 1.5rem 1.1rem;
+    background: rgba(13, 21, 32, 0.97);
+    backdrop-filter: blur(8px);
+    border-color: var(--border);
   }
+
+  .navbar.menu-open {
+    background: transparent;
+    backdrop-filter: none;
+    border-color: transparent;
+  }
+}
 
   .hamburger {
     display: flex;
