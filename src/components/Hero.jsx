@@ -63,7 +63,7 @@ export default function Hero() {
             rel="noopener noreferrer"
             className="btn btn-ghost"
           >
-            Resume ↗
+            Resume <span className="nf">{'\uf35d'}</span>
           </a>
         </div>
       </div>
