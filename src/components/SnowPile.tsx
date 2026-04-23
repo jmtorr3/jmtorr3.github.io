@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, MouseEvent as ReactMouseEvent } from 'react'
 import { pileQueue } from './pileQueue'
 
 const PIXEL = 2
@@ -49,11 +49,11 @@ const SM_W = SM_COLS * B           // 36px
 const SM_H = SM_ROWS * B           // 80px
 
 export default function SnowPile() {
-  const canvasRef = useRef(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const scarfIdxRef = useRef(0)
 
-  const handleClick = useCallback((e) => {
-    const canvas = canvasRef.current
+  const handleClick = useCallback((e: ReactMouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()
     const cx = e.clientX - rect.left
     const cy = e.clientY - rect.top
@@ -65,30 +65,30 @@ export default function SnowPile() {
   }, [])
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
+    const canvas = canvasRef.current!
+    const ctx = canvas.getContext('2d')!
 
-    let W = window.innerWidth
-    canvas.width = W
+    let winW = window.innerWidth
+    canvas.width = winW
     canvas.height = MAX_HEIGHT
 
-    const gridCols = () => Math.ceil(W / PIXEL)
+    const gridCols = () => Math.ceil(winW / PIXEL)
     let pile = new Float32Array(gridCols())
 
     const onResize = () => {
-      W = window.innerWidth
-      canvas.width = W
+      winW = window.innerWidth
+      canvas.width = winW
       canvas.height = MAX_HEIGHT
       pile = new Float32Array(gridCols())
     }
     window.addEventListener('resize', onResize)
 
-    const getCol = (x) => {
+    const getCol = (x: number) => {
       const ratio = x / window.innerWidth
       return Math.max(0, Math.min(gridCols() - 1, Math.floor(ratio * gridCols())))
     }
 
-    const drawSnowman = (sx, sy, blink) => {
+    const drawSnowman = (sx: number, sy: number, blink: boolean) => {
       const scarfColor = SCARF_COLORS[scarfIdxRef.current]
       ctx.globalAlpha = 1
       for (let row = 0; row < SM_ROWS; row++) {
@@ -105,14 +105,14 @@ export default function SnowPile() {
     }
 
     let frame = 0
-    let raf
+    let raf: number
 
     const tick = () => {
       frame++
 
       // Consume flake queue
       while (pileQueue.length > 0) {
-        const { x, size } = pileQueue.shift()
+        const { x, size } = pileQueue.shift()!
         const c0 = getCol(x)
         const c1 = Math.min(gridCols() - 1, c0 + Math.ceil(size / PIXEL))
         for (let c = c0; c <= c1; c++) {
@@ -121,7 +121,7 @@ export default function SnowPile() {
       }
 
       const gC = gridCols()
-      ctx.clearRect(0, 0, W, MAX_HEIGHT)
+      ctx.clearRect(0, 0, winW, MAX_HEIGHT)
 
       // Angle of repose — spread steep columns
       for (let c = 1; c < gC - 1; c++) {
@@ -147,7 +147,7 @@ export default function SnowPile() {
       }
 
       // Draw snowman centered on canvas, sitting at the bottom
-      const sx = Math.floor((W - SM_W) / 2)
+      const sx = Math.floor((winW - SM_W) / 2)
       const sy = MAX_HEIGHT - SM_H
       const blink = frame % 200 < 8  // blink briefly every ~3.3s at 60fps
       drawSnowman(sx, sy, blink)

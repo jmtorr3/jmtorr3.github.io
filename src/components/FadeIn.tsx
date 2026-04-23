@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, ReactNode } from 'react'
 import './FadeIn.css'
 
-export default function FadeIn({ children, delay = 0 }) {
-  const ref = useRef(null)
+type FadeInProps = { children: ReactNode; delay?: number }
+
+export default function FadeIn({ children, delay = 0 }: FadeInProps) {
+  const ref = useRef<HTMLDivElement | null>(null)
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {

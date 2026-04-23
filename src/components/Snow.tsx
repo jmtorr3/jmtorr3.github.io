@@ -5,12 +5,12 @@ const COLORS = ['#5277c3', '#7ebae4', '#4169b8', '#9ecfee', '#3a5aab']
 const SIZES = [2, 2, 4, 4, 4, 6]
 const PIXEL = 2
 
-export default function Snow({ count = 60 }) {
-  const canvasRef = useRef(null)
+export default function Snow({ count = 60 }: { count?: number }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
+    const canvas = canvasRef.current!
+    const ctx = canvas.getContext('2d')!
 
     let W = window.innerWidth
     let H = window.innerHeight
@@ -37,7 +37,7 @@ export default function Snow({ count = 60 }) {
     }
     window.addEventListener('resize', onResize)
 
-    let raf
+    let raf: number
 
     const tick = () => {
       ctx.clearRect(0, 0, W, H)

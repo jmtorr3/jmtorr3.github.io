@@ -14,7 +14,7 @@ import './App.css'
 export default function App() {
   useEffect(() => {
     const sections = document.querySelectorAll('section[id]')
-    let current = null
+    let current: Element | null = null
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((e) => {

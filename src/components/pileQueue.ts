@@ -1,3 +1,4 @@
 // Shared queue: falling flakes push here when they exit the viewport bottom.
 // SnowPile consumes entries each frame to grow the pile.
-export const pileQueue = []
+export type PileEntry = { x: number; size: number }
+export const pileQueue: PileEntry[] = []

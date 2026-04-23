@@ -4,13 +4,23 @@ import './Blog.css'
 const API_URL = import.meta.env.VITE_BLOG_API_URL
 const BLOG_URL = import.meta.env.VITE_BLOG_FRONTEND_URL
 
-function formatDate(iso) {
+type Post = {
+  id: string | number
+  slug: string
+  title: string
+  description?: string
+  cover_image_url?: string
+  published_at?: string
+  created_at: string
+}
+
+function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
     year: 'numeric', month: 'short', day: 'numeric',
   })
 }
 
-function PostCard({ post }) {
+function PostCard({ post }: { post: Post }) {
   const href = BLOG_URL ? `${BLOG_URL}/post/${post.slug}` : '#'
   return (
     <a className="blog-card" href={href}>
@@ -29,7 +39,7 @@ function PostCard({ post }) {
 }
 
 export default function Blog() {
-  const [posts, setPosts] = useState(null)
+  const [posts, setPosts] = useState<Post[] | null>(null)
 
   useEffect(() => {
     if (!API_URL) return

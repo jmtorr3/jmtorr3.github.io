@@ -1,5 +1,21 @@
 import './Projects.css'
 
+export type Project = {
+  title: string
+  subtitle: string
+  date: string
+  status: string
+  featured?: boolean
+  tech: string[]
+  github?: string | null
+  demo?: string
+  logo?: string
+  images?: { src: string; alt: string }[]
+  bullets: string[]
+}
+
+type CardProps = { project: Project; index: number }
+
 function GitHubIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -8,7 +24,7 @@ function GitHubIcon() {
   )
 }
 
-function CardChrome({ p }) {
+function CardChrome({ p }: { p: Project }) {
   return (
     <div className="card-chrome">
       {p.featured && <span className="badge-featured">featured</span>}
@@ -17,7 +33,7 @@ function CardChrome({ p }) {
   )
 }
 
-function CardLinks({ p }) {
+function CardLinks({ p }: { p: Project }) {
   return (
     <div className="project-meta">
       <span className="project-date">{p.date}</span>
@@ -41,7 +57,7 @@ function CardLinks({ p }) {
   )
 }
 
-function CardBullets({ bullets }) {
+function CardBullets({ bullets }: { bullets: string[] }) {
   return (
     <ul className="project-bullets">
       {bullets.map((b, i) => <li key={i}>{b}</li>)}
@@ -49,7 +65,7 @@ function CardBullets({ bullets }) {
   )
 }
 
-function CardTech({ tech }) {
+function CardTech({ tech }: { tech: string[] }) {
   return (
     <div className="project-tech">
       {tech.map((t) => <span key={t} className="tech-tag">{t}</span>)}
@@ -57,7 +73,7 @@ function CardTech({ tech }) {
   )
 }
 
-export function FeaturedCard({ project: p, index }) {
+export function FeaturedCard({ project: p, index }: CardProps) {
   return (
     <div className="project-card project-card--featured">
       <span className="project-number" aria-hidden="true">
@@ -100,7 +116,7 @@ export function FeaturedCard({ project: p, index }) {
   )
 }
 
-export function ProjectCard({ project: p, index }) {
+export function ProjectCard({ project: p, index }: CardProps) {
   return (
     <div className="project-card">
       <span className="project-number" aria-hidden="true">
