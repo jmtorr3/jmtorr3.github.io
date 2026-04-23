@@ -29,7 +29,7 @@
 \vspace{-5pt}
 
 \textbf{Virginia Tech} \hfill Blacksburg, VA \\
-B.S. Computer Science. \hfill May 2026
+B.S. Computer Science, Major GPA: 3.5/4.0 \hfill May 2026
 
 \textbf{Relevant Coursework:} Linux Kernel Programming, Software Reverse Engineering, Security of AI, Computer Architecture, Computer Systems, Data Structures \& Algorithms.
 
@@ -51,28 +51,27 @@ B.S. Computer Science. \hfill May 2026
 
 \vspace{3pt}
 
-
-\textbf{ParkGrid: Campus Parking Solution} \textbullet \ \href{https://github.com/jmtorr3/smart-parking}{GitHub} \hfill Winter 2025 \\
-\textit{React, Django, PostgreSQL, Docker, Python}
+\textbf{Celeste RL: Deep Reinforcement Learning for Precision Platforming} \hfill Spring 2026 \\
+\textit{Python, PyTorch, Gymnasium, NumPy}
 \begin{itemize}[noitemsep, topsep=0pt, partopsep=0pt, parsep=0pt]
-  \item Served as the technical lead for a 5-person team, directing project milestones and taking primary ownership of the original core full-stack application
-  \item Partnered with one developer to design the relational databse architecture and transition the initial prototype into a more polished version
-  \item Developed a Python simulator to generate high frequency occupancy data ensuring the PostgreSQL database could handle simultaneous sensor updates accurately.
+    \item Built a Gymnasium environment wrapping a Python reimplementation of Celeste Classic (PICO-8), with a 31-dim state (kinematics + 5×5 local tile grid), 15 discrete actions, and a shaped reward combining height gain, milestone bonuses, and death penalties
+    \item Implemented and compared four approaches — Double Dueling DQN, Behavioral Cloning from TAS demonstrations, DQN warm-started with expert transitions, and a six-stage backwards curriculum — isolating exploration, credit assignment, and distribution-shift failure modes
+    \item Diagnosed a latent bug where level-completion reward was misclassified as death across all non-curriculum runs, producing the first successful full-level completions after the fix; curriculum agent cleared 480+ sub-level completions and reached within 4 pixels of the exit from full-level start
 \end{itemize}
 
 \vspace{3pt}
 
-\textbf{Nintendo DS Security Analysis} \hfill Winter 2024 \\
-\textit{Assembly, DeSmuME, Ghidra}
+\textbf{Pokémon Black (Nintendo DS) Reverse Engineering} \hfill Winter 2024 \\
+\textit{Ghidra, DeSmuME, No\$GBA, ARM Assembly}
 \begin{itemize}[noitemsep, topsep=0pt, partopsep=0pt, parsep=0pt]
-    \item Executed dynamic binary analysis on the Nintendo DS architecture using a virtualized Debian/Windows lab environment provided by the advanced Software Reverse Engineering curriculum.
-    \item Reverse-engineered the proprietary Gen 5 Linear Congruential Generator (LCG) encryption protocol to decrypt 220-byte save file structures.
-    \item Developed a custom Python tool to calculate dynamic block shuffling permutations based on the PID bitmask, enabling the modification of binary data without checksum corruption.
+    \item Reverse engineered a commercial NDS ROM to map how encounter tables, battle logic, and save file structures are implemented in memory
+    \item Analyzed ARM9 disassembly in Ghidra alongside live execution in DeSmuME and No\$GBA to trace Action Replay codes back to the specific memory regions and routines they patch
+    \item Developed custom modifications including Pokémon import/export via memory editing and runtime patches to movement speed and collision handling
 \end{itemize}
 
 \vspace{3pt}
 
-\textbf{Experimental Proxmox Home Lab} \hfill 2021 -- Present \\
+\textbf{Experimental Home Lab} \hfill 2021 -- Present \\
 \textit{Proxmox, Debian, Ubuntu, NixOS, Docker}
 \begin{itemize}[noitemsep, topsep=0pt, partopsep=0pt, parsep=0pt]
   \item Built a home lab environment on Proxmox to host, manage, and experiment with various things.

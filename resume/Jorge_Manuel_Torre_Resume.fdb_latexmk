@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1775096374.42342 "Jorge_Manuel_Torre_Resume.tex" "Jorge_Manuel_Torre_Resume.pdf" "Jorge_Manuel_Torre_Resume" 1775096375.13221 0
+["pdflatex"] 1776895034.15988 "Jorge_Manuel_Torre_Resume.tex" "Jorge_Manuel_Torre_Resume.pdf" "Jorge_Manuel_Torre_Resume" 1776895034.94144 0
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1136849721 2971 def0b6c1f0b107b3b936def894055589 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/enc/dvips/cm-super/cm-super-ts1.enc" 1136849721 2900 1537cc8184ad1792082cd229ecc269f4 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -64,9 +64,9 @@
   "/usr/local/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map" 1774924067 5573038 b99aad5e4898a9034e953632f940512b ""
   "/usr/local/texlive/2026/texmf-var/web2c/pdftex/pdflatex.fmt" 1774209607 3636776 dc5fa9b6b1453b9d196cd42edf876004 ""
   "/usr/local/texlive/2026/texmf.cnf" 1774209515 577 648cd9f92f9c0eac486f4c71c85cfbbe ""
-  "Jorge_Manuel_Torre_Resume.aux" 1775096375.07331 280 6b828094e00234c0864beebb1893eb25 "pdflatex"
-  "Jorge_Manuel_Torre_Resume.out" 1775096374.91391 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "Jorge_Manuel_Torre_Resume.tex" 1775096361.23709 4979 ecd763b5426b40be0566f729b33ee0fc ""
+  "Jorge_Manuel_Torre_Resume.aux" 1776895034.85921 280 6b828094e00234c0864beebb1893eb25 "pdflatex"
+  "Jorge_Manuel_Torre_Resume.out" 1776895034.7037 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "Jorge_Manuel_Torre_Resume.tex" 1776895033.88364 5304 b17bebc586b6d07b2d09232566f88137 ""
   (generated)
   "Jorge_Manuel_Torre_Resume.aux"
   "Jorge_Manuel_Torre_Resume.log"
