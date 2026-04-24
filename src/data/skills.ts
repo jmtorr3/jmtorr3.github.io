@@ -11,7 +11,7 @@ export const skillGroups = [
       { name: 'JavaScript',     icon: '\ue781' },
       { name: 'TypeScript',     icon: '\ue8ca' },
       { name: 'SQL',            icon: '\uf1c0' },
-      { name: 'Assembly (ARM)', icon: '\uf2db' },
+      { name: 'Assembly (ARM & x86_64)', icon: '\uf2db' },
     ],
   },
   {
