@@ -9,6 +9,7 @@ export const skillGroups = [
       { name: 'Python',         icon: '\ue73c' },
       { name: 'Java',           icon: '\ue738' },
       { name: 'JavaScript',     icon: '\ue781' },
+      { name: 'TypeScript',     icon: '\ue8ca' },
       { name: 'SQL',            icon: '\uf1c0' },
       { name: 'Assembly (ARM)', icon: '\uf2db' },
     ],
