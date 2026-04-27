@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import './About.css'
 import { coursework } from '../data/about'
 
 export default function About() {
+  const [logoFailed, setLogoFailed] = useState(false)
+
   return (
     <section id="about">
       <p className="section-label"><span className="nf">{'\uf19d'} </span>Background</p>
@@ -26,12 +29,16 @@ export default function About() {
           <div className="edu-card">
             <div className="edu-header">
               <span className="edu-school">
-                <img
-                  src="/VT-logo.png"
-                  alt="Virginia Tech logo"
-                  className="edu-logo"
-                />
-                Virginia Tech
+                {logoFailed ? (
+                  'Virginia Tech'
+                ) : (
+                  <img
+                    src="/VT-logo.png"
+                    alt="Virginia Tech"
+                    className="edu-logo"
+                    onError={() => setLogoFailed(true)}
+                  />
+                )}
               </span>
               <span className="edu-date">May 2026</span>
             </div>

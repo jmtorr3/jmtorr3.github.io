@@ -40,8 +40,9 @@
 }
 
 .edu-logo {
-  height: 1.4em;
+  height: 1.6em;
   width: auto;
+  max-width: 12em;
   object-fit: contain;
   display: block;
 }
