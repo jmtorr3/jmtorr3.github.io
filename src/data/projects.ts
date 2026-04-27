@@ -1,5 +1,27 @@
 export const projects = [
   {
+    title: 'Celeste-RL',
+    subtitle: 'Deep Reinforcement Learning for a Precision Platformer',
+    date: 'Spring 2026',
+    status: 'completed',
+    featured: true,
+    tech: ['PyTorch', 'Python', 'NumPy', 'matplotlib', 'CUDA', 'React', 'Vite'],
+    github: 'https://github.com/jmtorr3/celeste-rl',
+    demo: 'https://jmtorr3.github.io/celeste-rl-web/',
+    demoLabel: 'Website',
+    logo: '/maddy.png',
+    images: [
+      { src: '/p8logo.png', alt: 'pico-8 wordmark' },
+      { src: 'https://raw.githubusercontent.com/jmtorr3/celeste-rl/master/docs/demo.gif', alt: 'dqn_r1 agent completing celeste room 0' },
+      { src: 'https://raw.githubusercontent.com/jmtorr3/celeste-rl/master/docs/comparison/outcome_breakdown.png', alt: 'per-method outcome breakdown' },
+    ],
+    bullets: [
+      'Final project for VT CS 4824 (Machine Learning) — controlled comparison of five RL methods (DQN, Behavioral Cloning, Hybrid, Curriculum, Dueling DQN + curiosity) trained to play Celeste Classic room 0 on the Pyleste emulator.',
+      'Identified that state representation dominated algorithm choice as the deciding factor: replacing raw PICO-8 tile IDs with a 5-class semantic encoding (air / solid / spike / out-of-bounds / other) raised plain DQN completion from 8% to 57–68% with no other change.',
+      'Shipped a fully reproducible pipeline with batched evaluation script, automated comparison plots, side-by-side gameplay GIF generator, GitHub-Pages-deployed results website, and a published debugging devlog covering 9 iteration phases.',
+    ],
+  },
+  {
     title: 'Garage64',
     subtitle: 'Custom Entity Model Studio',
     date: 'Spring 2026',
@@ -22,9 +44,11 @@ export const projects = [
     subtitle: 'Campus Parking Solution',
     date: 'Winter 2025',
     status: 'completed',
+    featured: true,
     tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Python', 'Django Channels', 'JWT'],
     github: 'https://github.com/jmtorr3/smart-parking',
     demo: 'https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing',
+    demoLabel: 'Video',
     images: [
       { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/dashboard.png', alt: 'Dashboard preview' },
       { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/Database_Diagram.png', alt: 'ER Diagram' },
@@ -40,6 +64,7 @@ export const projects = [
     subtitle: 'Reverse Engineering Research',
     date: 'Winter 2024',
     status: 'completed',
+    featured: true,
     tech: ['Assembly', 'DeSmuME', 'Ghidra', 'Python'],
     github: null,
     bullets: [
@@ -53,6 +78,7 @@ export const projects = [
     subtitle: 'Self-Hosted Infrastructure',
     date: '2021 – Present',
     status: 'ongoing',
+    featured: true,
     tech: ['Proxmox', 'NixOS', 'Debian', 'Docker', 'OPNsense'],
     github: null,
     bullets: [

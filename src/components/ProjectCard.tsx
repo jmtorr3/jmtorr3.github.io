@@ -9,6 +9,7 @@ export type Project = {
   tech: string[]
   github?: string | null
   demo?: string
+  demoLabel?: string
   logo?: string
   images?: { src: string; alt: string }[]
   bullets: string[]
@@ -39,7 +40,7 @@ function CardLinks({ p }: { p: Project }) {
       <span className="project-date">{p.date}</span>
       {p.demo && (
         <a href={p.demo} target="_blank" rel="noopener noreferrer" className="demo-link">
-          Demo ↗
+          {p.demoLabel ?? 'Demo'} ↗
         </a>
       )}
       {p.github && (
