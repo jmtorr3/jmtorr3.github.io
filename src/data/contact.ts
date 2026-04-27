@@ -1,7 +1,7 @@
 export const contactLinks = [
   {
     label: 'Email',
-    value: 'jmt1006@vt.edu',
+    value: 'jorgetorre06@gmail.com',
     href: 'mailto:jorgetorre06@gmail.com',
     icon: '\uf0e0',
   },
