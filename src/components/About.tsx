@@ -21,7 +21,9 @@ export default function About() {
             When I'm not in class or doing more technical things,
             I really like working on art/design. I spend a lot of
             my time tinkering with my homelab, messing with
-            PICO-8, or just hanging out with my dogs.
+            PICO-8,{' '}
+            <a href="https://www.youtube.com/@sys32ent" target="_blank" rel="noopener noreferrer">skateboarding</a>{' '}
+            with friends, or just hanging out with my dogs.
           </p>
         </div>
 
