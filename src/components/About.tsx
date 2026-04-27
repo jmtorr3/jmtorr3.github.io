@@ -25,7 +25,14 @@ export default function About() {
         <div className="about-edu">
           <div className="edu-card">
             <div className="edu-header">
-              <span className="edu-school">Virginia Tech</span>
+              <span className="edu-school">
+                <img
+                  src="/VT-logo.png"
+                  alt="Virginia Tech logo"
+                  className="edu-logo"
+                />
+                Virginia Tech
+              </span>
               <span className="edu-date">May 2026</span>
             </div>
             <p className="edu-degree">B.S. Computer Science</p>
