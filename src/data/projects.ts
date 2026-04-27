@@ -42,7 +42,7 @@ export const projects = [
     subtitle: 'Campus Parking Solution',
     date: 'Winter 2025',
     featured: true,
-    tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Python', 'Django Channels', 'JWT'],
+    tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Redis', 'Django Channels', 'Vite', 'JWT'],
     github: 'https://github.com/jmtorr3/smart-parking',
     demo: 'https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing',
     demoLabel: 'Video',
@@ -51,9 +51,9 @@ export const projects = [
       { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/Database_Diagram.png', alt: 'ER Diagram' },
     ],
     bullets: [
-      'Served as technical lead for a 5-person team, directing project milestones and owning the core full-stack application.',
-      'Co-designed the relational database architecture and led the transition from prototype to a polished production version.',
-      'Built a Python simulator generating high-frequency occupancy data to stress-test simultaneous sensor updates against PostgreSQL.',
+      'Tech lead of the original 5-person hackathon build, then co-led a December 2025 production rebuild with a partner — owning the infra and correctness layer end-to-end.',
+      'Migrated the data layer from SQLite to PostgreSQL, containerized the stack with Docker, and enforced ACID compliance to resolve race conditions under concurrent sensor writes.',
+      'Hardened the build and deployment pipeline: switched to Vite to resolve npm vulnerabilities, authored the backend test suite, and fixed Redis + WebSocket state-sync bugs surfacing in the live dashboard.',
     ],
   },
   {
