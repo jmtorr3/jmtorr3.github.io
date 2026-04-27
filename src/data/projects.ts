@@ -46,12 +46,15 @@ export const projects = [
     github: 'https://github.com/jmtorr3/smart-parking',
     demo: 'https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing',
     demoLabel: 'Video',
+    collaborators: [
+      { name: 'Subhan Shrestha', href: 'https://subhanshrestha.github.io/' },
+    ],
     images: [
       { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/dashboard.png', alt: 'Dashboard preview' },
       { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/Database_Diagram.png', alt: 'ER Diagram' },
     ],
     bullets: [
-      'Tech lead of the original 5-person hackathon build, then co-led a December 2025 production rebuild with a partner — owning the infra and correctness layer end-to-end.',
+      'Took the project through three phases: original 2-person hackathon prototype, a 5-person class project where I served as tech lead, and a December 2025 production rebuild co-led with my hackathon partner — owning the infra and correctness layer end-to-end.',
       'Migrated the data layer from SQLite to PostgreSQL, containerized the stack with Docker, and enforced ACID compliance to resolve race conditions under concurrent sensor writes.',
       'Hardened the build and deployment pipeline: switched to Vite to resolve npm vulnerabilities, authored the backend test suite, and fixed Redis + WebSocket state-sync bugs surfacing in the live dashboard.',
     ],

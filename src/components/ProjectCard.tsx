@@ -12,6 +12,7 @@ export type Project = {
   logo?: string
   images?: { src: string; alt: string }[]
   bullets: string[]
+  collaborators?: { name: string; href: string }[]
 }
 
 type CardProps = { project: Project; index: number }
@@ -64,6 +65,21 @@ function CardBullets({ bullets }: { bullets: string[] }) {
   )
 }
 
+function CardCollaborators({ collaborators }: { collaborators?: { name: string; href: string }[] }) {
+  if (!collaborators?.length) return null
+  return (
+    <p className="project-collaborators">
+      with{' '}
+      {collaborators.map((c, i) => (
+        <span key={c.href}>
+          <a href={c.href} target="_blank" rel="noopener noreferrer">{c.name}</a>
+          {i < collaborators.length - 1 ? ', ' : ''}
+        </span>
+      ))}
+    </p>
+  )
+}
+
 function CardTech({ tech }: { tech: string[] }) {
   return (
     <div className="project-tech">
@@ -94,6 +110,7 @@ export function FeaturedCard({ project: p, index }: CardProps) {
           </div>
           <CardLinks p={p} />
           <CardBullets bullets={p.bullets} />
+          <CardCollaborators collaborators={p.collaborators} />
           <CardTech tech={p.tech} />
         </div>
 
@@ -138,6 +155,7 @@ export function ProjectCard({ project: p, index }: CardProps) {
       </div>
 
       <CardBullets bullets={p.bullets} />
+      <CardCollaborators collaborators={p.collaborators} />
 
       {p.images && (
         <div className="project-images">
