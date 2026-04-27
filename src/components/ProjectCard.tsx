@@ -4,7 +4,6 @@ export type Project = {
   title: string
   subtitle: string
   date: string
-  status: string
   featured?: boolean
   tech: string[]
   github?: string | null
@@ -29,7 +28,6 @@ function CardChrome({ p }: { p: Project }) {
   return (
     <div className="card-chrome">
       {p.featured && <span className="badge-featured">featured</span>}
-      <span className={`badge-status status-${p.status}`}>{p.status}</span>
     </div>
   )
 }

@@ -65,19 +65,6 @@
   padding: 0.15rem 0.45rem;
 }
 
-.badge-status {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-radius: 4px;
-  padding: 0.15rem 0.45rem;
-}
-
-.status-active    { color: #28c840; border: 1px solid rgba(40, 200, 64, 0.3); }
-.status-completed { color: var(--text-faint); border: 1px solid var(--border); }
-.status-ongoing   { color: #ffbd2e; border: 1px solid rgba(255, 189, 46, 0.3); }
-
 /* Faded background number */
 .project-number {
   position: absolute;
@@ -310,8 +297,7 @@
     right: 0.75rem;
   }
 
-  .badge-featured,
-  .badge-status {
+  .badge-featured {
     font-size: 0.6rem;
     padding: 0.1rem 0.35rem;
   }
