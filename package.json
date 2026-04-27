@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "sync-resume": "test -f ../resume/Jorge_Manuel_Torre_Resume.pdf && cp ../resume/Jorge_Manuel_Torre_Resume.pdf public/ || true",
+    "predev": "npm run sync-resume",
+    "prebuild": "npm run sync-resume",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
