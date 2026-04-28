@@ -173,6 +173,7 @@
     backdrop-filter: blur(20px) saturate(140%);
     flex-direction: column;
     justify-content: center;
+    padding-bottom: 6rem;
     gap: 2rem;
     opacity: 0;
     pointer-events: none;
