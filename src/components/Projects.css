@@ -113,6 +113,23 @@
   color: var(--text);
 }
 
+.project-title-logo {
+  height: 1.6rem;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.project-title-gif {
+  height: 56px;
+  width: auto;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  object-fit: contain;
+  background: rgba(0, 0, 0, 0.2);
+}
+
 .project-subtitle {
   font-size: 0.85rem;
   color: var(--text-muted);
