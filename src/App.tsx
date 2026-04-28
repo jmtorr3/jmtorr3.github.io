@@ -42,6 +42,7 @@ export default function App() {
         <FadeIn><Skills /></FadeIn>
         <FadeIn><Other /></FadeIn>
         <FadeIn><Contact /></FadeIn>
+        <a href="#hero" className="back-to-top" aria-label="Back to top">↑ Back to top</a>
       </main>
       <SnowPile />
     </>
