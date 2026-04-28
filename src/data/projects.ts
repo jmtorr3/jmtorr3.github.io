@@ -8,9 +8,9 @@ export const projects = [
     github: 'https://github.com/jmtorr3/celeste-rl',
     demo: 'https://jmtorr3.github.io/celeste-rl-web/',
     demoLabel: 'Website',
-    logo: '/maddy.png',
+    logo: '/CELESTERL/maddy.png',
     images: [
-      { src: '/p8logo.png', alt: 'pico-8 wordmark' },
+      { src: '/CELESTERL/p8logo.png', alt: 'pico-8 wordmark' },
       { src: 'https://raw.githubusercontent.com/jmtorr3/celeste-rl/master/docs/demo.gif', alt: 'dqn_r1 agent completing celeste room 0' },
       { src: 'https://raw.githubusercontent.com/jmtorr3/celeste-rl/master/docs/comparison/outcome_breakdown.png', alt: 'per-method outcome breakdown' },
     ],
@@ -66,6 +66,11 @@ export const projects = [
     featured: true,
     tech: ['Assembly', 'DeSmuME', 'Ghidra', 'Python'],
     github: null,
+    logo: '/PKMNBLK/pkball.png',
+    images: [
+      { src: '/PKMNBLK/pkmnblck_mem.png', alt: 'Pokémon Black memory analysis' },
+      { src: '/PKMNBLK/ram.png', alt: 'RAM inspection during reverse engineering' },
+    ],
     bullets: [
       'Executed dynamic binary analysis on the Nintendo DS architecture using a virtualized lab environment from the Advanced Software Reverse Engineering curriculum.',
       'Reverse-engineered the proprietary Gen 5 Linear Congruential Generator (LCG) encryption protocol to decrypt 220-byte save file structures.',
@@ -73,12 +78,17 @@ export const projects = [
     ],
   },
   {
-    title: 'Proxmox Home Lab',
+    title: 'Experimental Home Lab',
     subtitle: 'Self-Hosted Infrastructure',
     date: '2021 – Present',
     featured: true,
     tech: ['Proxmox', 'NixOS', 'Debian', 'Docker', 'OPNsense'],
     github: null,
+    logo: '/HOMELAB/Tux.png',
+    images: [
+      { src: '/HOMELAB/NixOS_logo.svg', alt: 'NixOS' },
+      { src: '/HOMELAB/Logo_Proxmox.svg', alt: 'Proxmox' },
+    ],
     bullets: [
       'Built and iterated on a home lab environment for hosting, experimenting, and learning systems concepts hands-on.',
       'Designed network topologies with OPNsense firewall configurations and secure jumpbox deployments for managing remote access.',
