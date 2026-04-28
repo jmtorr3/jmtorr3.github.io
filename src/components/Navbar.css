@@ -157,6 +157,16 @@
     -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
     z-index: 9001;
+    transition: opacity 0.3s;
+  }
+
+  .navbar.scrolled .hamburger {
+    opacity: 0.4;
+  }
+
+  .navbar.scrolled .hamburger:hover,
+  .navbar.scrolled.menu-open .hamburger {
+    opacity: 1;
   }
 
   .navbar-links {
