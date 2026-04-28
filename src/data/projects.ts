@@ -38,28 +38,6 @@ export const projects = [
     ],
   },
   {
-    title: 'ParkGrid',
-    subtitle: 'Campus Parking Solution',
-    date: 'Winter 2025',
-    featured: true,
-    tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Redis', 'Django Channels', 'Vite', 'JWT'],
-    github: 'https://github.com/jmtorr3/smart-parking',
-    demo: 'https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing',
-    demoLabel: 'Video',
-    collaborators: [
-      { name: 'Subhan Shrestha', href: 'https://subhanshrestha.github.io/' },
-    ],
-    images: [
-      { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/dashboard.png', alt: 'Dashboard preview' },
-      { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/Database_Diagram.png', alt: 'ER Diagram' },
-    ],
-    bullets: [
-      'Took the project through three phases: original 2-person hackathon prototype, a 5-person class project where I served as tech lead, and a December 2025 production rebuild co-led with my hackathon partner — owning the infra and correctness layer end-to-end.',
-      'Migrated the data layer from SQLite to PostgreSQL, containerized the stack with Docker, and enforced ACID compliance to resolve race conditions under concurrent sensor writes.',
-      'Hardened the build and deployment pipeline: switched to Vite to resolve npm vulnerabilities, authored the backend test suite, and fixed Redis + WebSocket state-sync bugs surfacing in the live dashboard.',
-    ],
-  },
-  {
     title: 'Reverse Engineering Pokémon Black',
     subtitle: 'Nintendo DS Memory & Cheat Analysis',
     date: 'Winter 2024',
@@ -93,6 +71,28 @@ export const projects = [
       'Built and iterated on a home lab environment for hosting, experimenting, and learning systems concepts hands-on.',
       'Designed network topologies with OPNsense firewall configurations and secure jumpbox deployments for managing remote access.',
       'Configured reproducible NixOS development environments for Linux kernel programming, system-level testing, and self-hosted services.',
+    ],
+  },
+  {
+    title: 'ParkGrid',
+    subtitle: 'Campus Parking Solution',
+    date: 'Winter 2025',
+    featured: true,
+    tech: ['React', 'Django', 'PostgreSQL', 'Docker', 'Redis', 'Django Channels', 'Vite', 'JWT'],
+    github: 'https://github.com/jmtorr3/smart-parking',
+    demo: 'https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing',
+    demoLabel: 'Video',
+    collaborators: [
+      { name: 'Subhan Shrestha', href: 'https://subhanshrestha.github.io/' },
+    ],
+    images: [
+      { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/dashboard.png', alt: 'Dashboard preview' },
+      { src: 'https://raw.githubusercontent.com/jmtorr3/smart-parking/main/Database_Diagram.png', alt: 'ER Diagram' },
+    ],
+    bullets: [
+      'Took the project through three phases: original 2-person hackathon prototype, a 5-person class project where I served as tech lead, and a December 2025 production rebuild co-led with my hackathon partner — owning the infra and correctness layer end-to-end.',
+      'Migrated the data layer from SQLite to PostgreSQL, containerized the stack with Docker, and enforced ACID compliance to resolve race conditions under concurrent sensor writes.',
+      'Hardened the build and deployment pipeline: switched to Vite to resolve npm vulnerabilities, authored the backend test suite, and fixed Redis + WebSocket state-sync bugs surfacing in the live dashboard.',
     ],
   },
 ]
