@@ -10,11 +10,21 @@ export default function Navbar() {
 
   useEffect(() => {
     let idleTimer: ReturnType<typeof setTimeout> | null = null
+    let lastY = window.scrollY
+    let lastT = performance.now()
     const onScroll = () => {
-      setScrolled(window.scrollY > 40)
-      setScrolling(true)
-      if (idleTimer) clearTimeout(idleTimer)
-      idleTimer = setTimeout(() => setScrolling(false), 180)
+      const now = performance.now()
+      const y = window.scrollY
+      const dt = Math.max(now - lastT, 1)
+      const speed = Math.abs(y - lastY) / dt
+      lastY = y
+      lastT = now
+      setScrolled(y > 40)
+      if (speed > 1.2) {
+        setScrolling(true)
+        if (idleTimer) clearTimeout(idleTimer)
+        idleTimer = setTimeout(() => setScrolling(false), 180)
+      }
     }
     window.addEventListener('scroll', onScroll)
     return () => {
