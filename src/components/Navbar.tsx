@@ -4,13 +4,23 @@ import { navLinks as links } from '../data/nav'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
+  const [scrolling, setScrolling] = useState(false)
   const [active, setActive] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40)
+      setScrolling(true)
+      if (idleTimer) clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => setScrolling(false), 180)
+    }
     window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (idleTimer) clearTimeout(idleTimer)
+    }
   }, [])
 
   useEffect(() => {
@@ -37,7 +47,7 @@ export default function Navbar() {
   const close = () => setMenuOpen(false)
 
   return (
-    <nav className={`navbar${scrolled ? ' scrolled' : ''}${menuOpen ? ' menu-open' : ''}`}>
+    <nav className={`navbar${scrolled ? ' scrolled' : ''}${menuOpen ? ' menu-open' : ''}${scrolling ? ' scrolling' : ''}`}>
       <a href="#hero" className="navbar-logo" onClick={close}>
         <span className="mono">jmt</span>
         <span className="accent">.</span>

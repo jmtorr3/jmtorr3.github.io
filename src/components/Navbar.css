@@ -160,13 +160,14 @@
     transition: opacity 0.3s;
   }
 
-  .navbar.scrolled .hamburger {
-    opacity: 0.4;
+  .navbar.scrolling .hamburger {
+    opacity: 0;
+    pointer-events: none;
   }
 
-  .navbar.scrolled .hamburger:hover,
-  .navbar.scrolled.menu-open .hamburger {
-    opacity: 1;
+  .navbar.menu-open .hamburger {
+    opacity: 1 !important;
+    pointer-events: all !important;
   }
 
   .navbar-links {
