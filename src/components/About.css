@@ -21,6 +21,7 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1.5rem;
+  position: relative;
 }
 
 .edu-header {
@@ -101,5 +102,11 @@
     flex-direction: column;
     align-items: flex-start;
     gap: 0.2rem;
+  }
+
+  .edu-date {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
   }
 }
