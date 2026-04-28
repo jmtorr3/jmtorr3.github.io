@@ -60,11 +60,11 @@ export const projects = [
     ],
   },
   {
-    title: 'Nintendo DS Security Analysis',
-    subtitle: 'Reverse Engineering Research',
+    title: 'Reverse Engineering Pokémon Black',
+    subtitle: 'Nintendo DS Memory & Cheat Analysis',
     date: 'Winter 2024',
     featured: true,
-    tech: ['Assembly', 'DeSmuME', 'Ghidra', 'Python'],
+    tech: ['ARM Assembly', 'DeSmuME', 'NO$GBA', 'PKHeX', 'Action Replay'],
     github: null,
     logo: '/PKMNBLK/pkball.png',
     images: [
@@ -72,9 +72,9 @@ export const projects = [
       { src: '/PKMNBLK/ram.png', alt: 'RAM inspection during reverse engineering' },
     ],
     bullets: [
-      'Executed dynamic binary analysis on the Nintendo DS architecture using a virtualized lab environment from the Advanced Software Reverse Engineering curriculum.',
-      'Reverse-engineered the proprietary Gen 5 Linear Congruential Generator (LCG) encryption protocol to decrypt 220-byte save file structures.',
-      'Built a custom Python tool calculating dynamic block shuffling permutations via PID bitmask — enabling binary modification without checksum corruption.',
+      'Used Action Replay codes as a window into the game\'s internals — decoded the AR opcode/prefix format and treated working cheats as known-good memory patches to trace which addresses drive specific in-game behavior.',
+      'Mapped player movement speed to a live ARM instruction at 0x02197FC4 (MOV R1, #0x0C) and reverse-engineered the wild encounter system to a preloaded slot table at 0x02250010, verified by injecting species IDs and observing battle outcomes.',
+      'Documented the Gen 5 in-RAM Pokémon data layout — 220-byte encrypted blocks (species, IVs/EVs, nickname, OT, nature) preceded by the N.pokeparty.c header — by cross-checking RAM dumps against PKHeX as a foundation for an in-progress standalone save editor.',
     ],
   },
   {
