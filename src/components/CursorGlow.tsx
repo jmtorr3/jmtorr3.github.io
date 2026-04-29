@@ -1,12 +1,21 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './CursorGlow.css'
 
 export default function CursorGlow() {
   const ref = useRef<HTMLDivElement | null>(null)
+  const [enabled, setEnabled] = useState(false)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (!window.matchMedia('(pointer: fine)').matches) return
+    const mq = window.matchMedia('(pointer: fine) and (hover: hover)')
+    setEnabled(mq.matches)
+    const onChange = (e: MediaQueryListEvent) => setEnabled(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  useEffect(() => {
+    if (!enabled) return
 
     const el = ref.current
     if (!el) return
@@ -70,7 +79,8 @@ export default function CursorGlow() {
       el.removeEventListener('animationend', onAnimEnd)
       if (frame) cancelAnimationFrame(frame)
     }
-  }, [])
+  }, [enabled])
 
+  if (!enabled) return null
   return <div ref={ref} className="cursor-glow" aria-hidden="true" />
 }
