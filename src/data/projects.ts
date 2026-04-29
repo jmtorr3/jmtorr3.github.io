@@ -90,7 +90,7 @@ export const projects = [
     bullets: [
       'Designed and built a fork-friendly blogging platform with a Django REST API backend and a React + Vite frontend, containerized end-to-end with Docker Compose and an Nginx reverse proxy.',
       'Implemented JWT-authenticated admin (SimpleJWT) with a draft/publish workflow, cover image upload, block-based post editing, and a public chat feature for visitor messages.',
-      'Exposed a public read-only API that feeds posts into this very portfolio, designed so other developers can fork the repo and customize it for their own personal blog.',
+      'Designed a public read-only API to syndicate posts into this portfolio, structured so other developers can fork the repo and customize it for their own personal blog.',
     ],
   },
   {
