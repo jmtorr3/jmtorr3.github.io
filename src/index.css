@@ -6,6 +6,19 @@
   cursor: url('/cursor.cur'), auto;
 }
 
+button, button *,
+a, a *,
+[role="button"], [role="button"] *,
+label[for], label[for] *,
+summary, summary *,
+input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"] {
+  cursor: pointer;
+}
+
+button:disabled, button:disabled * {
+  cursor: not-allowed;
+}
+
 :root {
   --bg: #0d1520;
   --bg-card: #111e2e;
