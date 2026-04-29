@@ -66,28 +66,30 @@ function OtherCard({ p }: { p: typeof otherProjects[number] }) {
             <div className="other-meta">
               <span className="other-role">{p.role}</span>
               <span className="other-stat">{statText}</span>
-              {p.modrinth && (
-                <a
-                  href={p.modrinth}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="github-link"
-                  aria-label={`${p.title} on Modrinth`}
-                >
-                  <ModrinthIcon />
-                </a>
-              )}
-              {p.github && (
-                <a
-                  href={p.github}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="github-link"
-                  aria-label={`${p.title} on GitHub`}
-                >
-                  <GitHubIcon />
-                </a>
-              )}
+              <div className="other-links">
+                {p.modrinth && (
+                  <a
+                    href={p.modrinth}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="github-link"
+                    aria-label={`${p.title} on Modrinth`}
+                  >
+                    <ModrinthIcon />
+                  </a>
+                )}
+                {p.github && (
+                  <a
+                    href={p.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="github-link"
+                    aria-label={`${p.title} on GitHub`}
+                  >
+                    <GitHubIcon />
+                  </a>
+                )}
+              </div>
             </div>
           </div>
 
