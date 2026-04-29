@@ -47,7 +47,7 @@ export default function Hero() {
         </div>
         <div className="status-badge">
           <span className="status-dot" />
-          Open to opportunities
+          Open to full-time · May 2026
         </div>
         <p className="hero-greeting">Hellooo, I'm</p>
         <h1 className="hero-name">Jorge Manuel Torre</h1>

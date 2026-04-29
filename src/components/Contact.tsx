@@ -9,8 +9,9 @@ export default function Contact() {
 
       <div className="contact-wrapper">
         <p className="contact-intro">
-          I'm currently looking for opportunities — feel free to reach out whether it's about
-          a role, a project, or just to connect.
+          Graduating <strong>May 2026</strong> and open to <strong>full-time SWE, Systems, and ML roles</strong> starting summer 2026 —
+          remote, DC/NoVA, or open to relocation. If your team is hiring or you know someone who is,
+          I'd love to chat. Email is fastest.
         </p>
 
         <div className="contact-links">
