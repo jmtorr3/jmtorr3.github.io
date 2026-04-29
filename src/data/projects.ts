@@ -46,7 +46,7 @@ export const projects = [
   {
     title: 'Garage64',
     subtitle: 'Custom Entity Model Studio',
-    date: 'Spring 2026',
+    date: 'August 2025 – Present',
     featured: true,
     tech: ['React', 'Three.js', 'Django', 'SQLite', 'Docker'],
     github: 'https://github.com/jmtorr3/Garage64',
