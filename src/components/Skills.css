@@ -100,14 +100,8 @@
   color: var(--text);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .skills-grid {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 641px) and (max-width: 900px) {
-  .skills-grid {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
