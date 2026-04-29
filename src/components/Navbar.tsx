@@ -88,9 +88,7 @@ export default function Navbar() {
         ))}
         <li>
           <a
-            href={`${import.meta.env.BASE_URL}Jorge_Manuel_Torre_Resume.pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`${import.meta.env.BASE_URL}resume.html`}
             className="nav-resume"
             onClick={close}
           >

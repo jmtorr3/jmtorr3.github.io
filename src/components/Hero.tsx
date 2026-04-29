@@ -54,9 +54,7 @@ export default function Hero() {
           <a href="#projects" className="btn btn-primary">View Projects</a>
           <a href="#contact" className="btn btn-ghost">Get in Touch</a>
           <a
-            href={`${import.meta.env.BASE_URL}Jorge_Manuel_Torre_Resume.pdf`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`${import.meta.env.BASE_URL}resume.html`}
             className="btn btn-ghost"
           >
             Resume

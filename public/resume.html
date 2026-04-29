@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resume — Jorge Manuel Torre</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1520;
+      --bg-card: #111e2e;
+      --bg-card-hover: #162538;
+      --border: #1c3050;
+      --accent: #4aafd4;
+      --accent-dim: #255e80;
+      --accent-glow: rgba(74, 175, 212, 0.15);
+      --text: #ddeaf5;
+      --text-muted: #7a9dba;
+      --text-faint: #3a5872;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-sans: 'Inter', sans-serif;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 4rem 1.5rem;
+    }
+
+    .back {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 2.5rem;
+      transition: color 0.2s ease;
+    }
+    .back:hover { color: var(--accent); }
+
+    .label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    .intro {
+      color: var(--text-muted);
+      max-width: 60ch;
+      margin-bottom: 2.5rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.5rem;
+      text-decoration: none;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+      position: relative;
+    }
+    .card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-dim);
+      transform: translateY(-2px);
+    }
+    .card:hover .card-arrow { color: var(--accent); transform: translateX(2px); }
+
+    .card-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      flex: 1;
+    }
+
+    .card-arrow {
+      font-family: var(--font-mono);
+      color: var(--text-faint);
+      font-size: 0.85rem;
+      align-self: flex-end;
+      transition: color 0.2s ease, transform 0.2s ease;
+    }
+
+    .footnote {
+      margin-top: 2rem;
+      font-size: 0.8rem;
+      color: var(--text-faint);
+      font-family: var(--font-mono);
+    }
+    .footnote a { color: var(--text-muted); text-decoration: none; }
+    .footnote a:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <a class="back" href="/">← back to portfolio</a>
+
+    <p class="label">resume</p>
+    <h1>Pick the version that fits the role</h1>
+    <p class="intro">
+      I keep three resumes tuned for different role types — same person,
+      different emphasis. Click any card to open the PDF in a new tab.
+    </p>
+
+    <div class="cards">
+      <a class="card" href="/Jorge_Manuel_Torre_Resume_SWE.pdf" target="_blank" rel="noopener noreferrer">
+        <span class="card-tag">A · default</span>
+        <span class="card-title">SWE / Full-Stack</span>
+        <span class="card-desc">
+          Web apps, REST APIs, full-stack engineering. Leads with Garage64, personal-blog, and the CS capstone (CHUD).
+        </span>
+        <span class="card-arrow">open ↗</span>
+      </a>
+
+      <a class="card" href="/Jorge_Manuel_Torre_Resume_Systems.pdf" target="_blank" rel="noopener noreferrer">
+        <span class="card-tag">B</span>
+        <span class="card-title">Systems / Low-Level</span>
+        <span class="card-desc">
+          Reverse engineering, Linux internals, infrastructure. Leads with Pokémon Black RE and the home lab.
+        </span>
+        <span class="card-arrow">open ↗</span>
+      </a>
+
+      <a class="card" href="/Jorge_Manuel_Torre_Resume_ML.pdf" target="_blank" rel="noopener noreferrer">
+        <span class="card-tag">C</span>
+        <span class="card-title">ML / AI</span>
+        <span class="card-desc">
+          LLM safety, fine-tuning attacks, reinforcement learning. Leads with the CHUD capstone and Celeste-RL.
+        </span>
+        <span class="card-arrow">open ↗</span>
+      </a>
+    </div>
+
+    <p class="footnote">
+      Not sure which? Default to <a href="/Jorge_Manuel_Torre_Resume_SWE.pdf" target="_blank" rel="noopener noreferrer">SWE</a>.
+    </p>
+  </main>
+</body>
+</html>

@@ -1,5 +1,25 @@
 export const projects = [
   {
+    title: 'CHUD',
+    subtitle: 'Catastrophic Harmful Update Detection — LLM Safety Capstone',
+    date: 'Spring 2026',
+    featured: true,
+    tech: ['Python', 'PyTorch', 'LoRA', 'Llama-2-7b', 'Llama-Guard-3-8b', 'Unsloth'],
+    github: null,
+    collaborators: [
+      { name: 'Team of 4 (CS Capstone)', href: 'https://github.com/jmtorr3' },
+    ],
+    images: [
+      { src: '/CHUD/direct-attack.png', alt: 'Q1 — ASR vs. BeaverTails samples: LoX defense vs. base Chat model under direct harmful fine-tuning' },
+      { src: '/CHUD/iterative-attack.png', alt: 'Q2 — iterative attack: GSM8k pre-training drives catastrophic forgetting and weakens LoX' },
+    ],
+    bullets: [
+      'Senior capstone — extending the LoX defense (Perin et al., COLM 2025) with a more realistic threat model: an iterative LoRA-based fine-tuning attack on Llama-2-7b that interleaves benign GSM8k samples with adversarial BeaverTails samples to drive catastrophic forgetting in safety-critical subspaces.',
+      'Built an Attack Success Rate (ASR) evaluation pipeline using Llama-Guard-3-8b as a judge model, calibrated against AdvBench (99% accuracy, 2% FNR) and BeaverTails; ran 30+ ASR experiments across attack mixes and learning-rate sweeps.',
+      'Showed direct harmful fine-tuning breaks Chat-aligned Llama-2 to 91–96% ASR, LoX reduces this to 37–63% under direct attack, and our iterative mixed-data attack pushes ASR back to 89% — demonstrating that LoX flattens the safety landscape but is not adversarially robust.',
+    ],
+  },
+  {
     title: 'Celeste-RL',
     subtitle: 'Deep Reinforcement Learning for a Precision Platformer',
     date: 'Spring 2026',
@@ -54,6 +74,23 @@ export const projects = [
       'Full-stack web application serving as a complete suite for designing and exporting custom Minecraft car models (OptiFine CEM) and texture packs.',
       'Engineered a React + Three.js frontend for a real-time 3D workspace — users dynamically compose vehicles by swapping parts and applying custom paint textures.',
       'Developed a Django REST API to manage entity data and created a one-click export generating ready-to-use .jem and .jpm asset files.',
+    ],
+  },
+  {
+    title: 'personal-blog',
+    subtitle: 'Full-Stack Blogging Platform',
+    date: 'Spring 2026',
+    featured: true,
+    tech: ['React', 'Vite', 'Django REST Framework', 'PostgreSQL', 'Docker', 'Nginx'],
+    github: 'https://github.com/jmtorr3/personal-blog',
+    images: [
+      { src: '/PERSONAL_BLOG/index.png', alt: 'jmt.blog public index — post cards rendered against a starfield background' },
+      { src: '/PERSONAL_BLOG/post.png', alt: 'a published post with cover image, draft/publish controls, and block-based content' },
+    ],
+    bullets: [
+      'Designed and built a fork-friendly blogging platform with a Django REST API backend and a React + Vite frontend, containerized end-to-end with Docker Compose and an Nginx reverse proxy.',
+      'Implemented JWT-authenticated admin (SimpleJWT) with a draft/publish workflow, cover image upload, block-based post editing, and a public chat feature for visitor messages.',
+      'Exposed a public read-only API that feeds posts into this very portfolio, designed so other developers can fork the repo and customize it for their own personal blog.',
     ],
   },
   {

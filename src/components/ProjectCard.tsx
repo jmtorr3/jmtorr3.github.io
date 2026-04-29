@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Lightbox from './Lightbox'
 import './Projects.css'
 
 export type Project = {
@@ -126,6 +127,7 @@ function CardTech({ tech }: { tech: string[] }) {
 }
 
 export function FeaturedCard({ project: p, index }: CardProps) {
+  const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null)
   return (
     <div className="project-card project-card--featured">
       <span className="project-number" aria-hidden="true">
@@ -157,22 +159,32 @@ export function FeaturedCard({ project: p, index }: CardProps) {
         {p.images && (
           <div className="featured-right">
             {p.images.map((img) => (
-              <img
+              <button
                 key={img.alt}
-                src={img.src}
-                alt={img.alt}
-                loading="lazy"
-                className="project-img"
-              />
+                type="button"
+                className="project-img-trigger"
+                onClick={() => setZoom({ src: img.src, alt: img.alt })}
+                aria-label={`Enlarge: ${img.alt}`}
+              >
+                <img
+                  src={img.src}
+                  alt={img.alt}
+                  loading="lazy"
+                  className="project-img"
+                />
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {zoom && <Lightbox src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
     </div>
   )
 }
 
 export function ProjectCard({ project: p, index }: CardProps) {
+  const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null)
   return (
     <div className="project-card">
       <span className="project-number" aria-hidden="true">
@@ -200,18 +212,27 @@ export function ProjectCard({ project: p, index }: CardProps) {
       {p.images && (
         <div className="project-images">
           {p.images.map((img) => (
-            <img
+            <button
               key={img.alt}
-              src={img.src}
-              alt={img.alt}
-              loading="lazy"
-              className="project-img"
-            />
+              type="button"
+              className="project-img-trigger"
+              onClick={() => setZoom({ src: img.src, alt: img.alt })}
+              aria-label={`Enlarge: ${img.alt}`}
+            >
+              <img
+                src={img.src}
+                alt={img.alt}
+                loading="lazy"
+                className="project-img"
+              />
+            </button>
           ))}
         </div>
       )}
 
       <CardTech tech={p.tech} />
+
+      {zoom && <Lightbox src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
     </div>
   )
 }
