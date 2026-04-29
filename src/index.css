@@ -3,20 +3,16 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  cursor: url('/cursor.cur'), auto;
 }
 
-button, button *,
-a, a *,
-[role="button"], [role="button"] *,
-label[for], label[for] *,
-summary, summary *,
-input[type="button"], input[type="submit"], input[type="reset"], input[type="checkbox"], input[type="radio"] {
-  cursor: pointer;
-}
-
-button:disabled, button:disabled * {
-  cursor: not-allowed;
+@media (pointer: fine) {
+  *, *::before, *::after,
+  button, button *,
+  a, a *,
+  [role="button"], [role="button"] *,
+  button:disabled, button:disabled * {
+    cursor: none !important;
+  }
 }
 
 :root {

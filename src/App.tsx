@@ -9,6 +9,7 @@ import Contact from './components/Contact'
 import FadeIn from './components/FadeIn'
 import Snow from './components/Snow'
 import SnowPile from './components/SnowPile'
+import CursorGlow from './components/CursorGlow'
 import './App.css'
 
 export default function App() {
@@ -45,6 +46,7 @@ export default function App() {
         <a href="#hero" className="back-to-top" aria-label="Back to top">↑ Back to top</a>
       </main>
       <SnowPile />
+      <CursorGlow />
     </>
   )
 }

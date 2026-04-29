@@ -1,0 +1,55 @@
+.cursor-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 70%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 25%, transparent) 45%,
+    transparent 75%
+  );
+  mix-blend-mode: screen;
+  filter: blur(2px);
+  will-change: transform;
+  transition: width 0.18s ease, height 0.18s ease, background 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
+}
+
+.cursor-glow.hidden {
+  opacity: 0;
+}
+
+.cursor-glow.over-link {
+  width: 44px;
+  height: 44px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 90%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 45%, transparent) 50%,
+    transparent 80%
+  );
+  filter: blur(1px);
+}
+
+.cursor-glow.expanding {
+  animation: cursor-expand 420ms ease-out forwards;
+}
+
+@keyframes cursor-expand {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 28px color-mix(in srgb, var(--accent) 0%, transparent);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor-glow.expanding { animation: none; }
+}
