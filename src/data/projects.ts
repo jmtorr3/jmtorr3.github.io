@@ -7,7 +7,9 @@ export const projects = [
     tech: ['Python', 'PyTorch', 'LoRA', 'Llama-2-7b', 'Llama-Guard-3-8b', 'Unsloth'],
     github: null,
     collaborators: [
-      { name: 'Team of 4 (CS Capstone)', href: 'https://github.com/jmtorr3' },
+      { name: 'Alex Levy', href: 'https://www.linkedin.com/in/alexlevy246/' },
+      { name: 'Jeevan Shahi', href: 'https://www.linkedin.com/in/jeevan-shahi/' },
+      { name: 'Elias Mengistu', href: 'https://www.linkedin.com/in/elias-mengistu/' },
     ],
     images: [
       { src: '/CHUD/direct-attack.png', alt: 'Q1 — ASR vs. BeaverTails samples: LoX defense vs. base Chat model under direct harmful fine-tuning' },

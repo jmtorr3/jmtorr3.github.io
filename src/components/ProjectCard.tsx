@@ -17,7 +17,7 @@ export type Project = {
   titleGifIntervalMs?: number
   images?: { src: string; alt: string }[]
   bullets: string[]
-  collaborators?: { name: string; href: string }[]
+  collaborators?: { name: string; href?: string }[]
 }
 
 type CardProps = { project: Project; index: number }
@@ -103,14 +103,16 @@ function CardBullets({ bullets }: { bullets: string[] }) {
   )
 }
 
-function CardCollaborators({ collaborators }: { collaborators?: { name: string; href: string }[] }) {
+function CardCollaborators({ collaborators }: { collaborators?: { name: string; href?: string }[] }) {
   if (!collaborators?.length) return null
   return (
     <p className="project-collaborators">
       with{' '}
       {collaborators.map((c, i) => (
-        <span key={c.href}>
-          <a href={c.href} target="_blank" rel="noopener noreferrer">{c.name}</a>
+        <span key={c.name}>
+          {c.href
+            ? <a href={c.href} target="_blank" rel="noopener noreferrer">{c.name}</a>
+            : c.name}
           {i < collaborators.length - 1 ? ', ' : ''}
         </span>
       ))}
