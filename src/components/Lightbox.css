@@ -56,6 +56,11 @@
   border: none;
 }
 
+body.lightbox-open .hamburger {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 @keyframes lightbox-fade {
   from { opacity: 0; }
   to { opacity: 1; }
