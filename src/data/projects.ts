@@ -18,7 +18,8 @@ export const projects = [
     bullets: [
       'Senior capstone — extending the LoX defense (Perin et al., COLM 2025) with a more realistic threat model: an iterative LoRA-based fine-tuning attack on Llama-2-7b that interleaves benign GSM8k samples with adversarial BeaverTails samples to drive catastrophic forgetting in safety-critical subspaces.',
       'Built an Attack Success Rate (ASR) evaluation pipeline using Llama-Guard-3-8b as a judge model, calibrated against AdvBench (99% accuracy, 2% FNR) and BeaverTails; ran 30+ ASR experiments across attack mixes and learning-rate sweeps.',
-      'Showed direct harmful fine-tuning breaks Chat-aligned Llama-2 to 91–96% ASR, LoX reduces this to 37–63% under direct attack, and our iterative mixed-data attack pushes ASR back to 89% — demonstrating that LoX flattens the safety landscape but is not adversarially robust.',
+      'Identified a robustness gap in LoX: direct harmful fine-tuning achieves 91–96% ASR on Chat-aligned Llama-2, LoX reduces this to 37–63% under direct attack, but iterative mixed-data attack restores 89% ASR — flattening the safety landscape without eliminating exploitability.',
+      'Provisioned dual VT GPU cluster environments (x86-64 and aarch64) for the team\'s training pipeline; owned QLoRA fine-tuning evaluation and integrated results into the final ASR analysis.',
     ],
   },
   {
@@ -37,7 +38,7 @@ export const projects = [
       { src: 'https://raw.githubusercontent.com/jmtorr3/celeste-rl/master/docs/comparison/outcome_breakdown.png', alt: 'per-method outcome breakdown' },
     ],
     bullets: [
-      'Final project for VT CS 4824 (Machine Learning) — controlled comparison of five RL methods (DQN, Behavioral Cloning, Hybrid, Curriculum, Dueling DQN + curiosity) trained to play Celeste Classic room 0 on the Pyleste emulator.',
+      'Controlled comparison of five RL methods (DQN, Behavioral Cloning, Hybrid, Curriculum, Dueling DQN + curiosity) trained to play Celeste Classic room 0 on the Pyleste emulator.',
       'Identified that state representation dominated algorithm choice as the deciding factor: replacing raw PICO-8 tile IDs with a 5-class semantic encoding (air / solid / spike / out-of-bounds / other) raised plain DQN completion from 8% to 57–68% with no other change.',
       'Shipped a fully reproducible pipeline with batched evaluation script, automated comparison plots, side-by-side gameplay GIF generator, GitHub-Pages-deployed results website, and a published debugging devlog covering 9 iteration phases.',
     ],
