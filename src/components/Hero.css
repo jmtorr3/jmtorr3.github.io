@@ -94,14 +94,39 @@
   }
 }
 
+.hero-avatar-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin-bottom: 1rem;
+}
+
 .hero-avatar {
   width: 120px;
   height: 120px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid var(--border);
-  margin-bottom: 1rem;
   box-shadow: 0 0 30px var(--accent-glow);
+}
+
+.hero-avatar-wrap .hero-avatar {
+  position: absolute;
+  inset: 0;
+  margin-bottom: 0;
+  transition: opacity 0.35s ease;
+}
+
+.hero-avatar-hover {
+  opacity: 0;
+}
+
+.hero-avatar-wrap:hover .hero-avatar-default {
+  opacity: 0;
+}
+
+.hero-avatar-wrap:hover .hero-avatar-hover {
+  opacity: 1;
 }
 
 .status-badge {

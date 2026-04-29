@@ -30,12 +30,21 @@ export default function Hero() {
   return (
     <section id="hero" className="hero">
       <div className="hero-content">
-        <img
-          src={`${import.meta.env.BASE_URL}avatar.jpg`}
-          alt="Jorge Manuel Torre"
-          className="hero-avatar"
-          loading="lazy"
-        />
+        <div className="hero-avatar-wrap">
+          <img
+            src={`${import.meta.env.BASE_URL}avatar.jpg`}
+            alt="Jorge Manuel Torre"
+            className="hero-avatar hero-avatar-default"
+            loading="lazy"
+          />
+          <img
+            src={`${import.meta.env.BASE_URL}slumpy.png`}
+            alt=""
+            aria-hidden="true"
+            className="hero-avatar hero-avatar-hover"
+            loading="lazy"
+          />
+        </div>
         <div className="status-badge">
           <span className="status-dot" />
           Open to opportunities
