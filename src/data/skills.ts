@@ -5,11 +5,11 @@ export const skillGroups = [
     skills: [
       { name: 'PyTorch',                  icon: '\ue73c' },
       { name: 'LoRA',                     icon: '\uf471' },
-      { name: 'Fine-Tuning',              icon: '\uf7d9' },
+      { name: 'Fine-Tuning',              icon: '\uf013' },
       { name: 'LLM Safety & Alignment',   icon: '\uf023' },
       { name: 'Reinforcement Learning',   icon: '\uf11b' },
       { name: 'DQN / BC / Curriculum',    icon: '\uf1b3' },
-      { name: 'Llama / Llama-Guard',      icon: '\uf544' },
+      { name: 'Llama / Llama-Guard',      icon: '\uf132' },
       { name: 'Adversarial ML',           icon: '\uf132' },
       { name: 'Research Methodology',     icon: '\uf02d' },
     ],
@@ -69,6 +69,7 @@ export const skillGroups = [
       { name: 'Nginx',      icon: '\uf0ac' },
       { name: 'Git',        icon: '\ue702' },
       { name: 'CI/CD',      icon: '\uf013' },
+      { name: 'Arch btw...', icon: '\uf303' },
     ],
   },
 ]
