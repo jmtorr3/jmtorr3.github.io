@@ -1,7 +1,5 @@
 #skills {
-  width: min(1120px, calc(100vw - 3rem));
-  margin-left: 50%;
-  transform: translateX(-50%);
+  width: 100%;
 }
 
 .skills-grid {
@@ -139,10 +137,6 @@
 }
 
 @media (max-width: 640px) {
-  #skills {
-    width: min(100%, calc(100vw - 2rem));
-  }
-
   .skills-grid {
     grid-template-columns: 1fr;
   }
