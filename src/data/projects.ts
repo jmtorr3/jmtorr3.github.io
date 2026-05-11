@@ -31,6 +31,16 @@ export const projects = [
     github: 'https://github.com/jmtorr3/celeste-rl',
     demo: 'https://jmtorr3.github.io/celeste-rl-web/',
     demoLabel: 'Website',
+    links: [
+      {
+        label: 'Report',
+        href: 'https://jmtorr3.github.io/celeste-rl-web/Celeste_RL__A_Controlled_Comparison_of_Reinforcement_Learning_Methods_on_a_Precision_Platformer.pdf',
+      },
+      {
+        label: 'Presentation',
+        href: 'https://jmtorr3.github.io/celeste-rl-web/CELESTERL-LATEST.pdf',
+      },
+    ],
     logo: '/CELESTERL/maddy.png',
     images: [
       { src: '/CELESTERL/p8logo.png', alt: 'pico-8 wordmark' },

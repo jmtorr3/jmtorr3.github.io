@@ -11,6 +11,7 @@ export type Project = {
   github?: string | null
   demo?: string
   demoLabel?: string
+  links?: { label: string; href: string }[]
   logo?: string
   titleLogo?: string
   titleGifs?: string[]
@@ -80,6 +81,17 @@ function CardLinks({ p }: { p: Project }) {
           {p.demoLabel ?? 'Demo'} ↗
         </a>
       )}
+      {p.links?.map((link) => (
+        <a
+          key={link.href}
+          href={link.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="demo-link"
+        >
+          {link.label} ↗
+        </a>
+      ))}
       {p.github && (
         <a
           href={p.github}
