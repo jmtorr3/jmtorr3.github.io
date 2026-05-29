@@ -5,7 +5,13 @@ export const projects = [
     date: 'Spring 2026',
     featured: true,
     tech: ['Python', 'PyTorch', 'LoRA', 'Llama-2-7b', 'Llama-Guard-3-8b', 'Unsloth'],
-    github: null,
+    github: 'https://github.com/jmtorr3/C.H.U.D.',
+    links: [
+      {
+        label: 'Report',
+        href: 'https://github.com/jmtorr3/C.H.U.D./blob/main/CHUD.pdf',
+      },
+    ],
     collaborators: [
       { name: 'Alex Levy', href: 'https://www.linkedin.com/in/alexlevy246/' },
       { name: 'Jeevan Shahi', href: 'https://www.linkedin.com/in/jeevan-shahi/' },
