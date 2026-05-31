@@ -16,6 +16,13 @@ section {
   }
 }
 
+@media (min-width: 1600px) {
+  main {
+    max-width: 1200px;
+    padding: 0 2rem;
+  }
+}
+
 .section-label {
   font-family: var(--font-mono);
   font-size: 0.75rem;
