@@ -50,7 +50,8 @@
 }
 
 .project-img-trigger {
-  display: contents;
+  display: block;
+  width: 100%;
   padding: 0;
   background: none;
   border: none;

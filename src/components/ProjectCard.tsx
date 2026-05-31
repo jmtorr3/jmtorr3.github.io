@@ -22,6 +22,7 @@ export type Project = {
 }
 
 type CardProps = { project: Project; index: number }
+type FeaturedCardProps = CardProps & { layout?: 'classic' | 'wrapping' }
 
 function GitHubIcon() {
   return (
@@ -140,10 +141,10 @@ function CardTech({ tech }: { tech: string[] }) {
   )
 }
 
-export function FeaturedCard({ project: p, index }: CardProps) {
+export function FeaturedCard({ project: p, index, layout = 'classic' }: FeaturedCardProps) {
   const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null)
   return (
-    <div className="project-card project-card--featured">
+    <div className={`project-card project-card--featured project-card--${layout}`}>
       <span className="project-number" aria-hidden="true">
         {String(index + 1).padStart(2, '0')}
       </span>
@@ -151,25 +152,6 @@ export function FeaturedCard({ project: p, index }: CardProps) {
       <CardChrome p={p} />
 
       <div className="featured-main">
-        <div className="featured-left">
-          <div className="project-header-left" style={{ marginBottom: '0.75rem' }}>
-            {p.titleGifs && p.titleGifs.length > 0 && (
-              <RotatingGifs gifs={p.titleGifs} intervalMs={p.titleGifIntervalMs} />
-            )}
-            {p.logo && (
-              <img src={p.logo} alt={`${p.title} logo`} className="project-logo" loading="lazy" />
-            )}
-            <div>
-              <CardTitle p={p} />
-              <p className="project-subtitle">{p.subtitle}</p>
-            </div>
-          </div>
-          <CardLinks p={p} />
-          <CardBullets bullets={p.bullets} />
-          <CardCollaborators collaborators={p.collaborators} />
-          <CardTech tech={p.tech} />
-        </div>
-
         {p.images && (
           <div className="featured-right">
             {p.images.map((img) => (
@@ -190,6 +172,25 @@ export function FeaturedCard({ project: p, index }: CardProps) {
             ))}
           </div>
         )}
+
+        <div className="featured-left">
+          <div className="project-header-left" style={{ marginBottom: '0.75rem' }}>
+            {p.titleGifs && p.titleGifs.length > 0 && (
+              <RotatingGifs gifs={p.titleGifs} intervalMs={p.titleGifIntervalMs} />
+            )}
+            {p.logo && (
+              <img src={p.logo} alt={`${p.title} logo`} className="project-logo" loading="lazy" />
+            )}
+            <div>
+              <CardTitle p={p} />
+              <p className="project-subtitle">{p.subtitle}</p>
+            </div>
+          </div>
+          <CardLinks p={p} />
+          <CardBullets bullets={p.bullets} />
+          <CardCollaborators collaborators={p.collaborators} />
+          <CardTech tech={p.tech} />
+        </div>
       </div>
 
       {zoom && <Lightbox src={zoom.src} alt={zoom.alt} onClose={() => setZoom(null)} />}
