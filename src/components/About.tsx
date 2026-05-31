@@ -13,8 +13,8 @@ export default function About() {
 			<div className="about-grid">
 				<div className="about-text">
 					<p>
-						I'm a Computer Science student at{' '}
-						<strong>Virginia Tech</strong> graduating in May 2026, based in Ashburn, VA.
+						I'm a Computer Science graduate from{' '}
+						<strong>Virginia Tech</strong>, based in Ashburn, VA.
 						I'm drawn to how software interacts with hardware.
 					</p>
 					<p>
@@ -23,7 +23,7 @@ export default function About() {
 						my time tinkering with my homelab, messing with
 						PICO-8,{' '}
 						<a href="https://www.youtube.com/@sys32ent" target="_blank" rel="noopener noreferrer">skateboarding</a>{' '}
-						with friends, or just hanging out with my dogs.
+						with friends, or just hanging out with my doggos.
 					</p>
 				</div>
 

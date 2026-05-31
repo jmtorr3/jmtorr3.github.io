@@ -3,74 +3,74 @@ import './Hero.css'
 import { roleText as ROLE_TEXT, heroBio, currentLocation } from '../data/hero'
 
 function useTyping(text, speed = 48) {
-  const [displayed, setDisplayed] = useState('')
-  const [done, setDone] = useState(false)
+	const [displayed, setDisplayed] = useState('')
+	const [done, setDone] = useState(false)
 
-  useEffect(() => {
-    let i = 0
-    setDisplayed('')
-    setDone(false)
-    const id = setInterval(() => {
-      i++
-      setDisplayed(text.slice(0, i))
-      if (i >= text.length) {
-        clearInterval(id)
-        setDone(true)
-      }
-    }, speed)
-    return () => clearInterval(id)
-  }, [text, speed])
+	useEffect(() => {
+		let i = 0
+		setDisplayed('')
+		setDone(false)
+		const id = setInterval(() => {
+			i++
+			setDisplayed(text.slice(0, i))
+			if (i >= text.length) {
+				clearInterval(id)
+				setDone(true)
+			}
+		}, speed)
+		return () => clearInterval(id)
+	}, [text, speed])
 
-  return { displayed, done }
+	return { displayed, done }
 }
 
 export default function Hero() {
-  const { displayed, done } = useTyping(ROLE_TEXT)
+	const { displayed, done } = useTyping(ROLE_TEXT)
 
-  return (
-    <section id="hero" className="hero">
-      <div className="hero-content">
-        <div className="hero-avatar-wrap">
-          <img
-            src={`${import.meta.env.BASE_URL}avatar.jpg`}
-            alt="Jorge Manuel Torre"
-            className="hero-avatar hero-avatar-default"
-            loading="lazy"
-          />
-          <img
-            src={`${import.meta.env.BASE_URL}slumpy.png`}
-            alt=""
-            aria-hidden="true"
-            className="hero-avatar hero-avatar-hover"
-            loading="lazy"
-          />
-        </div>
-        <div className="status-badge">
-          <span className="status-dot" />
-          Open to full-time · May 2026
-        </div>
-        <p className="hero-greeting">Hellooo, I'm</p>
-        <h1 className="hero-name">Jorge Manuel Torre</h1>
-        <p className="hero-role">
-          <span className="mono accent">{'>'}</span> {displayed}
-          <span className={`cursor${done ? ' cursor-blink' : ''}`}>█</span>
-        </p>
-        <p className="hero-working">
-          <span className="mono accent">$</span> based in <a>{currentLocation.label}</a>
-        </p>
-        <p className="hero-bio">{heroBio}</p>
-        <div className="hero-cta">
-          <a href="#projects" className="btn btn-primary">View Projects</a>
-          <a href="#contact" className="btn btn-ghost">Get in Touch</a>
-          <a
-            href={`${import.meta.env.BASE_URL}resume.html`}
-            className="btn btn-ghost"
-          >
-            Resume
-          </a>
-        </div>
-      </div>
-      <pre className="hero-ascii" aria-hidden="true">{`⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+	return (
+		<section id="hero" className="hero">
+			<div className="hero-content">
+				<div className="hero-avatar-wrap">
+					<img
+						src={`${import.meta.env.BASE_URL}avatar.jpg`}
+						alt="Jorge Manuel Torre"
+						className="hero-avatar hero-avatar-default"
+						loading="lazy"
+					/>
+					<img
+						src={`${import.meta.env.BASE_URL}slumpy.png`}
+						alt=""
+						aria-hidden="true"
+						className="hero-avatar hero-avatar-hover"
+						loading="lazy"
+					/>
+				</div>
+				<div className="status-badge">
+					<span className="status-dot" />
+					Open to full-time
+				</div>
+				<p className="hero-greeting">Hellooo, I'm</p>
+				<h1 className="hero-name">Jorge Manuel Torre</h1>
+				<p className="hero-role">
+					<span className="mono accent">{'>'}</span> {displayed}
+					<span className={`cursor${done ? ' cursor-blink' : ''}`}>█</span>
+				</p>
+				<p className="hero-working">
+					<span className="mono accent">$</span> based in <a>{currentLocation.label}</a>
+				</p>
+				<p className="hero-bio">{heroBio}</p>
+				<div className="hero-cta">
+					<a href="#projects" className="btn btn-primary">View Projects</a>
+					<a href="#contact" className="btn btn-ghost">Get in Touch</a>
+					<a
+						href={`${import.meta.env.BASE_URL}resume.html`}
+						className="btn btn-ghost"
+					>
+						Resume
+					</a>
+				</div>
+			</div>
+			<pre className="hero-ascii" aria-hidden="true">{`⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⢿⣿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -92,6 +92,6 @@ export default function Hero() {
 ⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣦⣄⣀⣀⣴⣿⣿⣿⡇⠀⠀⢸⣿⣿⣿⣧⣀⢀⣠⣴⣾⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⡟⠁⠀⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠛⠿⠿⠛⠛⠉⠀⠀⠀⠀⠀⠀⠈⠛⠛⠿⠿⠟⠛⠉⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`}</pre>
-    </section>
-  )
+		</section>
+	)
 }
