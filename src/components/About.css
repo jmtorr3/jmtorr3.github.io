@@ -16,12 +16,19 @@
   font-weight: 600;
 }
 
+.about-edu {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .edu-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1.5rem;
   position: relative;
+  width: 100%;
+  max-width: 430px;
 }
 
 .edu-header {
