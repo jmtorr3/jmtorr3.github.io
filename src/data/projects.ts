@@ -5,11 +5,11 @@ export const projects = [
     date: 'Spring 2026',
     featured: true,
     tech: ['Python', 'PyTorch', 'LoRA', 'Llama-2-7b', 'Llama-Guard-3-8b', 'Unsloth'],
-    github: 'https://github.com/jmtorr3/C.H.U.D.',
+    github: 'https://github.com/jmtorr3/CHUD',
     links: [
       {
         label: 'Report',
-        href: 'https://github.com/jmtorr3/C.H.U.D./blob/main/CHUD.pdf',
+        href: 'https://github.com/jmtorr3/CHUD/blob/main/CHUD.pdf',
       },
     ],
     collaborators: [
