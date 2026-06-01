@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import FadeIn from './FadeIn'
 import './Projects.css'
 import { projects } from '../data/projects'
@@ -10,10 +10,22 @@ const grid = projects.filter((p) => !p.featured)
 
 export default function Projects() {
   const [showAll, setShowAll] = useState(false)
+  const expandRef = useRef<HTMLDivElement | null>(null)
   const visibleFeatured = showAll
     ? featured
     : featured.slice(0, INITIAL_VISIBLE_PROJECTS)
   const hiddenCount = featured.length - INITIAL_VISIBLE_PROJECTS
+  const toggleProjects = () => {
+    if (!showAll) {
+      setShowAll(true)
+      return
+    }
+
+    setShowAll(false)
+    requestAnimationFrame(() => {
+      expandRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
 
   return (
     <section id="projects">
@@ -31,7 +43,7 @@ export default function Projects() {
       ))}
 
       {hiddenCount > 0 && (
-        <div className="projects-expand">
+        <div ref={expandRef} className="projects-expand">
           <p className="projects-count">
             Showing {visibleFeatured.length} of {featured.length} selected projects
           </p>
@@ -39,7 +51,7 @@ export default function Projects() {
             type="button"
             className="projects-expand-btn"
             aria-expanded={showAll}
-            onClick={() => setShowAll((current) => !current)}
+            onClick={toggleProjects}
           >
             <span aria-hidden="true">{showAll ? '−' : '+'}</span>
             {showAll ? 'Show fewer projects' : `Show ${hiddenCount} more projects`}
