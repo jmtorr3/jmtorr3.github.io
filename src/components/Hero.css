@@ -232,12 +232,19 @@
 .btn {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   padding: 0.65rem 1.4rem;
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 500;
   transition: all 0.2s;
   cursor: pointer;
+}
+
+.btn-icon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
 }
 
 .btn-primary {
