@@ -101,15 +101,17 @@ export const projects = [
     date: 'Spring 2026',
     featured: true,
     tech: ['React', 'Vite', 'Django REST Framework', 'PostgreSQL', 'Docker', 'Nginx'],
-    github: 'https://github.com/jmtorr3/personal-blog',
+    github: null,
+    demo: 'https://blog.sys32ent.com/',
+    demoLabel: 'Website',
     images: [
       { src: '/PERSONAL_BLOG/index.png', alt: 'jmt.blog public index — post cards rendered against a starfield background' },
       { src: '/PERSONAL_BLOG/post.png', alt: 'a published post with cover image, draft/publish controls, and block-based content' },
     ],
     bullets: [
-      'Designed and built a fork-friendly blogging platform with a Django REST API backend and a React + Vite frontend, containerized end-to-end with Docker Compose and an Nginx reverse proxy.',
+      'Designed and built a deployed blogging platform with a Django REST API backend and a React + Vite frontend, containerized end-to-end with Docker Compose and an Nginx reverse proxy.',
       'Implemented JWT-authenticated admin (SimpleJWT) with a draft/publish workflow, cover image upload, block-based post editing, and a public chat feature for visitor messages.',
-      'Designed a public read-only API to syndicate posts into this portfolio, structured so other developers can fork the repo and customize it for their own personal blog.',
+      'Designed a public read-only API to syndicate posts into this portfolio while the main blog runs at blog.sys32ent.com.',
     ],
   },
   {
