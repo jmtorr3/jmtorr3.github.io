@@ -4,4 +4,5 @@ export const navLinks = [
   { label: 'Skills',   href: '#skills',   id: 'skills' },
   { label: 'Other',    href: '#other',    id: 'other' },
   { label: 'Contact',  href: '#contact',  id: 'contact' },
+  { label: 'Blog',     href: 'https://blog.sys32ent.com/' },
 ]

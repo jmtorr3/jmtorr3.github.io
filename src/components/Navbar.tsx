@@ -37,12 +37,18 @@ export default function Navbar() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) setActive(entry.target.id)
+          if (entry.isIntersecting) {
+            const id = entry.target.id
+            setActive(id === 'hero' ? '' : id)
+          }
         })
       },
       { rootMargin: '-40% 0px -55% 0px' }
     )
+    const hero = document.getElementById('hero')
+    if (hero) observer.observe(hero)
     links.forEach(({ id }) => {
+      if (!id) return
       const el = document.getElementById(id)
       if (el) observer.observe(el)
     })
@@ -75,17 +81,20 @@ export default function Navbar() {
       </button>
 
       <ul className={`navbar-links${menuOpen ? ' open' : ''}`}>
-        {links.map(({ label, href, id }) => (
-          <li key={href}>
+        <li className="navbar-link-group">
+          {links.map(({ label, href, id }) => (
             <a
+              key={href}
               href={href}
+              target={href.startsWith('http') ? '_blank' : undefined}
+              rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
               className={active === id ? 'active' : ''}
               onClick={close}
             >
               {label}
             </a>
-          </li>
-        ))}
+          ))}
+        </li>
         <li>
           <a
             href={`${import.meta.env.BASE_URL}resume.html`}

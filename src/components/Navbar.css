@@ -46,7 +46,16 @@
   list-style: none;
   display: flex;
   align-items: center;
+  gap: 1.75rem;
+}
+
+.navbar-link-group {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: center;
   gap: 2rem;
+  transform: translateX(-50%);
 }
 
 .navbar-links a {
@@ -189,6 +198,13 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.25s;
+  }
+
+  .navbar-link-group {
+    position: static;
+    flex-direction: column;
+    gap: 2rem;
+    transform: none;
   }
 
   .navbar-links.open {
