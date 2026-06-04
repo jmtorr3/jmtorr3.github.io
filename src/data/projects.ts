@@ -65,7 +65,7 @@ export const projects = [
 		date: 'August 2025 – Present',
 		featured: true,
 		tech: ['React', 'Three.js', 'Django', 'SQLite', 'Docker'],
-		github: 'https://github.com/jmtorr3/Garage64',
+		github: 'https://github.com/system32entertainment/Garage64',
 		titleLogo: 'https://raw.githubusercontent.com/jmtorr3/Garage64/main/assets/Logo.png',
 		titleGifs: [
 			'https://raw.githubusercontent.com/jmtorr3/Garage32/main/.assets/gifs/BlueMiataAriosKit.gif',
