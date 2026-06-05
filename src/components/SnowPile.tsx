@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, MouseEvent as ReactMouseEvent } from 'react'
+import { useEffect, useRef, useCallback, useState, MouseEvent as ReactMouseEvent } from 'react'
 import { pileQueue } from './pileQueue'
 
 const PIXEL = 2
@@ -51,18 +51,35 @@ const SM_H = SM_ROWS * B           // 80px
 export default function SnowPile() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const scarfIdxRef = useRef(0)
+  const [snowmanHover, setSnowmanHover] = useState(false)
 
-  const handleClick = useCallback((e: ReactMouseEvent<HTMLCanvasElement>) => {
-    const canvas = canvasRef.current!
-    const rect = canvas.getBoundingClientRect()
-    const cx = e.clientX - rect.left
-    const cy = e.clientY - rect.top
+  const getSnowmanBounds = useCallback((canvas: HTMLCanvasElement) => {
     const sx = Math.floor((canvas.width - SM_W) / 2)
     const sy = MAX_HEIGHT - SM_H
-    if (cx >= sx && cx <= sx + SM_W && cy >= sy && cy <= sy + SM_H) {
+    return { sx, sy }
+  }, [])
+
+  const isOverSnowman = useCallback((e: ReactMouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return false
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const cx = (e.clientX - rect.left) * scaleX
+    const cy = (e.clientY - rect.top) * scaleY
+    const { sx, sy } = getSnowmanBounds(canvas)
+    return cx >= sx && cx <= sx + SM_W && cy >= sy && cy <= sy + SM_H
+  }, [getSnowmanBounds])
+
+  const handleClick = useCallback((e: ReactMouseEvent<HTMLCanvasElement>) => {
+    if (isOverSnowman(e)) {
       scarfIdxRef.current = (scarfIdxRef.current + 1) % SCARF_COLORS.length
     }
-  }, [])
+  }, [isOverSnowman])
+
+  const handlePointerMove = useCallback((e: ReactMouseEvent<HTMLCanvasElement>) => {
+    setSnowmanHover(isOverSnowman(e))
+  }, [isOverSnowman])
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -167,11 +184,13 @@ export default function SnowPile() {
     <canvas
       ref={canvasRef}
       onClick={handleClick}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={() => setSnowmanHover(false)}
       style={{
         display: 'block',
         width: '100%',
         height: `${MAX_HEIGHT}px`,
-        cursor: 'pointer',
+        cursor: snowmanHover ? 'pointer' : 'default',
       }}
       aria-hidden="true"
     />
