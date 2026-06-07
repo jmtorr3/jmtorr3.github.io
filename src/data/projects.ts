@@ -66,7 +66,7 @@ export const projects = [
 		featured: true,
 		tech: ['React', 'Three.js', 'Django', 'SQLite', 'Docker'],
 		github: 'https://github.com/system32entertainment/Garage64',
-		titleLogo: 'https://raw.githubusercontent.com/jmtorr3/Garage64/main/assets/Logo.png',
+		titleLogo: '/GARAGE64/Logo.png',
 		titleGifs: [
 			'https://raw.githubusercontent.com/jmtorr3/Garage32/main/.assets/gifs/BlueMiataAriosKit.gif',
 			'https://raw.githubusercontent.com/jmtorr3/Garage32/main/.assets/gifs/MiataVip.gif',
@@ -87,7 +87,7 @@ export const projects = [
 		],
 		titleGifIntervalMs: 5000,
 		images: [
-			{ src: 'https://raw.githubusercontent.com/jmtorr3/Garage64/main/assets/cover.png', alt: 'Garage64 cover' },
+			{ src: '/GARAGE64/cover.png', alt: 'Garage64 cover' },
 		],
 		bullets: [
 			'Developing a self-hosted web application for creating custom Minecraft vehicle models and texture packs using the OptiFine Custom Entity Model (CEM) format.',
