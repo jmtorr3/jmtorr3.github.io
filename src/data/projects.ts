@@ -111,9 +111,9 @@ export const projects = [
 			{ src: '/PERSONAL_BLOG/post.png', alt: 'a published post with cover image, draft/publish controls, and block-based content' },
 		],
 		bullets: [
-			'Designed and built a deployed blogging platform with a Django REST API backend and a React + Vite frontend, containerized end-to-end with Docker Compose and an Nginx reverse proxy.',
-			'Implemented JWT-authenticated admin (SimpleJWT) with a draft/publish workflow, cover image upload, block-based post editing, and a public chat feature for visitor messages.',
-			'Designed a public read-only API to syndicate posts into this portfolio while the main blog runs at blog.sys32ent.com.',
+			'Designed, built, deployed, and operate a self-hosted blogging platform on personally managed infrastructure, featuring a Django REST API backend, React frontend, PostgreSQL database, Dockerized services, and Nginx reverse proxy.',
+			'Implemented JWT-authenticated admin system with a draft/publish workflow, cover image upload, block-based post editing, and a public chat feature for visitor messages.',
+			'Built a REST API that serves blog posts, media, and metadata to the frontend, keeping content management and presentation separate.',
 		],
 	},
 	{
