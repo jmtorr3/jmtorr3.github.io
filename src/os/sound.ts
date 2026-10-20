@@ -121,3 +121,136 @@ export function playClick(release = false) {
   src.start(t)
   tone(c, t, 0.02, 'square', release ? 1800 : 1200, 400, env(c, t, release ? 0.015 : 0.03, 0.001, 0.015))
 }
+
+// Machine spinning up before the screen comes on (plays during the zoom, ~1.4s):
+// a rising "oooo" hum that opens up like a vowel, fan/drive whir, and seek ticks.
+export function playSpinUp(seconds = 1.35) {
+  // the context may still be resuming on the very first click; scheduling on it
+  // anyway is fine, it starts playing as soon as it's running
+  if (useSound.getState().muted || !ctx) return
+  const c = ctx
+  const t = c.currentTime
+  const end = t + seconds
+
+  const out = c.createGain()
+  out.gain.setValueAtTime(0, t)
+  out.gain.linearRampToValueAtTime(1, t + 0.25)
+  out.gain.setValueAtTime(1, end - 0.25)
+  out.gain.linearRampToValueAtTime(0, end)
+  out.connect(c.destination)
+
+  // the "oooo": two detuned voices gliding up, through a lowpass that opens
+  const vowel = c.createBiquadFilter()
+  vowel.type = 'lowpass'
+  vowel.Q.value = 6
+  vowel.frequency.setValueAtTime(250, t)
+  vowel.frequency.exponentialRampToValueAtTime(1800, end)
+  const hum = c.createGain()
+  hum.gain.value = 0.07
+  vowel.connect(hum).connect(out)
+
+  // slight wobble, like a motor that hasn't settled
+  const lfo = c.createOscillator()
+  lfo.frequency.value = 7
+  const depth = c.createGain()
+  depth.gain.value = 6
+  lfo.connect(depth)
+  lfo.start(t)
+  lfo.stop(end)
+
+  for (const [type, from, to] of [
+    ['triangle', 70, 330],
+    ['sawtooth', 70.6, 333],
+  ] as const) {
+    const o = c.createOscillator()
+    o.type = type
+    o.frequency.setValueAtTime(from, t)
+    o.frequency.exponentialRampToValueAtTime(to, end)
+    depth.connect(o.frequency)
+    o.connect(vowel)
+    o.start(t)
+    o.stop(end)
+  }
+
+  // fan / platter whir rising with it
+  const whir = c.createBufferSource()
+  whir.buffer = noiseBuffer(c, seconds)
+  const bp = c.createBiquadFilter()
+  bp.type = 'bandpass'
+  bp.Q.value = 3
+  bp.frequency.setValueAtTime(300, t)
+  bp.frequency.exponentialRampToValueAtTime(1600, end)
+  const whirGain = c.createGain()
+  whirGain.gain.value = 0.05
+  whir.connect(bp).connect(whirGain).connect(out)
+  whir.start(t)
+  whir.stop(end)
+
+  // a few hard-drive seek ticks
+  for (const at of [0.3, 0.55, 0.62, 0.9, 1.05]) {
+    if (at > seconds - 0.1) continue
+    noise(c, t + at, 0.02, 'highpass', 3000, env(c, t + at, 0.08, 0.001, 0.015))
+  }
+}
+
+// ---- Mochi face bleeps: tiny chiptune voices, one per expression ----
+
+type Note = [at: number, dur: number, from: number, to: number, type?: OscillatorType, gain?: number]
+
+function bleeps(notes: Note[]) {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  for (const [at, dur, from, to, type = 'square', gain = 0.035] of notes)
+    tone(c, t + at, dur, type, from, to, env(c, t + at, gain, 0.005, dur - 0.005))
+}
+
+const FACE_SOUNDS: Record<string, Note[]> = {
+  // little "boot" chirp as the eyes open
+  wake: [
+    [0, 0.07, 520, 520],
+    [0.08, 0.07, 780, 780],
+    [0.16, 0.12, 1040, 1040, 'triangle', 0.05],
+  ],
+  // two quick rising notes
+  happy: [
+    [0, 0.08, 660, 700],
+    [0.09, 0.12, 990, 1050],
+  ],
+  // a "bwip"
+  wink: [[0, 0.09, 500, 1400, 'triangle', 0.05]],
+  // soft heartbeat, then a sparkle
+  love: [
+    [0, 0.09, 330, 300, 'sine', 0.09],
+    [0.13, 0.12, 330, 280, 'sine', 0.09],
+    [0.32, 0.06, 1760, 1760, 'triangle', 0.025],
+    [0.38, 0.08, 2350, 2350, 'triangle', 0.02],
+  ],
+  // slow yawn sliding down
+  sleepy: [[0, 0.7, 520, 180, 'triangle', 0.05]],
+  // "oh?" bending up
+  surprised: [[0, 0.16, 440, 880, 'square', 0.03]],
+  // "aww" two notes down
+  sad: [
+    [0, 0.18, 620, 560, 'triangle', 0.05],
+    [0.2, 0.3, 520, 380, 'triangle', 0.05],
+  ],
+  // low grumble
+  angry: [
+    [0, 0.09, 140, 120, 'sawtooth', 0.03],
+    [0.1, 0.09, 150, 120, 'sawtooth', 0.03],
+    [0.2, 0.14, 130, 90, 'sawtooth', 0.03],
+  ],
+  // wobbly warble
+  dizzy: [
+    [0, 0.12, 700, 500, 'triangle', 0.04],
+    [0.12, 0.12, 500, 760, 'triangle', 0.04],
+    [0.24, 0.12, 760, 460, 'triangle', 0.04],
+    [0.36, 0.16, 460, 300, 'triangle', 0.04],
+  ],
+}
+
+export function playFaceSound(expr: string) {
+  const notes = FACE_SOUNDS[expr]
+  if (notes) bleeps(notes)
+}

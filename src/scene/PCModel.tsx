@@ -6,7 +6,7 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { MochiFace, type Expression } from './MochiFace'
 import { useStore } from '../store'
-import { unlockAudio } from '../os/sound'
+import { unlockAudio, playSpinUp, playFaceSound } from '../os/sound'
 
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
@@ -54,6 +54,22 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
   useFrame((_, dt) => model.face.update(Math.min(dt, 0.1)))
 
   useEffect(() => {
+    // the face bleeps as it changes expression (the spin-up covers the zoom)
+    model.face.onChange = (expr) => {
+      if (useStore.getState().mode === 'room') playFaceSound(expr)
+    }
+    // browsers only allow sound after an interaction: any first tap or drag in the room counts
+    const unlock = () => unlockAudio()
+    window.addEventListener('pointerdown', unlock, { once: true })
+    window.addEventListener('keydown', unlock, { once: true })
+    return () => {
+      model.face.onChange = undefined
+      window.removeEventListener('pointerdown', unlock)
+      window.removeEventListener('keydown', unlock)
+    }
+  }, [model])
+
+  useEffect(() => {
     const screen = model.meshes[SCREEN_MESH_INDEX]
     if (!screen) return
     model.root.updateMatrixWorld(true)
@@ -83,6 +99,7 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
         // a drag that ends over the PC is an orbit, not a click
         if (mode !== 'room' || e.delta > 6) return
         unlockAudio()
+        playSpinUp() // the 'oooo' while the face looks surprised and the camera zooms in
         setMode('zooming')
       }}
     />

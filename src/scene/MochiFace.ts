@@ -63,6 +63,8 @@ function pickMood(): Expression {
 
 export class MochiFace {
   readonly texture: THREE.CanvasTexture
+  // called when a new expression appears ('wake' when the eyes first open), for sounds
+  onChange?: (expr: Expression | 'wake') => void
   private ctx: CanvasRenderingContext2D
   private img: ImageData
   private px = new Uint8Array(FACE_W * FACE_H)
@@ -107,6 +109,7 @@ export class MochiFace {
     } else if (this.shown === 'off') {
       // waking up: eyes open from closed
       this.shown = this.next = expr ?? 'neutral'
+      this.onChange?.('wake')
       this.open = 0
       this.closing = false
     } else {
@@ -141,6 +144,7 @@ export class MochiFace {
       if (this.open <= 0) {
         this.open = 0
         this.closing = false
+        if (this.shown !== this.next) this.onChange?.(this.next)
         this.shown = this.next
         this.nextBlinkAt = this.t + rand(2, 5)
       }
