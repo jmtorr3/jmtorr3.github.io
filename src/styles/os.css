@@ -16,6 +16,7 @@ body,
   font-size: 13px;
   /* no double-tap zoom on phones */
   touch-action: manipulation;
+  cursor: var(--cursor);
 }
 
 button {
@@ -26,6 +27,12 @@ button {
 a {
   color: var(--accent);
   text-decoration: none;
+  cursor: var(--cursor-pointer);
+}
+
+input,
+textarea {
+  cursor: var(--cursor-text);
 }
 
 a:hover {
@@ -247,7 +254,7 @@ a:hover {
   border: 1px dotted transparent;
   color: var(--text);
   text-shadow: 1px 1px 0 #000;
-  cursor: default;
+  cursor: var(--cursor);
 }
 
 .desk-icon span {
@@ -315,7 +322,7 @@ a:hover {
   text-shadow: 1px 1px 0 #000;
   user-select: none;
   touch-action: none;
-  cursor: default;
+  cursor: var(--cursor);
 }
 
 .window:not(.focused) .titlebar {
@@ -348,7 +355,7 @@ a:hover {
   color: #fff;
   font-size: 12px;
   line-height: 1;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .controls button.close {
@@ -423,7 +430,7 @@ button.card:hover {
   background: transparent;
   border: 1px solid var(--accent-dim);
   color: var(--accent);
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   white-space: nowrap;
 }
 
@@ -446,7 +453,7 @@ button.card:hover {
 
 .btn:disabled {
   opacity: 0.4;
-  cursor: default;
+  cursor: var(--cursor);
 }
 
 .btn-row {
@@ -540,7 +547,7 @@ button.card:hover {
   text-align: left;
   background: none;
   border: 1px solid transparent;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .places button:hover {
@@ -733,7 +740,7 @@ button.card:hover {
   border: 1px solid transparent;
   text-align: center;
   line-height: 1.2;
-  cursor: default;
+  cursor: var(--cursor);
 }
 
 .file:hover {
@@ -945,7 +952,7 @@ button.card:hover {
 }
 
 .card.pick {
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .card.pick.active {
@@ -1122,7 +1129,7 @@ button.card:hover {
   top: 0;
   left: 0;
   z-index: 1;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .mochi-cam canvas {
@@ -1194,7 +1201,7 @@ button.card:hover {
   font-size: 16px;
   font-weight: bold;
   text-shadow: 1px 1px 0 rgb(255 255 255 / 0.3);
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .start.pressed,
@@ -1298,7 +1305,7 @@ button.card:hover {
   border: 0;
   background: none;
   text-align: left;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .start-list button:hover {
@@ -1337,7 +1344,7 @@ button.card:hover {
   border: 1px solid var(--border);
   border-radius: 3px;
   background: var(--bg-card);
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   overflow: hidden;
 }
 
@@ -1490,7 +1497,7 @@ button.card:hover {
   border: 0;
   color: inherit;
   font-size: 15px;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .tray-btn:hover {

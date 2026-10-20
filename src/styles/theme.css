@@ -17,6 +17,13 @@
   --accent-dim: #255e80;
   --accent-glow: rgba(74, 175, 212, 0.15);
   --text: #ddeaf5;
+
+  /* pixel cursors (public/cursors), with the system ones as fallback */
+  --cursor: url('/cursors/arrow.png') 1 1, default;
+  --cursor-pointer: url('/cursors/hand.png') 9 1, pointer;
+  --cursor-grab: url('/cursors/grab.png') 15 14, grab;
+  --cursor-grabbing: url('/cursors/grabbing.png') 15 16, grabbing;
+  --cursor-text: url('/cursors/text.png') 7 13, text;
   --text-muted: #7a9dba;
   --text-faint: #3a5872;
   --ok: #4ade80;

@@ -7,10 +7,12 @@ import { makeScreenMaterial } from './ScreenMaterial'
 import { MochiFace, FACE_W, FACE_H, type Expression } from './MochiFace'
 import { useStore } from '../store'
 import { unlockAudio, playSpinUp, playFaceSound, playFart } from '../os/sound'
+import { DeskProps } from './deskProps'
 
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
 const SCREEN_MESH_INDEX = 7
+const KEYBOARD_MESH_INDEX = 10
 const MOUSE_MESH_INDEX = 11 // the little mouse next to the keyboard
 // how far the 3D mouse slides from its rest spot (world units) as the cursor crosses the screen
 const MOUSE_RANGE = { side: 0.12, depth: 0.09 }
@@ -27,6 +29,17 @@ type ClickEvent = {
   object: THREE.Object3D
 }
 
+type PressEvent = {
+  stopPropagation: () => void
+  button: number
+  pointerId: number
+  object: THREE.Object3D
+  ray: THREE.Ray
+  target: EventTarget | null
+}
+
+export type HoverKind = 'pc' | 'prop' | null
+
 const hitFan = (e: ClickEvent) => {
   if (!e.uv) return false
   const x = Math.floor(e.uv.x * 128)
@@ -34,7 +47,7 @@ const hitFan = (e: ClickEvent) => {
   return x >= FAN_TEXELS.x0 && x <= FAN_TEXELS.x1 && y >= FAN_TEXELS.y0 && y <= FAN_TEXELS.y1
 }
 
-export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
+export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const { scene } = useGLTF(URL)
   const setScreen = useStore((s) => s.setScreen)
   const mode = useStore((s) => s.mode)
@@ -59,8 +72,15 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
       screenBox = new THREE.Box3().setFromObject(screen)
       screen.material = makeScreenMaterial(face.texture, screenBox)
     }
-    const mouse = meshes[MOUSE_MESH_INDEX]
-    return { root, meshes, face, material, mouse, mouseRest: mouse?.position.clone(), screenBox }
+    // the keyboard and mouse can be picked up; they can't go into the rest of the PC
+    root.updateMatrixWorld(true)
+    const pc = new THREE.Box3()
+    meshes.forEach((m, i) => {
+      if (i !== KEYBOARD_MESH_INDEX && i !== MOUSE_MESH_INDEX) pc.union(new THREE.Box3().setFromObject(m))
+    })
+    const props = new DeskProps([meshes[KEYBOARD_MESH_INDEX], meshes[MOUSE_MESH_INDEX]], pc, pc.getCenter(new THREE.Vector3()))
+    const mouse = props.find(meshes[MOUSE_MESH_INDEX])
+    return { root, meshes, face, material, mouse, props, screenBox }
   }, [scene])
 
   const [hovered, setHovered] = useState(false)
@@ -74,6 +94,8 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
     model.face.set(expr)
     // the canvas only renders on demand while the desktop is up
     invalidate()
+    // leaving the desktop puts the keyboard and mouse back where they belong
+    if (mode === 'exiting') model.props.reset()
   }, [mode, hovered, model, invalidate])
 
   // spun around too fast: dizzy for a few seconds (its sound plays via onChange)
@@ -89,7 +111,14 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
   const mouseMove = useRef({ right: new THREE.Vector3(), away: new THREE.Vector3(), goal: new THREE.Vector3(), pressed: false })
   useEffect(() => {
     const down = () => (mouseMove.current.pressed = true)
-    const up = () => (mouseMove.current.pressed = false)
+    const up = () => {
+      mouseMove.current.pressed = false
+      // let go of whatever's held, wherever the pointer is
+      if (model.props.holding) {
+        model.props.release()
+        document.body.style.cursor = 'var(--cursor-grab)'
+      }
+    }
     window.addEventListener('pointerdown', down)
     window.addEventListener('pointerup', up)
     window.addEventListener('pointercancel', up)
@@ -98,9 +127,10 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
       window.removeEventListener('pointerup', up)
       window.removeEventListener('pointercancel', up)
     }
-  }, [])
+  }, [model])
 
   const corner = useRef(new THREE.Vector3())
+  const raycaster = useRef(new THREE.Raycaster())
   const jolt = useRef(0) // seconds of shake left (fan easter egg)
   const clockRef = useRef(0)
   useFrame(({ clock, camera, pointer }, dt) => {
@@ -140,18 +170,22 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
     }
     model.face.update(Math.min(dt, 0.1))
 
-    if (model.mouse && model.mouseRest) {
+    raycaster.current.setFromCamera(pointer, camera)
+    model.props.update(Math.min(dt, 0.05), raycaster.current.ray)
+
+    // (only while it's sitting still on the desk, around wherever it was dropped)
+    if (model.mouse?.state === 'rest') {
       const m = mouseMove.current
       // camera's right and forward, flattened onto the desk
       camera.getWorldDirection(m.away).setY(0).normalize()
       m.right.crossVectors(m.away, THREE.Object3D.DEFAULT_UP).normalize()
       const follow = mode === 'room' ? 1 : 0 // rests in place once you sit at the screen
       m.goal
-        .copy(model.mouseRest)
+        .copy(model.mouse.anchor)
         .addScaledVector(m.right, pointer.x * MOUSE_RANGE.side * follow)
         .addScaledVector(m.away, pointer.y * MOUSE_RANGE.depth * follow)
       m.goal.y -= m.pressed && mode === 'room' ? 0.012 : 0 // clicks press it down a hair
-      model.mouse.position.lerp(m.goal, 1 - Math.exp(-dt * 14))
+      model.mouse.mesh.position.lerp(m.goal, 1 - Math.exp(-dt * 14))
     }
 
     const t = clock.elapsedTime
@@ -204,19 +238,31 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
   return (
     <primitive
       object={model.root}
-      onPointerOver={(e: { stopPropagation: () => void }) => {
+      onPointerOver={(e: { stopPropagation: () => void; object: THREE.Object3D }) => {
         e.stopPropagation()
-        onHover(true)
+        onHover(model.props.find(e.object) ? 'prop' : 'pc')
         setHovered(true)
       }}
+      // moving between the PC and the keyboard/mouse doesn't re-fire "over"
+      onPointerMove={(e: { object: THREE.Object3D }) => onHover(model.props.find(e.object) ? 'prop' : 'pc')}
       onPointerOut={() => {
-        onHover(false)
+        onHover(null)
         setHovered(false)
+      }}
+      onPointerDown={(e: PressEvent) => {
+        const prop = model.props.find(e.object)
+        if (mode !== 'room' || e.button !== 0 || !prop) return
+        // pick up the keyboard or mouse
+        e.stopPropagation()
+        model.props.grab(prop, e.ray)
+        ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
+        document.body.style.cursor = 'var(--cursor-grabbing)'
       }}
       onClick={(e: ClickEvent) => {
         e.stopPropagation()
-        // a drag that ends over the PC is an orbit, not a click
-        if (mode !== 'room' || e.delta > 6) return
+        // a drag that ends over the PC is an orbit, not a click; the keyboard and
+        // mouse are for picking up, not for turning it on
+        if (mode !== 'room' || e.delta > 6 || model.props.find(e.object)) return
         unlockAudio()
         if (hitFan(e)) {
           // the fan blows out along the face it's on

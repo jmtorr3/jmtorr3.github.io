@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { fitScreen } from './screenFit'
+import { grabState } from './deskProps'
 
 // center of the PC model's bounding box: the camera orbits around (and looks at) this
 const ROOM_TARGET = new THREE.Vector3(0.375, 0.84, 0.625)
@@ -102,6 +103,11 @@ export function CameraRig() {
     }
     const move = (e: PointerEvent) => {
       if (!o.dragging) return
+      // the press picked up the keyboard or mouse instead: don't orbit
+      if (grabState.active) {
+        o.dragging = false
+        return
+      }
       // a full drag across the screen turns about one and a half times around
       const k = (Math.PI * 3) / Math.max(400, window.innerWidth)
       const dYaw = -(e.clientX - o.x) * k
@@ -115,7 +121,7 @@ export function CameraRig() {
       o.x = e.clientX
       o.y = e.clientY
       o.at = e.timeStamp
-      document.body.style.cursor = 'grabbing'
+      document.body.style.cursor = 'var(--cursor-grabbing)'
     }
     const up = (e: PointerEvent) => {
       if (!o.dragging) return
@@ -123,7 +129,7 @@ export function CameraRig() {
       // held still before letting go: no glide
       if (e.timeStamp - o.at > 80) o.vYaw = o.vPitch = 0
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId)
-      document.body.style.cursor = 'grab'
+      document.body.style.cursor = 'var(--cursor-grab)'
     }
     el.addEventListener('pointerdown', down)
     el.addEventListener('pointermove', move)
