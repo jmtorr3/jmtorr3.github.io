@@ -241,6 +241,84 @@ const FACE_SOUNDS: Record<string, Note[]> = {
     [0.1, 0.09, 150, 120, 'sawtooth', 0.03],
     [0.2, 0.14, 130, 90, 'sawtooth', 0.03],
   ],
+  // rising arpeggio with a sparkle on top
+  excited: [
+    [0, 0.06, 523, 523],
+    [0.06, 0.06, 659, 659],
+    [0.12, 0.06, 784, 784],
+    [0.18, 0.12, 1047, 1047],
+    [0.32, 0.06, 2093, 2093, 'triangle', 0.025],
+  ],
+  // "hehehe": quick bouncing notes
+  laugh: [
+    [0, 0.06, 880, 820],
+    [0.09, 0.06, 980, 900],
+    [0.18, 0.06, 880, 820],
+    [0.27, 0.06, 1040, 960],
+  ],
+  // wailing slide down, twice
+  cry: [
+    [0, 0.35, 700, 450, 'triangle', 0.05],
+    [0.38, 0.45, 650, 380, 'triangle', 0.05],
+  ],
+  // cute "uwu" wobble
+  uwu: [
+    [0, 0.1, 600, 800, 'triangle', 0.05],
+    [0.1, 0.1, 800, 600, 'triangle', 0.05],
+    [0.2, 0.14, 600, 900, 'triangle', 0.05],
+  ],
+  // shy little "eep"
+  blush: [[0, 0.12, 1200, 1500, 'sine', 0.06]],
+  // "yeah": low slide then a high glint
+  cool: [
+    [0, 0.25, 220, 160, 'square', 0.03],
+    [0.5, 0.05, 2600, 2600, 'triangle', 0.03],
+    [0.56, 0.08, 3100, 3100, 'triangle', 0.02],
+  ],
+  // "hmm": a low hum that bends
+  thinking: [[0, 0.5, 300, 340, 'triangle', 0.05]],
+  // "huh?" bending up at the end
+  confused: [
+    [0, 0.12, 500, 480, 'square', 0.03],
+    [0.14, 0.18, 480, 760, 'square', 0.03],
+  ],
+  // "hmmm..." low and flat
+  suspicious: [[0, 0.4, 240, 230, 'sawtooth', 0.025]],
+  // a sigh sliding down
+  bored: [[0, 0.6, 400, 260, 'sine', 0.06]],
+  // a little tune
+  music: [
+    [0, 0.12, 659, 659, 'triangle', 0.05],
+    [0.13, 0.12, 784, 784, 'triangle', 0.05],
+    [0.26, 0.12, 880, 880, 'triangle', 0.05],
+    [0.39, 0.24, 784, 784, 'triangle', 0.05],
+  ],
+  // big yawn: up then a long slide down
+  yawn: [
+    [0, 0.3, 300, 520, 'triangle', 0.05],
+    [0.3, 0.8, 520, 200, 'triangle', 0.05],
+  ],
+  // computer blips, then a done chime
+  loading: [
+    [0, 0.03, 1800, 1800],
+    [0.25, 0.03, 1800, 1800],
+    [0.5, 0.03, 1800, 1800],
+    [2.6, 0.08, 880, 880, 'triangle', 0.05],
+    [2.68, 0.14, 1320, 1320, 'triangle', 0.05],
+  ],
+  // garbled bit-crush noise
+  glitch: [
+    [0, 0.04, 2000, 300],
+    [0.05, 0.03, 150, 1800],
+    [0.09, 0.05, 3000, 600],
+    [0.16, 0.04, 400, 2400],
+  ],
+  // slow hypnotic wobble
+  hypno: [
+    [0, 0.3, 400, 600, 'sine', 0.06],
+    [0.3, 0.3, 600, 400, 'sine', 0.06],
+    [0.6, 0.3, 400, 600, 'sine', 0.06],
+  ],
   // wobbly warble
   dizzy: [
     [0, 0.12, 700, 500, 'triangle', 0.04],
