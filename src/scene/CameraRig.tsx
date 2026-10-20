@@ -25,6 +25,8 @@ const RETURN_SPEED = 0.6 // radians per second, easing out near the front
 // spinning about a full turn within a second makes the face dizzy
 const DIZZY_SPIN = Math.PI * 2
 const DIZZY_COOLDOWN = 4 // seconds before it can get dizzy again
+// the PC's bounding box reaches ~1.5 from its middle; keep the room camera outside that
+const MIN_ROOM_DISTANCE = 2.2
 // how far up/down the user can orbit, as angles from straight up (radians)
 const MIN_POLAR = 0.35
 const MAX_POLAR = 1.45 // just above the desk
@@ -217,8 +219,19 @@ export function CameraRig() {
       centering = mode === 'zooming' ? 1 - k : k
       if (t.current >= 1) setMode(mode === 'zooming' ? 'desktop' : 'room')
     } else {
-      camera.position.lerp(goal.pos, mode === 'room' ? 0.08 : 1)
-      lookAt.current.lerp(goal.target, mode === 'room' ? 0.08 : 1)
+      if (mode === 'room') {
+        // ease toward the goal around the PC, not in a straight line through it
+        // (a fast spin puts the goal on the far side); same feel at any frame rate
+        const k = 1 - Math.exp(-delta * 5)
+        camera.position.copy(arcBetween(camera.position, goal.pos, k))
+        // and never closer to the PC's middle than its outer edge plus a margin
+        const d = camera.position.distanceTo(ROOM_TARGET)
+        if (d < MIN_ROOM_DISTANCE) camera.position.sub(ROOM_TARGET).multiplyScalar(MIN_ROOM_DISTANCE / d).add(ROOM_TARGET)
+        lookAt.current.lerp(goal.target, k)
+      } else {
+        camera.position.copy(goal.pos)
+        lookAt.current.copy(goal.target)
+      }
     }
     camera.lookAt(lookAt.current)
     centerModel(centering, delta)

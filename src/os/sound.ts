@@ -332,3 +332,45 @@ export function playFaceSound(expr: string) {
   const notes = FACE_SOUNDS[expr]
   if (notes) bleeps(notes)
 }
+
+// Easter egg: the fan on the back. A fluttering low "pbbbt", a little different each time.
+export function playFart() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  const len = 0.45 + Math.random() * 0.5
+  const base = 70 + Math.random() * 50
+
+  const out = c.createGain()
+  out.gain.setValueAtTime(0, t)
+  out.gain.linearRampToValueAtTime(0.22, t + 0.02)
+  out.gain.setValueAtTime(0.22, t + len * 0.7)
+  out.gain.exponentialRampToValueAtTime(0.0001, t + len)
+  const lp = c.createBiquadFilter()
+  lp.type = 'lowpass'
+  lp.frequency.value = 700
+  lp.connect(out).connect(c.destination)
+
+  // buzzy tone sliding down, its volume fluttering quickly (the "brrr")
+  const o = c.createOscillator()
+  o.type = 'sawtooth'
+  o.frequency.setValueAtTime(base * 1.3, t)
+  o.frequency.exponentialRampToValueAtTime(base * 0.7, t + len)
+  const flutter = c.createGain()
+  flutter.gain.value = 0.5
+  const lfo = c.createOscillator()
+  lfo.type = 'square'
+  lfo.frequency.setValueAtTime(28 + Math.random() * 10, t)
+  lfo.frequency.linearRampToValueAtTime(18, t + len)
+  const depth = c.createGain()
+  depth.gain.value = 0.5
+  lfo.connect(depth).connect(flutter.gain)
+  o.connect(flutter).connect(lp)
+  for (const n of [o, lfo]) {
+    n.start(t)
+    n.stop(t + len)
+  }
+
+  // breathy air through it
+  noise(c, t, len, 'bandpass', 380, env(c, t, 0.12, 0.02, len - 0.02))
+}

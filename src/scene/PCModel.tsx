@@ -6,7 +6,7 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { MochiFace, FACE_W, FACE_H, type Expression } from './MochiFace'
 import { useStore } from '../store'
-import { unlockAudio, playSpinUp, playFaceSound } from '../os/sound'
+import { unlockAudio, playSpinUp, playFaceSound, playFart } from '../os/sound'
 
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
@@ -14,6 +14,25 @@ const SCREEN_MESH_INDEX = 7
 const MOUSE_MESH_INDEX = 11 // the little mouse next to the keyboard
 // how far the 3D mouse slides from its rest spot (world units) as the cursor crosses the screen
 const MOUSE_RANGE = { side: 0.12, depth: 0.09 }
+// easter egg: the round fan grille on the back of the case, as texels in the
+// 128px atlas (with a texel of slack so it's easy to hit on a phone)
+const FAN_TEXELS = { x0: 60, x1: 67, y0: 51, y1: 58 }
+
+type ClickEvent = {
+  stopPropagation: () => void
+  delta: number
+  uv?: THREE.Vector2
+  point: THREE.Vector3
+  face?: THREE.Face | null
+  object: THREE.Object3D
+}
+
+const hitFan = (e: ClickEvent) => {
+  if (!e.uv) return false
+  const x = Math.floor(e.uv.x * 128)
+  const y = Math.floor(e.uv.y * 128)
+  return x >= FAN_TEXELS.x0 && x <= FAN_TEXELS.x1 && y >= FAN_TEXELS.y0 && y <= FAN_TEXELS.y1
+}
 
 export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
   const { scene } = useGLTF(URL)
@@ -82,7 +101,17 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
   }, [])
 
   const corner = useRef(new THREE.Vector3())
+  const jolt = useRef(0) // seconds of shake left (fan easter egg)
+  const clockRef = useRef(0)
   useFrame(({ clock, camera, pointer }, dt) => {
+    clockRef.current = clock.elapsedTime
+    // a little shudder after the fan goes off
+    if (jolt.current > 0) {
+      jolt.current = Math.max(0, jolt.current - dt)
+      const a = jolt.current * 0.05
+      model.root.position.set((Math.random() - 0.5) * a, Math.random() * a * 0.5, (Math.random() - 0.5) * a)
+    } else model.root.position.set(0, 0, 0)
+
     // Up close (the phone zoom fills the view with the glass), only part of the
     // screen is visible: find that part and fit the face into it.
     const box = model.screenBox
@@ -184,11 +213,21 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
         onHover(false)
         setHovered(false)
       }}
-      onClick={(e: { stopPropagation: () => void; delta: number }) => {
+      onClick={(e: ClickEvent) => {
         e.stopPropagation()
         // a drag that ends over the PC is an orbit, not a click
         if (mode !== 'room' || e.delta > 6) return
         unlockAudio()
+        if (hitFan(e)) {
+          // the fan blows out along the face it's on
+          const dir = (e.face?.normal ?? new THREE.Vector3(0, 0, 1)).clone().transformDirection(e.object.matrixWorld)
+          useStore.getState().doFart([e.point.x, e.point.y, e.point.z], [dir.x, dir.y, dir.z])
+          playFart()
+          jolt.current = 0.35
+          lights.current.hddUntil = clockRef.current + 1.2 // drive light goes wild
+          model.face.react('blush', 2.6)
+          return
+        }
         playSpinUp() // the 'oooo' while the face looks surprised and the camera zooms in
         setMode('zooming')
       }}

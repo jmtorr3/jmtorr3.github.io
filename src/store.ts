@@ -34,6 +34,8 @@ interface State {
   poweringOff: boolean
   // bumped when the user spins the PC around too fast (the face gets dizzy)
   spins: number
+  // easter egg: someone clicked the fan on the back; where, and which way it blows
+  fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
   screen: ScreenInfo | null
   // desktop size in its own layout px; the Desktop is drawn at `scale`× that on screen
   desk: { w: number; h: number; scale: number }
@@ -43,6 +45,7 @@ interface State {
   setMode: (m: Mode) => void
   shutdown: () => void
   spunTooFast: () => void
+  doFart: (at: [number, number, number], dir: [number, number, number]) => void
   setScreen: (s: ScreenInfo) => void
   setDesk: (w: number, h: number, scale: number) => void
   open: (app: AppId, opts?: { title?: string; props?: Record<string, unknown>; key?: string }) => void
@@ -61,6 +64,7 @@ export const useStore = create<State>((set, get) => ({
   mode: 'room',
   poweringOff: false,
   spins: 0,
+  fart: null,
   screen: null,
   desk: { w: window.innerWidth, h: window.innerHeight, scale: 1 },
   windows: [],
@@ -71,6 +75,7 @@ export const useStore = create<State>((set, get) => ({
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
   shutdown: () => set({ poweringOff: true }),
   spunTooFast: () => set((s) => ({ spins: s.spins + 1 })),
+  doFart: (at, dir) => set((s) => ({ fart: { n: (s.fart?.n ?? 0) + 1, at, dir } })),
   setScreen: (screen) => set({ screen }),
   setDesk: (w, h, scale) => set({ desk: { w, h, scale } }),
 

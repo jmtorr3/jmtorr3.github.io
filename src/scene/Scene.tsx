@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PCModel } from './PCModel'
+import { DustPuff } from './DustPuff'
 import { PicoPostFX } from './PicoPostFX'
 import { CameraRig } from './CameraRig'
 import { useStore } from '../store'
@@ -28,6 +29,7 @@ export function Scene() {
     >
       <Suspense fallback={null}>
         <PCModel onHover={setHovered} />
+        <DustPuff />
       </Suspense>
       <CameraRig />
       <PicoPostFX hovered={hovered && mode === 'room'} />

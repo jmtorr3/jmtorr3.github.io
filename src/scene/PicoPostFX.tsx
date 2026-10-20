@@ -32,10 +32,12 @@ const fragmentShader = /* glsl */ `
     if (c.a > 0.0) { gl_FragColor = vec4(c.rgb, 1.0); return; }
 
     vec2 t = 1.0 / texSize;
-    float hit = texture2D(tDiffuse, uv + vec2(t.x, 0.0)).a
-              + texture2D(tDiffuse, uv - vec2(t.x, 0.0)).a
-              + texture2D(tDiffuse, uv + vec2(0.0, t.y)).a
-              + texture2D(tDiffuse, uv - vec2(0.0, t.y)).a;
+    // only solid geometry (alpha 1) gets outlined; effects like the dust puff
+    // write alpha 0.5 so they're drawn but leave no outline
+    float hit = step(0.75, texture2D(tDiffuse, uv + vec2(t.x, 0.0)).a)
+              + step(0.75, texture2D(tDiffuse, uv - vec2(t.x, 0.0)).a)
+              + step(0.75, texture2D(tDiffuse, uv + vec2(0.0, t.y)).a)
+              + step(0.75, texture2D(tDiffuse, uv - vec2(0.0, t.y)).a);
     if (hit > 0.0) { gl_FragColor = vec4(outlineColor, 1.0); return; }
 
     // background: 4 bands with a checker dither between each, like the shading
