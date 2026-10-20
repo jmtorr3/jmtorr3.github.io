@@ -12,5 +12,5 @@ export const profile = {
 
 	// terminal identity: user@host
 	user: 'jmtorr3',
-	host: 'sys32ent',
+	host: 'slumpy',
 }
