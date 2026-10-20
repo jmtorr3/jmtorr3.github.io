@@ -1,7 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useGLTF } from '@react-three/drei'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { makePicoMaterial } from './PicoMaterial'
+import { makeScreenMaterial } from './ScreenMaterial'
+import { MochiFace, type Expression } from './MochiFace'
 import { useStore } from '../store'
 import { unlockAudio } from '../os/sound'
 
@@ -24,8 +27,31 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
     const map = (meshes[0]?.material as THREE.MeshStandardMaterial | undefined)?.map ?? null
     const material = makePicoMaterial(map)
     meshes.forEach((m) => (m.material = material))
-    return { root, meshes }
+
+    // the screen glows with the Mochi face (black while the desktop is up)
+    const face = new MochiFace()
+    const screen = meshes[SCREEN_MESH_INDEX]
+    if (screen) {
+      root.updateMatrixWorld(true)
+      screen.material = makeScreenMaterial(face.texture, new THREE.Box3().setFromObject(screen))
+    }
+    return { root, meshes, face }
   }, [scene])
+
+  const [hovered, setHovered] = useState(false)
+  const invalidate = useThree((s) => s.invalidate)
+
+  useEffect(() => {
+    let expr: Expression | null = null // idle: cycles moods by itself
+    if (mode === 'desktop' || mode === 'exiting') expr = 'off'
+    else if (mode === 'zooming') expr = 'surprised'
+    else if (hovered) expr = 'happy'
+    model.face.set(expr)
+    // the canvas only renders on demand while the desktop is up
+    invalidate()
+  }, [mode, hovered, model, invalidate])
+
+  useFrame((_, dt) => model.face.update(Math.min(dt, 0.1)))
 
   useEffect(() => {
     const screen = model.meshes[SCREEN_MESH_INDEX]
@@ -46,8 +72,12 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
       onPointerOver={(e: { stopPropagation: () => void }) => {
         e.stopPropagation()
         onHover(true)
+        setHovered(true)
       }}
-      onPointerOut={() => onHover(false)}
+      onPointerOut={() => {
+        onHover(false)
+        setHovered(false)
+      }}
       onClick={(e: { stopPropagation: () => void }) => {
         e.stopPropagation()
         if (mode !== 'room') return
