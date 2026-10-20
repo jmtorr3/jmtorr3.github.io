@@ -71,7 +71,9 @@ export const useStore = create<State>((set, get) => ({
     const existing = get().windows.find((w) => w.id === id)
     if (existing) {
       set((s) => ({
-        windows: s.windows.map((w) => (w.id === id ? { ...w, minimized: false } : w)),
+        windows: s.windows.map((w) =>
+          w.id === id ? { ...w, minimized: false, props: opts.props ?? w.props, title: opts.title ?? w.title } : w,
+        ),
       }))
       get().focus(id)
       return

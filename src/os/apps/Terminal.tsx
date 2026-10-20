@@ -1,53 +1,66 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { about, profile } from '../../content/about'
-import { resume } from '../../content/resume'
-import { contact } from '../../content/contact'
-import { projects } from '../../content/projects'
+import { profile } from '../../data/profile'
+import { education, coursework } from '../../data/about'
+import { resumes } from '../../data/resume'
+import { contactLinks } from '../../data/contact'
+import { projects, slugOf, type Project } from '../../data/projects'
+import { skillGroups } from '../../data/skills'
 import { useStore } from '../../store'
-import { APPS, type AppId } from './registry'
+import { plain } from '../richText'
+import { LAUNCHABLE, type AppId } from './registry'
 import { openProject } from './Explorer'
 
-// tiny virtual filesystem built from src/content
+// tiny virtual filesystem built from src/data
 type Node = { type: 'file'; text: string } | { type: 'dir'; children: Record<string, Node> }
 
-const HOME = `/home/${profile.handle}`
+const HOME = `/home/${profile.user}`
 const file = (text: string): Node => ({ type: 'file', text })
-const FS: Node = {
-  type: 'dir',
-  children: {
-    home: {
-      type: 'dir',
-      children: {
-        [profile.handle]: {
-          type: 'dir',
-          children: {
-            'about.txt': file(about),
-            'resume.txt': file(resume),
-            'contact.txt': file(
-              [`email: ${contact.email}`, ...contact.links.map((l) => `${l.label}: ${l.url}`)].join('\n'),
-            ),
-            projects: {
-              type: 'dir',
-              children: Object.fromEntries(
-                projects.map((p) => [
-                  p.slug,
-                  {
-                    type: 'dir',
-                    children: {
-                      'README.txt': file(
-                        `${p.name} (${p.year})\n${p.tags.join(', ')}\n\n${p.body}${p.url ? `\n\n${p.url}` : ''}`,
-                      ),
-                    },
-                  } as Node,
-                ]),
-              ),
-            },
-          },
-        },
-      },
-    },
-  },
-}
+const dir = (children: Record<string, Node>): Node => ({ type: 'dir', children })
+
+const readme = (p: Project) =>
+  [
+    `${p.title} — ${p.subtitle}`,
+    `${p.date}${p.stat ? ` · ${p.stat}` : ''}`,
+    `[${p.tech.join(', ')}]`,
+    '',
+    ...p.bullets.map((b) => `* ${b}`),
+    '',
+    ...[p.github && `github: ${p.github}`, p.demo && `${(p.demoLabel ?? 'demo').toLowerCase()}: ${p.demo}`]
+      .concat(p.links?.map((l) => `${l.label.toLowerCase()}: ${l.href}`) ?? [])
+      .filter(Boolean),
+  ].join('\n')
+
+const projectDir = (folder: 'projects' | 'other') =>
+  dir(
+    Object.fromEntries(
+      projects
+        .filter((p) => (p.folder ?? 'projects') === folder)
+        .map((p) => [slugOf(p), dir({ 'README.txt': file(readme(p)) })]),
+    ),
+  )
+
+const FS: Node = dir({
+  home: dir({
+    [profile.user]: dir({
+      'about.txt': file(
+        [
+          `${profile.name} — ${profile.role}`,
+          `based in ${profile.location}`,
+          '',
+          plain(profile.bio),
+          '',
+          `${education.degree}, ${education.school} (${education.date})`,
+          ...coursework.map((c) => `  - ${c}`),
+        ].join('\n'),
+      ),
+      'skills.txt': file(skillGroups.map((g) => `${g.category}:\n  ${g.skills.map((s) => s.name).join(', ')}`).join('\n\n')),
+      'contact.txt': file(contactLinks.map((l) => `${l.label.padEnd(9)} ${l.value}`).join('\n')),
+      resume: dir(Object.fromEntries(resumes.map((r) => [r.file.split('/').pop()!, file(`${r.title}\n${r.blurb}\n\nopen ${r.file}`)]))),
+      projects: projectDir('projects'),
+      other: projectDir('other'),
+    }),
+  }),
+})
 
 function resolve(cwd: string, path = ''): string {
   const raw = path.startsWith('~') ? HOME + path.slice(1) : path.startsWith('/') ? path : `${cwd}/${path}`
@@ -71,14 +84,14 @@ function lookup(path: string): Node | null {
 
 const pretty = (path: string) => (path.startsWith(HOME) ? '~' + path.slice(HOME.length) : path)
 
-// a function, not a const: APPS isn't initialized yet when this module loads (circular import)
+// a function, not a const: LAUNCHABLE isn't initialized yet when this module loads (circular import)
 const help = () => `available commands:
   help              show this
   ls [dir]          list files
   cd <dir>          change directory
   cat <file>        print a file
   pwd, whoami, date, echo, clear
-  open <app>        open a window: ${Object.keys(APPS).filter((a) => a !== 'project').join(', ')}
+  open <app>        open a window: ${LAUNCHABLE.join(', ')}
   open <project>    open a project by folder name
   neofetch          system info
   shutdown          power off and step away from the desk`
@@ -92,7 +105,7 @@ interface Line {
 export function Terminal({ winId }: { winId: string }) {
   const [cwd, setCwd] = useState(HOME)
   const [lines, setLines] = useState<Line[]>([
-    { kind: 'out', text: `Welcome to ${profile.name}'s machine. Type "help" to get started.` },
+    { kind: 'out', text: `Welcome to ${profile.host}, ${profile.name}'s machine. Type "help" to get started.` },
   ])
   const [input, setInput] = useState('')
   const [history, setHistory] = useState<string[]>([])
@@ -121,7 +134,7 @@ export function Terminal({ winId }: { winId: string }) {
       case 'pwd':
         return cwd
       case 'whoami':
-        return profile.handle
+        return profile.user
       case 'date':
         return new Date().toString()
       case 'echo':
@@ -154,7 +167,7 @@ export function Terminal({ winId }: { winId: string }) {
       }
       case 'open': {
         if (!arg) return 'open: what should I open?'
-        if (arg in APPS && arg !== 'project') {
+        if ((LAUNCHABLE as string[]).includes(arg)) {
           useStore.getState().open(arg as AppId)
           return `opening ${arg}...`
         }
@@ -163,12 +176,13 @@ export function Terminal({ winId }: { winId: string }) {
       }
       case 'neofetch':
         return [
-          `   ▄▄▄▄▄▄▄     ${profile.handle}@homepc`,
+          `   ▄▄▄▄▄▄▄     ${profile.user}@${profile.host}`,
           `   █ ▀▀▀ █     -------------`,
-          `   █▄▄▄▄▄█     OS: picoOS 1.0 (React)`,
-          `    ▄▄█▄▄      Renderer: three.js r169`,
-          `  ▄▀▀▀▀▀▀▀▄    Shader: picoCAD dither`,
-          `  ▀▀▀▀▀▀▀▀▀    Resolution: ${window.innerWidth}x${window.innerHeight}`,
+          `   █▄▄▄▄▄█     Name: ${profile.name}`,
+          `    ▄▄█▄▄      Role: ${profile.role}`,
+          `  ▄▀▀▀▀▀▀▀▄    Location: ${profile.location}`,
+          `  ▀▀▀▀▀▀▀▀▀    OS: picoOS 1.0 (React + three.js)`,
+          `               Shader: picoCAD dither`,
         ].join('\n')
       case 'exit':
         useStore.getState().close(winId)
@@ -178,7 +192,7 @@ export function Terminal({ winId }: { winId: string }) {
         useStore.getState().shutdown()
         return 'Broadcast message: the system is going down NOW!'
       case 'sudo':
-        return `${profile.handle} is not in the sudoers file. This incident will be reported.`
+        return `${profile.user} is not in the sudoers file. This incident will be reported.`
       default:
         return `${cmd}: command not found`
     }
@@ -213,7 +227,7 @@ export function Terminal({ winId }: { winId: string }) {
   const prompt = (dir: string) => (
     <span className="prompt">
       <span className="p-user">
-        {profile.handle}@homepc
+        {profile.user}@{profile.host}
       </span>
       :<span className="p-dir">{pretty(dir)}</span>$&nbsp;
     </span>

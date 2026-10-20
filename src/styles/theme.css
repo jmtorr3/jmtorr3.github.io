@@ -1,0 +1,35 @@
+/* Colors + fonts for the virtual desktop — from the old portfolio (NixOS navy + cyan).
+   Change these and every window, the taskbar and the wallpaper follow. */
+
+@font-face {
+  font-family: 'MonocraftNF';
+  src: url('/fonts/MonocraftNF.ttf') format('truetype');
+  font-display: swap;
+}
+
+:root {
+  --bg: #0d1520;
+  --bg-card: #111e2e;
+  --bg-card-hover: #162538;
+  --border: #1c3050;
+  --accent: #4aafd4;
+  --accent-bright: #7ecce8;
+  --accent-dim: #255e80;
+  --accent-glow: rgba(74, 175, 212, 0.15);
+  --text: #ddeaf5;
+  --text-muted: #7a9dba;
+  --text-faint: #3a5872;
+  --ok: #4ade80;
+
+  /* window chrome */
+  --title-top: #2f7aa3;
+  --title-mid: #1e5677;
+  --title-bottom: #163f5a;
+  --title-inactive: #1a2a3f;
+
+  /* wallpaper */
+  --wall-top: #0d1520;
+  --wall-bottom: #132238;
+
+  --font: 'MonocraftNF', 'JetBrains Mono', ui-monospace, monospace;
+}

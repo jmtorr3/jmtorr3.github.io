@@ -2,7 +2,25 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { APPS, LAUNCHABLE } from './apps/registry'
 import { Icon } from './Icon'
-import { profile } from '../content/about'
+import { profile } from '../data/profile'
+import { useSound, unlockAudio } from './sound'
+
+function SoundToggle() {
+  const { muted, toggle } = useSound()
+  return (
+    <button
+      className="tray-btn nf"
+      onClick={() => {
+        unlockAudio()
+        toggle()
+      }}
+      title={muted ? 'Sound off' : 'Sound on'}
+      aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
+    >
+      {muted ? '\uf026' : '\uf028'}
+    </button>
+  )
+}
 
 function Clock() {
   const [now, setNow] = useState(() => new Date())
@@ -30,7 +48,7 @@ export function Taskbar() {
     return () => window.removeEventListener('pointerdown', close)
   }, [menu])
 
-  const apps = LAUNCHABLE.filter((id) => APPS[id].title.toLowerCase().includes(query.toLowerCase()))
+  const apps = LAUNCHABLE.filter((id) => APPS[id].label.toLowerCase().includes(query.toLowerCase()))
 
   const launch = (id: (typeof LAUNCHABLE)[number]) => {
     open(id)
@@ -48,8 +66,11 @@ export function Taskbar() {
         {menu && (
           <div className="start-menu">
             <div className="start-head">
-              <Icon name="user" size={32} />
-              <span>{profile.name}</span>
+              <img src={profile.avatar} alt="" className="start-avatar" />
+              <span>
+                {profile.name}
+                <span className="start-role">{profile.role}</span>
+              </span>
             </div>
             <input
               className="start-search"
@@ -63,7 +84,7 @@ export function Taskbar() {
               {apps.map((id) => (
                 <button key={id} onClick={() => launch(id)}>
                   <Icon name={APPS[id].icon} size={24} />
-                  {APPS[id].title.replace(/ - Notepad$/, '')}
+                  {APPS[id].label}
                 </button>
               ))}
             </div>
@@ -94,6 +115,7 @@ export function Taskbar() {
       </div>
 
       <div className="tray">
+        <SoundToggle />
         <Clock />
       </div>
     </div>

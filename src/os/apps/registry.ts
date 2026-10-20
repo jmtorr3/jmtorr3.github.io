@@ -1,27 +1,34 @@
 import type { ComponentType } from 'react'
 import type { IconName } from '../Icon'
-import { Notepad } from './Notepad'
-import { Explorer, ProjectViewer } from './Explorer'
+import { About } from './About'
+import { Explorer, ProjectViewer, ImageViewer } from './Explorer'
+import { Skills } from './Skills'
+import { Resume } from './Resume'
+import { Blog } from './Blog'
 import { Terminal } from './Terminal'
 import { Contact } from './Contact'
 
 export interface AppDef {
   title: string
+  label: string // desktop icon / start menu name
   icon: IconName
   size: [number, number]
   component: ComponentType<{ winId: string; props?: Record<string, unknown> }>
 }
 
 export const APPS = {
-  about: { title: 'about.txt - Notepad', icon: 'user', size: [460, 360], component: Notepad },
-  resume: { title: 'resume.txt - Notepad', icon: 'text', size: [520, 440], component: Notepad },
-  contact: { title: 'Contact', icon: 'mail', size: [360, 260], component: Contact },
-  projects: { title: 'Projects', icon: 'folder', size: [560, 380], component: Explorer },
-  project: { title: 'Project', icon: 'text', size: [440, 320], component: ProjectViewer },
-  terminal: { title: 'Konsole', icon: 'terminal', size: [600, 380], component: Terminal },
+  about: { title: 'About Me', label: 'About Me', icon: 'user', size: [560, 520], component: About },
+  projects: { title: 'Projects - Dolphin', label: 'Projects', icon: 'folder', size: [600, 400], component: Explorer },
+  skills: { title: 'Skills - System Settings', label: 'Skills', icon: 'chip', size: [580, 380], component: Skills },
+  resume: { title: 'Resume', label: 'Resume', icon: 'text', size: [760, 560], component: Resume },
+  blog: { title: 'Blog', label: 'Blog', icon: 'globe', size: [520, 440], component: Blog },
+  contact: { title: 'Contact', label: 'Contact', icon: 'mail', size: [380, 330], component: Contact },
+  terminal: { title: 'Konsole', label: 'Konsole', icon: 'terminal', size: [620, 400], component: Terminal },
+  project: { title: 'Project', label: 'Project', icon: 'folder', size: [580, 540], component: ProjectViewer },
+  image: { title: 'Image Viewer', label: 'Image Viewer', icon: 'image', size: [640, 480], component: ImageViewer },
 } satisfies Record<string, AppDef>
 
 export type AppId = keyof typeof APPS
 
-// what shows on the desktop and in the start menu
-export const LAUNCHABLE: AppId[] = ['about', 'projects', 'resume', 'contact', 'terminal']
+// what shows on the desktop and in the start menu, in order
+export const LAUNCHABLE: AppId[] = ['about', 'projects', 'skills', 'resume', 'blog', 'contact', 'terminal']

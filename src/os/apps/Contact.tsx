@@ -1,24 +1,21 @@
-import { contact } from '../../content/contact'
-import { Icon } from '../Icon'
+import { contactLinks } from '../../data/contact'
 
 export function Contact() {
   return (
     <div className="contact">
-      <div className="contact-head">
-        <Icon name="mail" size={48} />
-        <div>
-          <div className="label">Send me a message</div>
-          <a href={`mailto:${contact.email}`}>{contact.email}</a>
-        </div>
-      </div>
-      <fieldset>
-        <legend>Elsewhere</legend>
-        {contact.links.map((l) => (
-          <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="link-row">
-            {l.label}
-          </a>
-        ))}
-      </fieldset>
+      <p className="section-title">
+        Get in <span className="accent">Touch</span>
+      </p>
+      {contactLinks.map((l) => (
+        <a key={l.href} className="card contact-row" href={l.href} target="_blank" rel="noreferrer">
+          <span className="nf accent contact-icon">{l.icon}</span>
+          <span>
+            <span className="muted small">{l.label}</span>
+            <br />
+            {l.value}
+          </span>
+        </a>
+      ))}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { makePicoMaterial } from './PicoMaterial'
 import { useStore } from '../store'
+import { unlockAudio } from '../os/sound'
 
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
@@ -51,7 +52,9 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
       onPointerOut={() => onHover(false)}
       onClick={(e: { stopPropagation: () => void }) => {
         e.stopPropagation()
-        if (mode === 'room') setMode('zooming')
+        if (mode !== 'room') return
+        unlockAudio()
+        setMode('zooming')
       }}
     />
   )
