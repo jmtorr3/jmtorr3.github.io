@@ -32,6 +32,8 @@ export interface ScreenInfo {
 interface State {
   mode: Mode
   poweringOff: boolean
+  // bumped when the user spins the PC around too fast (the face gets dizzy)
+  spins: number
   screen: ScreenInfo | null
   // desktop size in its own layout px; the Desktop is drawn at `scale`× that on screen
   desk: { w: number; h: number; scale: number }
@@ -40,6 +42,7 @@ interface State {
   topZ: number
   setMode: (m: Mode) => void
   shutdown: () => void
+  spunTooFast: () => void
   setScreen: (s: ScreenInfo) => void
   setDesk: (w: number, h: number, scale: number) => void
   open: (app: AppId, opts?: { title?: string; props?: Record<string, unknown>; key?: string }) => void
@@ -57,6 +60,7 @@ let spawn = 0
 export const useStore = create<State>((set, get) => ({
   mode: 'room',
   poweringOff: false,
+  spins: 0,
   screen: null,
   desk: { w: window.innerWidth, h: window.innerHeight, scale: 1 },
   windows: [],
@@ -66,6 +70,7 @@ export const useStore = create<State>((set, get) => ({
   setMode: (mode) => set({ mode, poweringOff: false }),
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
   shutdown: () => set({ poweringOff: true }),
+  spunTooFast: () => set((s) => ({ spins: s.spins + 1 })),
   setScreen: (screen) => set({ screen }),
   setDesk: (w, h, scale) => set({ desk: { w, h, scale } }),
 

@@ -57,6 +57,12 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
     invalidate()
   }, [mode, hovered, model, invalidate])
 
+  // spun around too fast: dizzy for a few seconds (its sound plays via onChange)
+  const spins = useStore((s) => s.spins)
+  useEffect(() => {
+    if (spins) model.face.react('dizzy', 3)
+  }, [spins, model])
+
   // front-panel lights: red power, green drive activity, blue blinks with the face
   const lights = useRef({ hddUntil: 0, hddNext: 0, hddOn: false, faceLeft: 0 })
   // the desk mouse follows the cursor: screen left/right and up/down map to sliding

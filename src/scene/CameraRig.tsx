@@ -18,9 +18,35 @@ const CORNERS = [0, 1, 2, 3, 4, 5, 6, 7].map(
     ),
 )
 const DURATION = 1.4
+// left behind or beside the monitor with nothing happening for this long, the
+// camera drifts back around to the front so the face is in view again
+const IDLE_RETURN_MS = 10_000
+const RETURN_SPEED = 0.6 // radians per second, easing out near the front
+// spinning about a full turn within a second makes the face dizzy
+const DIZZY_SPIN = Math.PI * 2
+const DIZZY_COOLDOWN = 4 // seconds before it can get dizzy again
 // how far up/down the user can orbit, as angles from straight up (radians)
 const MIN_POLAR = 0.35
 const MAX_POLAR = 1.45 // just above the desk
+
+// Travel between two camera spots along an arc around the PC rather than a straight
+// line, so zooming in from behind swings around the side instead of going through it.
+const _a = new THREE.Spherical()
+const _b = new THREE.Spherical()
+const _v = new THREE.Vector3()
+function arcBetween(from: THREE.Vector3, to: THREE.Vector3, k: number) {
+  _a.setFromVector3(_v.copy(from).sub(ROOM_TARGET))
+  _b.setFromVector3(_v.copy(to).sub(ROOM_TARGET))
+  // shortest way around
+  let turn = _b.theta - _a.theta
+  turn = Math.atan2(Math.sin(turn), Math.cos(turn))
+  _a.set(
+    THREE.MathUtils.lerp(_a.radius, _b.radius, k),
+    THREE.MathUtils.lerp(_a.phi, _b.phi, k),
+    _a.theta + turn * k,
+  )
+  return _v.setFromSpherical(_a).add(ROOM_TARGET)
+}
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
@@ -40,7 +66,29 @@ export function CameraRig() {
   const shiftReady = useRef(false)
   const gl = useThree((s) => s.gl)
   // drag (mouse or finger) to orbit the PC; velocity keeps it gliding after release
-  const orbit = useRef({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0, dragging: false, x: 0, y: 0, at: 0 })
+  const orbit = useRef({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0, dragging: false, x: 0, y: 0, at: 0, lastInput: 0, returning: false })
+  // recent turning (fades out over about a second) and when it last got dizzy
+  const spin = useRef({ amount: 0, lastYaw: 0, dizzyAt: -Infinity })
+
+  // any input counts as "not idle" and stops a return in progress
+  useEffect(() => {
+    const o = orbit.current
+    o.lastInput = performance.now()
+    const active = () => {
+      o.lastInput = performance.now()
+      o.returning = false
+    }
+    const events = ['pointermove', 'pointerdown', 'keydown', 'wheel'] as const
+    events.forEach((ev) => window.addEventListener(ev, active, { passive: true }))
+    return () => events.forEach((ev) => window.removeEventListener(ev, active))
+  }, [])
+
+  // can the camera see the screen (and the face on it)? false from behind or edge-on
+  const faceVisible = () => {
+    const screen = useStore.getState().screen
+    if (!screen) return true
+    return _v.copy(camera.position).sub(screen.center).normalize().dot(screen.normal) > 0.35
+  }
 
   useEffect(() => {
     const el = gl.domElement
@@ -98,6 +146,30 @@ export function CameraRig() {
       o.vPitch *= damp
     }
 
+    // how fast has it been spun lately?
+    const sp = spin.current
+    sp.amount = sp.amount * Math.exp(-delta) + Math.abs(o.yaw - sp.lastYaw)
+    sp.lastYaw = o.yaw
+    if (sp.amount > DIZZY_SPIN && time - sp.dizzyAt > DIZZY_COOLDOWN) {
+      sp.dizzyAt = time
+      sp.amount = 0
+      useStore.getState().spunTooFast()
+    }
+
+    if (!o.dragging && !o.returning && performance.now() - o.lastInput > IDLE_RETURN_MS && !faceVisible()) {
+      o.returning = true
+      o.yaw = Math.atan2(Math.sin(o.yaw), Math.cos(o.yaw)) // the short way back, not unwinding full turns
+      sp.lastYaw = o.yaw // that jump isn't a spin
+      o.vYaw = o.vPitch = 0
+    }
+    if (o.returning) {
+      // slow and steady, easing out as it reaches the front view
+      const step = (v: number) => Math.sign(v) * Math.min(Math.abs(v), Math.min(RETURN_SPEED, Math.abs(v)) * delta)
+      o.yaw -= step(o.yaw)
+      o.pitch -= step(o.pitch)
+      if (Math.abs(o.yaw) < 0.005 && Math.abs(o.pitch) < 0.005) o.returning = false
+    }
+
     // slow idle drift plus a little pointer parallax (not while dragging)
     if (!o.dragging) sway.current.lerp(pointer, 0.05)
     const offset = ROOM_POS.clone().sub(ROOM_TARGET)
@@ -140,7 +212,7 @@ export function CameraRig() {
     if (mode === 'zooming' || mode === 'exiting') {
       t.current = Math.min(1, t.current + delta / DURATION)
       const k = ease(t.current)
-      camera.position.lerpVectors(from.current.pos, goal.pos, k)
+      camera.position.copy(arcBetween(from.current.pos, goal.pos, k))
       lookAt.current.lerpVectors(from.current.target, goal.target, k)
       centering = mode === 'zooming' ? 1 - k : k
       if (t.current >= 1) setMode(mode === 'zooming' ? 'desktop' : 'room')
