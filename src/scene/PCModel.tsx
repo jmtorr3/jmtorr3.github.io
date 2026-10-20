@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useGLTF } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -35,7 +35,7 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
       root.updateMatrixWorld(true)
       screen.material = makeScreenMaterial(face.texture, new THREE.Box3().setFromObject(screen))
     }
-    return { root, meshes, face }
+    return { root, meshes, face, material }
   }, [scene])
 
   const [hovered, setHovered] = useState(false)
@@ -51,11 +51,32 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
     invalidate()
   }, [mode, hovered, model, invalidate])
 
-  useFrame((_, dt) => model.face.update(Math.min(dt, 0.1)))
+  // front-panel lights: red power, green drive activity, blue blinks with the face
+  const lights = useRef({ hddUntil: 0, hddNext: 0, hddOn: false, faceLeft: 0 })
+  useFrame(({ clock }, dt) => {
+    model.face.update(Math.min(dt, 0.1))
+
+    const t = clock.elapsedTime
+    const l = lights.current
+    const busy = mode === 'zooming' // booting: everything goes
+    // drive light: random bursts of flicker, constant while booting
+    if (!busy && t > l.hddUntil && Math.random() < dt * 0.6) l.hddUntil = t + 0.3 + Math.random() * 0.7
+    if (t > l.hddNext) {
+      l.hddOn = (busy || t < l.hddUntil) && Math.random() < 0.6
+      l.hddNext = t + 0.04 + Math.random() * 0.06
+    }
+    const blink = (hz: number) => (Math.floor(t * hz) % 2 === 0 ? 1 : 0.1)
+    const red = busy ? 1 : 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 2.2)) // standby breathing
+    const green = l.hddOn ? 1 : 0.08
+    l.faceLeft = Math.max(0, l.faceLeft - dt)
+    const blue = busy ? blink(10) : l.faceLeft > 0 ? blink(12) : 0.08
+    model.material.uniforms.leds.value.set(red, green, blue)
+  })
 
   useEffect(() => {
     // the face bleeps as it changes expression (the spin-up covers the zoom)
     model.face.onChange = (expr) => {
+      lights.current.faceLeft = 0.5
       if (useStore.getState().mode === 'room') playFaceSound(expr)
     }
     // browsers only allow sound after an interaction: any first tap or drag in the room counts

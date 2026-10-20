@@ -25,12 +25,24 @@ const fragmentShader = /* glsl */ `
   uniform float ambient;
   uniform float dark;
   uniform float darker;
+  uniform float texSize;
+  uniform vec3 leds;       // brightness of the case's red / green / blue lights, 0..1
   varying vec2 vUv;
   varying vec3 vViewPos;
 
   void main() {
     vec4 tex = texture2D(map, vUv);
     if (tex.a < 0.05) discard;
+
+    // the three front-panel lights are single texels in row 47 of the atlas;
+    // lit ones glow (unshaded), unlit ones go dark
+    vec2 texel = floor(vUv * texSize);
+    if (texel.y == 47.0 && (texel.x == 46.0 || texel.x == 48.0 || texel.x == 50.0)) {
+      float k = texel.x == 46.0 ? leds.r : texel.x == 48.0 ? leds.g : leds.b;
+      vec3 lit = texel.x == 46.0 ? vec3(1.0, 0.16, 0.16) : texel.x == 48.0 ? vec3(0.3, 1.0, 0.4) : vec3(0.3, 0.65, 1.0);
+      gl_FragColor = vec4(mix(tex.rgb * 0.8, lit, k), 1.0);
+      return;
+    }
 
     // flat face normal straight from screen-space derivatives
     vec3 n = normalize(cross(dFdx(vViewPos), dFdy(vViewPos)));
@@ -66,6 +78,8 @@ export function makePicoMaterial(map: THREE.Texture | null) {
       ambient: { value: 0.15 },
       dark: { value: 0.62 },
       darker: { value: 0.38 },
+      texSize: { value: (map?.image as { width?: number } | undefined)?.width ?? 128 },
+      leds: { value: new THREE.Vector3(1, 1, 1) },
     },
   })
 }
