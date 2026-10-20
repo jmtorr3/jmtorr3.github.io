@@ -374,3 +374,45 @@ export function playFart() {
   // breathy air through it
   noise(c, t, len, 'bandpass', 380, env(c, t, 0.12, 0.02, len - 0.02))
 }
+
+// ---- keyboard & mouse physics ----
+
+// picked up: a light plastic lift
+export function playPickup() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  noise(c, t, 0.03, 'highpass', 2500, env(c, t, 0.12, 0.001, 0.025))
+  tone(c, t + 0.01, 0.06, 'triangle', 500, 900, env(c, t + 0.01, 0.04, 0.005, 0.05))
+}
+
+// hit the desk; strength ~ impact speed. The keyboard thuds and its keys rattle,
+// the mouse just taps.
+export function playLand(kind: 'keyboard' | 'mouse', speed: number) {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  const g = Math.min(1, speed / 3)
+  if (kind === 'keyboard') {
+    tone(c, t, 0.14, 'sine', 130, 55, env(c, t, 0.35 * g, 0.003, 0.13))
+    noise(c, t, 0.05, 'lowpass', 900, env(c, t, 0.2 * g, 0.002, 0.045))
+    // keys rattling
+    for (let i = 0; i < 5; i++) {
+      const at = t + 0.015 + Math.random() * 0.09
+      noise(c, at, 0.012, 'bandpass', 3000 + Math.random() * 2000, env(c, at, 0.1 * g, 0.001, 0.01))
+    }
+  } else {
+    tone(c, t, 0.07, 'sine', 260, 120, env(c, t, 0.25 * g, 0.002, 0.065))
+    noise(c, t, 0.02, 'highpass', 2000, env(c, t, 0.12 * g, 0.001, 0.018))
+  }
+}
+
+// knocked into the PC: a hollow plastic knock
+export function playBump(speed: number) {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  const g = Math.min(1, speed / 3)
+  tone(c, t, 0.1, 'triangle', 190, 120, env(c, t, 0.3 * g, 0.002, 0.095))
+  noise(c, t, 0.04, 'lowpass', 1200, env(c, t, 0.15 * g, 0.001, 0.035))
+}

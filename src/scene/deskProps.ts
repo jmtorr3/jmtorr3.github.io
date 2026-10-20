@@ -7,12 +7,18 @@ import * as THREE from 'three'
 export const grabState = { active: false }
 
 const LIFT = 0.45 // how high a held prop floats above the desk
+const MAX_LIFT = 1.4 // how high it can be raised when moving it up and down
+// a knock only plays if the prop hasn't touched the PC for this long (seconds),
+// so sliding along it or wiggling against it while held stays quiet
+const KNOCK_GAP = 0.5
 const GRAVITY = 7
 const BOUNDS = 2.4 // how far from the PC a prop can go
 
 type State = 'rest' | 'held' | 'fall' | 'home'
+export type PropKind = 'keyboard' | 'mouse'
 
 export type Prop = {
+  kind: PropKind
   mesh: THREE.Object3D
   rest: THREE.Vector3 // where it started (and goes back to)
   restRot: THREE.Euler
@@ -21,6 +27,7 @@ export type Prop = {
   state: State
   offset: THREE.Vector3 // bounding-box center relative to the mesh position
   half: THREE.Vector3 // half the bounding-box size
+  lastTouch: number // when it last touched the PC (for KNOCK_GAP)
 }
 
 export class DeskProps {
@@ -31,12 +38,21 @@ export class DeskProps {
   private hit = new THREE.Vector3()
   private target = new THREE.Vector3()
   private last = new THREE.Vector3()
+  private n = new THREE.Vector3()
+  private time = 0
 
-  // obstacle: the PC's footprint, which props can't move into
-  constructor(meshes: THREE.Object3D[], private obstacle: THREE.Box3, private center: THREE.Vector3) {
-    this.props = meshes.map((mesh) => {
+  // for sounds: picked up, hit the desk, knocked into the PC (speed in units/s)
+  onGrab?: (p: Prop) => void
+  onLand?: (p: Prop, speed: number) => void
+  onBump?: (p: Prop, speed: number) => void
+
+  // obstacle: the PC's footprint. Props can't go into it, and they can't go further
+  // back than its middle (the PC faces -z), so they never end up behind it.
+  constructor(items: { mesh: THREE.Object3D; kind: PropKind }[], private obstacle: THREE.Box3, private center: THREE.Vector3) {
+    this.props = items.map(({ mesh, kind }) => {
       const box = new THREE.Box3().setFromObject(mesh)
       return {
+        kind,
         mesh,
         rest: mesh.position.clone(),
         restRot: mesh.rotation.clone(),
@@ -45,6 +61,7 @@ export class DeskProps {
         state: 'rest' as State,
         offset: box.getCenter(new THREE.Vector3()).sub(mesh.position),
         half: box.getSize(new THREE.Vector3()).multiplyScalar(0.5),
+        lastTouch: -Infinity,
       }
     })
   }
@@ -57,12 +74,27 @@ export class DeskProps {
     return this.held !== null
   }
 
-  grab(prop: Prop, ray: THREE.Ray) {
+  // camDir: where the camera is looking. The held prop moves on a surface through
+  // it that tilts with the view: looking straight at the PC it's upright, so moving
+  // the pointer up and down raises and lowers the prop; looking down from above
+  // it's the desk plane, so up and down is forward and back.
+  grab(prop: Prop, ray: THREE.Ray, camDir: THREE.Vector3) {
+    const down = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(-camDir.y, -1, 1)))
+    const upright = THREE.MathUtils.clamp((50 - down) / 30, 0, 1) // 1 at <=20° down, 0 at >=50°
+    // blend between facing the camera (upright) and facing up (the desk plane)
+    this.n.set(-camDir.x, 0, -camDir.z).normalize().multiplyScalar(upright)
+    this.n.y += 1 - upright
+    this.n.normalize()
+    // through the prop, at the height it gets lifted to
+    this.target.copy(prop.mesh.position).setY(prop.rest.y + LIFT)
+    this.plane.setFromNormalAndCoplanarPoint(this.n, this.target)
     if (!ray.intersectPlane(this.plane, this.hit)) return
-    this.grabOffset.copy(prop.mesh.position).sub(this.hit).setY(0)
+    // keep the grab point under the pointer, lifted to LIFT right away
+    this.grabOffset.copy(this.target).sub(this.hit)
     prop.state = 'held'
     this.held = prop
     grabState.active = true
+    this.onGrab?.(prop)
   }
 
   release() {
@@ -79,11 +111,13 @@ export class DeskProps {
   }
 
   update(dt: number, ray: THREE.Ray) {
+    this.time += dt
     for (const p of this.props) {
       const pos = p.mesh.position
       if (p.state === 'held') {
         if (!ray.intersectPlane(this.plane, this.hit)) continue
-        this.target.copy(this.hit).add(this.grabOffset).setY(p.rest.y + LIFT)
+        this.target.copy(this.hit).add(this.grabOffset)
+        this.target.y = THREE.MathUtils.clamp(this.target.y, p.rest.y + 0.1, p.rest.y + MAX_LIFT)
         this.last.copy(pos)
         pos.lerp(this.target, 1 - Math.exp(-dt * 20))
         p.vel.copy(pos).sub(this.last).divideScalar(Math.max(dt, 1e-3))
@@ -97,6 +131,7 @@ export class DeskProps {
         const grounded = pos.y <= p.rest.y
         if (grounded) {
           pos.y = p.rest.y
+          if (p.vel.y < -0.3) this.onLand?.(p, -p.vel.y)
           p.vel.y = p.vel.y < -1 ? -p.vel.y * 0.3 : 0 // one little bounce
           const friction = Math.exp(-dt * 5)
           p.vel.x *= friction
@@ -128,24 +163,41 @@ export class DeskProps {
     p.mesh.rotation.z += (p.restRot.z - p.mesh.rotation.z) * k
   }
 
-  // keep out of the PC and within reach of it (side to side only)
+  // keep out of the PC, no further back than its middle, and within reach of it
   private collide(p: Prop) {
     const pos = p.mesh.position
+    const o = this.obstacle
+
+    // the invisible wall halfway back: silent, it isn't anything you can hit
+    const wall = (o.min.z + o.max.z) / 2
+    const behind = pos.z + p.offset.z + p.half.z - wall
+    if (behind > 0) {
+      pos.z -= behind
+      p.vel.z = Math.min(0, p.vel.z)
+    }
+
+    // the PC itself is solid: push out along the shallower side, and knock
     const cx = pos.x + p.offset.x
     const cz = pos.z + p.offset.z
-    const o = this.obstacle
     const px = Math.min(cx + p.half.x - o.min.x, o.max.x - (cx - p.half.x))
     const pz = Math.min(cz + p.half.z - o.min.z, o.max.z - (cz - p.half.z))
     if (px > 0 && pz > 0) {
       const mid = o.getCenter(this.hit)
+      let speed: number
       if (px < pz) {
+        speed = Math.abs(p.vel.x)
         pos.x += cx < mid.x ? -px : px
         p.vel.x = 0
       } else {
+        speed = Math.abs(p.vel.z)
         pos.z += cz < mid.z ? -pz : pz
         p.vel.z = 0
       }
+      if (this.time - p.lastTouch > KNOCK_GAP && speed > 0.6) this.onBump?.(p, speed)
+      p.lastTouch = this.time
     }
+
+    // and not too far away (silent too)
     const dx = pos.x + p.offset.x - this.center.x
     const dz = pos.z + p.offset.z - this.center.z
     const d = Math.hypot(dx, dz)

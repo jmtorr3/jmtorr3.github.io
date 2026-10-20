@@ -6,7 +6,7 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { MochiFace, FACE_W, FACE_H, type Expression } from './MochiFace'
 import { useStore } from '../store'
-import { unlockAudio, playSpinUp, playFaceSound, playFart } from '../os/sound'
+import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump } from '../os/sound'
 import { DeskProps } from './deskProps'
 
 const URL = '/models/pc.gltf'
@@ -19,6 +19,9 @@ const MOUSE_RANGE = { side: 0.12, depth: 0.09 }
 // easter egg: the round fan grille on the back of the case, as texels in the
 // 128px atlas (with a texel of slack so it's easy to hit on a phone)
 const FAN_TEXELS = { x0: 60, x1: 67, y0: 51, y1: 58 }
+// picking up the keyboard and mouse is a mouse/trackpad thing; on touch screens
+// dragging orbits the camera and tapping them turns the PC on like the rest of it
+const CAN_GRAB = !matchMedia('(pointer: coarse)').matches
 
 type ClickEvent = {
   stopPropagation: () => void
@@ -35,6 +38,7 @@ type PressEvent = {
   pointerId: number
   object: THREE.Object3D
   ray: THREE.Ray
+  camera: THREE.Camera
   target: EventTarget | null
 }
 
@@ -78,7 +82,17 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     meshes.forEach((m, i) => {
       if (i !== KEYBOARD_MESH_INDEX && i !== MOUSE_MESH_INDEX) pc.union(new THREE.Box3().setFromObject(m))
     })
-    const props = new DeskProps([meshes[KEYBOARD_MESH_INDEX], meshes[MOUSE_MESH_INDEX]], pc, pc.getCenter(new THREE.Vector3()))
+    const props = new DeskProps(
+      [
+        { mesh: meshes[KEYBOARD_MESH_INDEX], kind: 'keyboard' },
+        { mesh: meshes[MOUSE_MESH_INDEX], kind: 'mouse' },
+      ],
+      pc,
+      pc.getCenter(new THREE.Vector3()),
+    )
+    props.onGrab = () => playPickup()
+    props.onLand = (p, speed) => playLand(p.kind, speed)
+    props.onBump = (_, speed) => playBump(speed)
     const mouse = props.find(meshes[MOUSE_MESH_INDEX])
     return { root, meshes, face, material, mouse, props, screenBox }
   }, [scene])
@@ -240,21 +254,21 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       object={model.root}
       onPointerOver={(e: { stopPropagation: () => void; object: THREE.Object3D }) => {
         e.stopPropagation()
-        onHover(model.props.find(e.object) ? 'prop' : 'pc')
+        onHover(CAN_GRAB && model.props.find(e.object) ? 'prop' : 'pc')
         setHovered(true)
       }}
       // moving between the PC and the keyboard/mouse doesn't re-fire "over"
-      onPointerMove={(e: { object: THREE.Object3D }) => onHover(model.props.find(e.object) ? 'prop' : 'pc')}
+      onPointerMove={(e: { object: THREE.Object3D }) => onHover(CAN_GRAB && model.props.find(e.object) ? 'prop' : 'pc')}
       onPointerOut={() => {
         onHover(null)
         setHovered(false)
       }}
       onPointerDown={(e: PressEvent) => {
         const prop = model.props.find(e.object)
-        if (mode !== 'room' || e.button !== 0 || !prop) return
+        if (!CAN_GRAB || mode !== 'room' || e.button !== 0 || !prop) return
         // pick up the keyboard or mouse
         e.stopPropagation()
-        model.props.grab(prop, e.ray)
+        model.props.grab(prop, e.ray, e.camera.getWorldDirection(new THREE.Vector3()))
         ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
         document.body.style.cursor = 'var(--cursor-grabbing)'
       }}
@@ -262,7 +276,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         e.stopPropagation()
         // a drag that ends over the PC is an orbit, not a click; the keyboard and
         // mouse are for picking up, not for turning it on
-        if (mode !== 'room' || e.delta > 6 || model.props.find(e.object)) return
+        if (mode !== 'room' || e.delta > 6 || (CAN_GRAB && model.props.find(e.object))) return
         unlockAudio()
         if (hitFan(e)) {
           // the fan blows out along the face it's on
