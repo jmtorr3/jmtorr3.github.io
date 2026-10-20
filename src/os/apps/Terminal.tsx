@@ -9,6 +9,9 @@ import { useStore } from '../../store'
 import { plain } from '../richText'
 import { LAUNCHABLE, type AppId } from './registry'
 import { openProject } from './Explorer'
+import { MochiFace, type Expression } from '../../scene/MochiFace'
+import { MochiCam } from '../MochiCam'
+import { playFaceSound } from '../sound'
 
 // tiny virtual filesystem built from src/data
 type Node = { type: 'file'; text: string } | { type: 'dir'; children: Record<string, Node> }
@@ -82,6 +85,37 @@ function lookup(path: string): Node | null {
   return node
 }
 
+// how Mochi reacts to a command (unknown commands and errors get 'confused')
+const REACTIONS: Record<string, Expression> = {
+  help: 'thinking',
+  ls: 'happy',
+  cd: 'wink',
+  cat: 'excited',
+  open: 'excited',
+  neofetch: 'cool',
+  clear: 'wink',
+  whoami: 'blush',
+  pwd: 'happy',
+  date: 'loading',
+  echo: 'uwu',
+  sudo: 'angry',
+  rm: 'dizzy',
+  exit: 'sad',
+  shutdown: 'cry',
+  poweroff: 'cry',
+  mochi: 'love',
+  hi: 'happy',
+  hello: 'happy',
+}
+
+function reactionFor(cmdline: string, out: string | null): Expression | null {
+  const line = cmdline.trim().toLowerCase()
+  if (!line) return null
+  if (/mochi|love|<3/.test(line) && !line.startsWith('sudo')) return 'love'
+  if (out && /not found|No such|missing|Not a directory|Is a directory/.test(out)) return 'confused'
+  return REACTIONS[line.split(/\s+/)[0]] ?? 'confused'
+}
+
 const pretty = (path: string) => (path.startsWith(HOME) ? '~' + path.slice(HOME.length) : path)
 
 // a function, not a const: LAUNCHABLE isn't initialized yet when this module loads (circular import)
@@ -94,6 +128,7 @@ const help = () => `available commands:
   open <app>        open a window: ${LAUNCHABLE.join(', ')}
   open <project>    open a project by folder name
   neofetch          system info
+  mochi             say hi to mochi
   shutdown          power off and step away from the desk`
 
 interface Line {
@@ -113,6 +148,39 @@ export function Terminal({ winId }: { winId: string }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const focused = useStore((s) => s.focused === winId)
+
+  // Mochi watches you type: eyes follow the text, reacts to each command,
+  // dozes off when you stop for a while and startles awake when you start again
+  const [face] = useState(() => new MochiFace({ idle: false }))
+  const lastTyped = useRef(performance.now())
+  const dozing = useRef(false)
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!dozing.current && performance.now() - lastTyped.current > 25_000) {
+        dozing.current = true
+        face.react('sleepy', 1e9)
+      }
+    }, 1000)
+    return () => clearInterval(id)
+  }, [face])
+  const onType = (value: string) => {
+    lastTyped.current = performance.now()
+    if (dozing.current) {
+      dozing.current = false
+      face.react('surprised', 0.9)
+    }
+    // look down at the line, following the end of the text
+    face.glance(Math.max(-10, Math.min(10, -10 + value.length * 0.7)), 5)
+    if (Math.random() < 0.15) face.poke()
+  }
+  const react = (cmdline: string, out: string | null) => {
+    lastTyped.current = performance.now()
+    dozing.current = false
+    const expr = reactionFor(cmdline, out)
+    if (!expr) return
+    face.react(expr, expr === 'loading' ? 3.2 : 2.2)
+    playFaceSound(expr)
+  }
 
   useEffect(() => {
     bodyRef.current?.scrollTo(0, bodyRef.current.scrollHeight)
@@ -203,6 +271,8 @@ export function Terminal({ winId }: { winId: string }) {
         return 'Broadcast message: the system is going down NOW!'
       case 'sudo':
         return `${profile.user} is not in the sudoers file. This incident will be reported.`
+      case 'mochi':
+        return '(\u25d5\u203f\u25d5) hi! i live in this computer.'
       default:
         return `${cmd}: command not found`
     }
@@ -212,6 +282,7 @@ export function Terminal({ winId }: { winId: string }) {
     if (e.key === 'Enter') {
       const entry: Line = { kind: 'in', text: input, cwd }
       const out = run(input)
+      react(input, out)
       if (out !== null) setLines((l) => [...l, entry, ...(out ? [{ kind: 'out' as const, text: out }] : [])])
       if (input.trim()) setHistory((h) => [input, ...h])
       setHIdx(-1)
@@ -244,30 +315,44 @@ export function Terminal({ winId }: { winId: string }) {
   )
 
   return (
-    <div className="terminal" ref={bodyRef} onClick={() => inputRef.current?.focus({ preventScroll: true })}>
-      {lines.map((l, i) =>
-        l.kind === 'in' ? (
-          <div key={i}>
-            {prompt(l.cwd!)}
-            {l.text}
-          </div>
-        ) : (
-          <pre key={i}>{l.text}</pre>
-        ),
-      )}
-      <div className="input-line">
-        {prompt(cwd)}
-        <input
-          ref={inputRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKey}
-          spellCheck={false}
-          autoComplete="off"
-          autoCapitalize="off"
-          aria-label="terminal input"
-        />
+    <div className="konsole">
+      <div className="terminal" ref={bodyRef} onClick={() => inputRef.current?.focus({ preventScroll: true })}>
+        {lines.map((l, i) =>
+          l.kind === 'in' ? (
+            <div key={i}>
+              {prompt(l.cwd!)}
+              {l.text}
+            </div>
+          ) : (
+            <pre key={i}>{l.text}</pre>
+          ),
+        )}
+        <div className="input-line">
+          {prompt(cwd)}
+          <input
+            ref={inputRef}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value)
+              onType(e.target.value)
+            }}
+            onKeyDown={onKey}
+            spellCheck={false}
+            autoComplete="off"
+            autoCapitalize="off"
+            aria-label="terminal input"
+          />
+        </div>
       </div>
+      <MochiCam
+        face={face}
+        onClick={() => {
+          // petting
+          face.react('love', 1.4)
+          playFaceSound('love')
+          inputRef.current?.focus({ preventScroll: true })
+        }}
+      />
     </div>
   )
 }

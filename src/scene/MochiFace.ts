@@ -123,6 +123,7 @@ function pickMood(): Expression {
 
 export class MochiFace {
   readonly texture: THREE.CanvasTexture
+  readonly canvas: HTMLCanvasElement
   // called when a new expression appears ('wake' when the eyes first open), for sounds
   onChange?: (expr: Expression | 'wake') => void
   private ctx: CanvasRenderingContext2D
@@ -147,9 +148,14 @@ export class MochiFace {
   private nextSquishAt = rand(4, 9)
   private t = 0
   private shownAt = 0 // when the current expression appeared, for ones that play out
+  private reactUntil = 0 // a reaction is showing until then (react())
+  private idle: boolean
 
-  constructor() {
+  // idle: cycle through random moods by itself (off when something else drives it)
+  constructor({ idle = true } = {}) {
+    this.idle = idle
     const canvas = document.createElement('canvas')
+    this.canvas = canvas
     canvas.width = FACE_W
     canvas.height = FACE_H
     this.ctx = canvas.getContext('2d')!
@@ -183,6 +189,24 @@ export class MochiFace {
     }
   }
 
+  // Show an expression for a while, then go back to resting.
+  react(expr: Expression, seconds = 1.8) {
+    if (this.shown === 'off') return
+    this.reactUntil = this.t + seconds
+    this.change(expr)
+  }
+
+  // Look toward an offset (eye px) and hold it before glancing around again.
+  glance(x: number, y: number, hold = 1.2) {
+    this.lookTarget = { x, y }
+    this.nextLookAt = this.t + hold
+  }
+
+  // A little squish, like it was poked.
+  poke() {
+    if (this.shown === 'neutral') this.squish = 1
+  }
+
   private change(expr: Expression) {
     if (expr === this.next) return
     this.next = expr
@@ -197,8 +221,13 @@ export class MochiFace {
     if (this.shown === 'off' && this.next === 'off') return
     this.t += dt
 
+    if (this.reactUntil && this.t > this.reactUntil) {
+      this.reactUntil = 0
+      this.change(this.override ?? 'neutral')
+    }
+
     // idle mood cycle
-    if (!this.override) {
+    if (this.idle && !this.override && !this.reactUntil) {
       if (this.next !== 'neutral' && this.t > this.moodUntil) this.change('neutral')
       if (this.next === 'neutral' && this.t > this.nextMoodAt) {
         const mood = pickMood()
