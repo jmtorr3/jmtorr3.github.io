@@ -40,9 +40,8 @@ const _v = new THREE.Vector3()
 function arcBetween(from: THREE.Vector3, to: THREE.Vector3, k: number) {
   _a.setFromVector3(_v.copy(from).sub(ROOM_TARGET))
   _b.setFromVector3(_v.copy(to).sub(ROOM_TARGET))
-  // shortest way around
   let turn = _b.theta - _a.theta
-  turn = Math.atan2(Math.sin(turn), Math.cos(turn))
+  turn = Math.atan2(Math.sin(turn), Math.cos(turn)) // shortest way around
   _a.set(
     THREE.MathUtils.lerp(_a.radius, _b.radius, k),
     THREE.MathUtils.lerp(_a.phi, _b.phi, k),
@@ -53,6 +52,33 @@ function arcBetween(from: THREE.Vector3, to: THREE.Vector3, k: number) {
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
+// The zoom/exit move. Like arcBetween, but the turn around the PC starts at the
+// speed the camera was already circling at (spin, rad/s) and bends smoothly to a
+// stop at the screen, so zooming in mid-spin carries on instead of halting and
+// snapping back. It keeps going the way it was spinning unless that's nearly a
+// full lap; then it eases on a little and curves back.
+function zoomArc(from: THREE.Vector3, to: THREE.Vector3, t: number, spin: number) {
+  _a.setFromVector3(_v.copy(from).sub(ROOM_TARGET))
+  _b.setFromVector3(_v.copy(to).sub(ROOM_TARGET))
+  let turn = _b.theta - _a.theta
+  turn = Math.atan2(Math.sin(turn), Math.cos(turn))
+  if (Math.abs(spin) > 1 && Math.sign(turn) !== Math.sign(spin)) {
+    const other = turn + Math.sign(spin) * Math.PI * 2
+    if (Math.abs(other) < Math.PI * 1.6) turn = other
+  }
+  // cubic Hermite: from rest-or-moving to rest
+  const h = t * t * (3 - 2 * t) // 0 -> 1, flat at both ends
+  const g = t * (1 - t) * (1 - t) // starts with slope 1, ends flat, 0 at both ends
+  const k = ease(t)
+  _a.set(
+    THREE.MathUtils.lerp(_a.radius, _b.radius, k),
+    THREE.MathUtils.lerp(_a.phi, _b.phi, k),
+    _a.theta + turn * h + THREE.MathUtils.clamp(spin, -6, 6) * DURATION * g,
+  )
+  return _v.setFromSpherical(_a).add(ROOM_TARGET)
+}
+const MAX_SPIN = 10 // radians per second; keeps the camera from lagging half a turn behind
+
 export function CameraRig() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
   const pointer = useThree((s) => s.pointer)
@@ -62,7 +88,8 @@ export function CameraRig() {
 
   const t = useRef(0)
   const lastMode = useRef(mode)
-  const from = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3() })
+  const from = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3(), spin: 0 })
+  const circling = useRef({ theta: 0, speed: 0 })
   const lookAt = useRef(ROOM_TARGET.clone())
   const sway = useRef(new THREE.Vector2())
   const shift = useRef(new THREE.Vector2()) // where the PC's outline sits, in NDC
@@ -147,6 +174,7 @@ export function CameraRig() {
     const o = orbit.current
     if (!o.dragging) {
       // glide to a stop
+      o.vYaw = THREE.MathUtils.clamp(o.vYaw, -MAX_SPIN, MAX_SPIN)
       o.yaw += o.vYaw * delta
       o.pitch += o.vPitch * delta
       const damp = Math.pow(0.04, delta)
@@ -202,11 +230,19 @@ export function CameraRig() {
   }
 
   useFrame((state, delta) => {
+    // how fast the camera is circling the PC right now (radians per second)
+    _a.setFromVector3(_v.copy(camera.position).sub(ROOM_TARGET))
+    const turned = Math.atan2(Math.sin(_a.theta - circling.current.theta), Math.cos(_a.theta - circling.current.theta))
+    circling.current.theta = _a.theta
+    if (delta > 0) circling.current.speed += (turned / delta - circling.current.speed) * 0.3
+
     if (mode !== lastMode.current) {
       lastMode.current = mode
       t.current = 0
       from.current.pos.copy(camera.position)
       from.current.target.copy(lookAt.current)
+      // zooming in while it's still spinning: carry that motion into the move
+      from.current.spin = circling.current.speed
     }
 
     // how much of the centering shift applies: none on the desktop, where the
@@ -220,7 +256,7 @@ export function CameraRig() {
     if (mode === 'zooming' || mode === 'exiting') {
       t.current = Math.min(1, t.current + delta / DURATION)
       const k = ease(t.current)
-      camera.position.copy(arcBetween(from.current.pos, goal.pos, k))
+      camera.position.copy(zoomArc(from.current.pos, goal.pos, t.current, from.current.spin))
       lookAt.current.lerpVectors(from.current.target, goal.target, k)
       centering = mode === 'zooming' ? 1 - k : k
       if (t.current >= 1) setMode(mode === 'zooming' ? 'desktop' : 'room')
@@ -228,7 +264,7 @@ export function CameraRig() {
       if (mode === 'room') {
         // ease toward the goal around the PC, not in a straight line through it
         // (a fast spin puts the goal on the far side); same feel at any frame rate
-        const k = 1 - Math.exp(-delta * 5)
+        const k = 1 - Math.exp(-delta * 10)
         camera.position.copy(arcBetween(camera.position, goal.pos, k))
         // and never closer to the PC's middle than its outer edge plus a margin
         const d = camera.position.distanceTo(ROOM_TARGET)
