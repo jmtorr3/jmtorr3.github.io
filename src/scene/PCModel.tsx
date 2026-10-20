@@ -11,6 +11,9 @@ import { unlockAudio, playSpinUp, playFaceSound } from '../os/sound'
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
 const SCREEN_MESH_INDEX = 7
+const MOUSE_MESH_INDEX = 11 // the little mouse next to the keyboard
+// how far the 3D mouse slides from its rest spot (world units) as the cursor crosses the screen
+const MOUSE_RANGE = { side: 0.12, depth: 0.09 }
 
 export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
   const { scene } = useGLTF(URL)
@@ -35,7 +38,8 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
       root.updateMatrixWorld(true)
       screen.material = makeScreenMaterial(face.texture, new THREE.Box3().setFromObject(screen))
     }
-    return { root, meshes, face, material }
+    const mouse = meshes[MOUSE_MESH_INDEX]
+    return { root, meshes, face, material, mouse, mouseRest: mouse?.position.clone() }
   }, [scene])
 
   const [hovered, setHovered] = useState(false)
@@ -53,8 +57,38 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
 
   // front-panel lights: red power, green drive activity, blue blinks with the face
   const lights = useRef({ hddUntil: 0, hddNext: 0, hddOn: false, faceLeft: 0 })
-  useFrame(({ clock }, dt) => {
+  // the desk mouse follows the cursor: screen left/right and up/down map to sliding
+  // it sideways and forward/back along the desk, relative to where the camera is
+  const mouseMove = useRef({ right: new THREE.Vector3(), away: new THREE.Vector3(), goal: new THREE.Vector3(), pressed: false })
+  useEffect(() => {
+    const down = () => (mouseMove.current.pressed = true)
+    const up = () => (mouseMove.current.pressed = false)
+    window.addEventListener('pointerdown', down)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      window.removeEventListener('pointerdown', down)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+    }
+  }, [])
+
+  useFrame(({ clock, camera, pointer }, dt) => {
     model.face.update(Math.min(dt, 0.1))
+
+    if (model.mouse && model.mouseRest) {
+      const m = mouseMove.current
+      // camera's right and forward, flattened onto the desk
+      camera.getWorldDirection(m.away).setY(0).normalize()
+      m.right.crossVectors(m.away, THREE.Object3D.DEFAULT_UP).normalize()
+      const follow = mode === 'room' ? 1 : 0 // rests in place once you sit at the screen
+      m.goal
+        .copy(model.mouseRest)
+        .addScaledVector(m.right, pointer.x * MOUSE_RANGE.side * follow)
+        .addScaledVector(m.away, pointer.y * MOUSE_RANGE.depth * follow)
+      m.goal.y -= m.pressed && mode === 'room' ? 0.012 : 0 // clicks press it down a hair
+      model.mouse.position.lerp(m.goal, 1 - Math.exp(-dt * 14))
+    }
 
     const t = clock.elapsedTime
     const l = lights.current
