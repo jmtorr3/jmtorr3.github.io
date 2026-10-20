@@ -119,7 +119,8 @@ export function Terminal({ winId }: { winId: string }) {
   }, [lines])
 
   useEffect(() => {
-    if (focused) inputRef.current?.focus()
+    // preventScroll: don't let the browser pan the page to the input (mobile)
+    if (focused) inputRef.current?.focus({ preventScroll: true })
   }, [focused])
 
   const run = (cmdline: string): string | null => {
@@ -174,16 +175,25 @@ export function Terminal({ winId }: { winId: string }) {
         if (openProject(arg)) return `opening ${arg}...`
         return `open: ${arg}: not found. try "ls ~/projects"`
       }
-      case 'neofetch':
-        return [
-          `   ▄▄▄▄▄▄▄     ${profile.user}@${profile.host}`,
-          `   █ ▀▀▀ █     -------------`,
-          `   █▄▄▄▄▄█     Name: ${profile.name}`,
-          `    ▄▄█▄▄      Role: ${profile.role}`,
-          `  ▄▀▀▀▀▀▀▀▄    Location: ${profile.location}`,
-          `  ▀▀▀▀▀▀▀▀▀    OS: picoOS 1.0 (React + three.js)`,
-          `               Shader: picoCAD dither`,
-        ].join('\n')
+      case 'neofetch': {
+        const art = ['   ▄▄▄▄▄▄▄', '   █ ▀▀▀ █', '   █▄▄▄▄▄█', '    ▄▄█▄▄', '  ▄▀▀▀▀▀▀▀▄', '  ▀▀▀▀▀▀▀▀▀']
+        const info = [
+          `${profile.user}@${profile.host}`,
+          '-------------',
+          `Name: ${profile.name}`,
+          `Role: ${profile.role}`,
+          `Location: ${profile.location}`,
+          'OS: picoOS 1.0 (React + three.js)',
+          'Shader: picoCAD dither',
+        ]
+        // side by side when it fits, otherwise the logo goes above the info (phones)
+        const body = bodyRef.current
+        const charW = body ? parseFloat(getComputedStyle(body).fontSize) * 0.6 : 8
+        const cols = body ? Math.floor(body.clientWidth / charW) : 80
+        const wide = 15 + Math.max(...info.map((l) => l.length)) <= cols
+        if (!wide) return [...art, '', ...info].join('\n')
+        return info.map((l, i) => (art[i] ?? '').padEnd(15) + l).join('\n')
+      }
       case 'exit':
         useStore.getState().close(winId)
         return null
@@ -234,7 +244,7 @@ export function Terminal({ winId }: { winId: string }) {
   )
 
   return (
-    <div className="terminal" ref={bodyRef} onClick={() => inputRef.current?.focus()}>
+    <div className="terminal" ref={bodyRef} onClick={() => inputRef.current?.focus({ preventScroll: true })}>
       {lines.map((l, i) =>
         l.kind === 'in' ? (
           <div key={i}>

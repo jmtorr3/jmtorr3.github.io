@@ -2,6 +2,10 @@ import { create } from 'zustand'
 import * as THREE from 'three'
 import { APPS, type AppId } from './os/apps/registry'
 
+// touch screens get a taller taskbar so its buttons are easy to hit; Window and the
+// start menu read the same value (in desktop units, before the UI scale)
+export const TASKBAR_H = matchMedia('(pointer: coarse)').matches ? 48 : 40
+
 export type Mode = 'room' | 'zooming' | 'desktop' | 'exiting'
 
 export interface Win {
@@ -29,14 +33,15 @@ interface State {
   mode: Mode
   poweringOff: boolean
   screen: ScreenInfo | null
-  desk: { w: number; h: number } // desktop size in CSS px (the monitor's screen area)
+  // desktop size in its own layout px; the Desktop is drawn at `scale`× that on screen
+  desk: { w: number; h: number; scale: number }
   windows: Win[]
   focused: string | null
   topZ: number
   setMode: (m: Mode) => void
   shutdown: () => void
   setScreen: (s: ScreenInfo) => void
-  setDesk: (w: number, h: number) => void
+  setDesk: (w: number, h: number, scale: number) => void
   open: (app: AppId, opts?: { title?: string; props?: Record<string, unknown>; key?: string }) => void
   close: (id: string) => void
   focus: (id: string) => void
@@ -53,7 +58,7 @@ export const useStore = create<State>((set, get) => ({
   mode: 'room',
   poweringOff: false,
   screen: null,
-  desk: { w: window.innerWidth, h: window.innerHeight },
+  desk: { w: window.innerWidth, h: window.innerHeight, scale: 1 },
   windows: [],
   focused: null,
   topZ: 10,
@@ -62,7 +67,7 @@ export const useStore = create<State>((set, get) => ({
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
   shutdown: () => set({ poweringOff: true }),
   setScreen: (screen) => set({ screen }),
-  setDesk: (w, h) => set({ desk: { w, h } }),
+  setDesk: (w, h, scale) => set({ desk: { w, h, scale } }),
 
   open: (app, opts = {}) => {
     const def = APPS[app]
@@ -79,7 +84,7 @@ export const useStore = create<State>((set, get) => ({
       return
     }
     const vw = get().desk.w
-    const vh = get().desk.h - 40 // taskbar
+    const vh = get().desk.h - TASKBAR_H
     const w = Math.min(def.size[0], vw - 16)
     const h = Math.min(def.size[1], vh - 16)
     const offset = (spawn++ % 6) * 28
@@ -95,7 +100,8 @@ export const useStore = create<State>((set, get) => ({
       h,
       z,
       minimized: false,
-      maximized: vw < 640,
+      // phones (portrait or landscape) get full-screen windows
+      maximized: vw < 640 || vh < 440,
     }
     set((s) => ({ windows: [...s.windows, win], focused: id, topZ: z }))
   },

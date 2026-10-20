@@ -14,6 +14,8 @@ body,
   color: var(--text);
   font-family: var(--font);
   font-size: 13px;
+  /* no double-tap zoom on phones */
+  touch-action: manipulation;
 }
 
 button {
@@ -92,6 +94,16 @@ a:hover {
   position: fixed; /* left/top/width/height come from the projected screen rect */
   overflow: hidden;
   z-index: 10;
+}
+
+/* everything inside is laid out in desktop px and scaled to the rect (Desktop.tsx);
+   it's also the size container, so cqh/@container use desktop px */
+.desk-ui {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  overflow: hidden;
   container-type: size;
 }
 
@@ -150,29 +162,21 @@ a:hover {
   top: 46%;
   left: 50%;
   transform: translate(-50%, -50%);
-  margin: 0;
-  font-family: monospace;
-  font-size: clamp(5px, 2.6cqh, 14px);
-  line-height: 1;
+  /* canvas dots are drawn in this color (see BrailleArt) */
   color: var(--accent);
-  user-select: none;
   pointer-events: none;
   animation: ascii-breathe 4s ease-in-out infinite alternate;
 }
 
-/* same glow pulse as the old portfolio's hero ASCII */
+/* same glow pulse as the old portfolio's hero ASCII; drop-shadow follows the dots, not the canvas box */
 @keyframes ascii-breathe {
   0% {
     opacity: 0.25;
-    text-shadow: 0 0 4px var(--accent);
+    filter: drop-shadow(0 0 2px var(--accent));
   }
   100% {
     opacity: 0.75;
-    text-shadow:
-      0 0 2px #ffffff,
-      0 0 8px var(--accent),
-      0 0 20px var(--accent),
-      0 0 40px var(--accent-glow);
+    filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px var(--accent)) drop-shadow(0 0 10px var(--accent));
   }
 }
 
@@ -189,6 +193,8 @@ a:hover {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  /* drawn at desktop px, then scaled with the UI: keep the flakes crisp */
+  image-rendering: pixelated;
 }
 
 .crt-overlay {
@@ -1126,7 +1132,7 @@ button.card:hover {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 40px;
+  height: var(--taskbar-h, 40px);
   display: flex;
   align-items: stretch;
   z-index: 99999;
@@ -1166,7 +1172,7 @@ button.card:hover {
   left: 0;
   width: clamp(230px, 36%, 340px);
   max-width: 100%;
-  max-height: calc(var(--desk-h, 100vh) - 40px);
+  max-height: calc(var(--desk-h, 100vh) - var(--taskbar-h, 40px));
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -1324,7 +1330,8 @@ button.card:hover {
   border-left: 1px solid var(--accent-dim);
 }
 
-@media (max-width: 640px) {
+/* narrow desktop (in desktop px, so it follows the UI scale, not the browser width) */
+@container (max-width: 640px) {
   .places,
   .resume-list {
     display: none;
@@ -1332,6 +1339,60 @@ button.card:hover {
   .task span {
     display: none;
   }
+}
+
+/* ---------- touch ---------- */
+
+@media (pointer: coarse) {
+  /* mobile browsers zoom into any focused input under 16px */
+  input,
+  textarea,
+  .start-search,
+  .terminal {
+    font-size: 16px;
+  }
+
+  .titlebar {
+    height: 36px;
+  }
+
+  .controls {
+    gap: 6px;
+  }
+
+  .controls button {
+    width: 30px;
+    height: 28px;
+    font-size: 15px;
+  }
+
+  .resize-handle {
+    width: 26px;
+    height: 26px;
+  }
+
+  .start-list button,
+  .start-foot button {
+    padding: 10px 10px;
+  }
+
+  .start-search {
+    padding: 8px 10px;
+  }
+
+  .task {
+    min-width: 48px;
+  }
+
+  .tray-btn {
+    padding: 8px;
+    font-size: 18px;
+  }
+}
+
+/* phones: maximized windows are the whole screen, no frame glow needed */
+.desktop.compact .window.maximized {
+  box-shadow: none;
 }
 
 /* document-style apps scroll as a whole; their sections keep natural height */

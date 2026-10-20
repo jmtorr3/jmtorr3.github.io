@@ -1,32 +1,69 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
 import { fitScreen } from '../scene/screenFit'
-import { useStore } from '../store'
+import { useStore, TASKBAR_H } from '../store'
 import { APPS, LAUNCHABLE, type AppId } from './apps/registry'
 import { Icon } from './Icon'
 import { Window } from './Window'
 import { Taskbar } from './Taskbar'
 import { Snow } from './Snow'
 import { NIX_ASCII } from './nixAscii'
+import { BrailleArt } from './BrailleArt'
 import { playPowerOn, playPowerOff, playClick } from './sound'
+
+const COARSE = matchMedia('(pointer: coarse)').matches
+
+// phones (either orientation) and portrait screens: the monitor's 5:4 opening would be
+// a tiny box, so the desktop fills the visible viewport instead
+const isCompact = (w: number, h: number) => w < 720 || h > w || Math.min(w, h) < 500
+
+const readViewport = () => {
+  const v = window.visualViewport
+  return {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    // the visible part of the page; it shrinks when the on-screen keyboard opens
+    vv: v ? { left: v.offsetLeft, top: v.offsetTop, width: v.width, height: v.height } : null,
+  }
+}
+
+// The desktop is laid out at a fixed-ish "logical" size and scaled to the rect,
+// so fonts, icons and windows keep their proportions on any screen.
+function uiScale(w: number, h: number, compact: boolean) {
+  const s = compact ? Math.min(w / 700, h / 900) : h / 720
+  // touch never goes below 1: inputs must stay >= 16px or mobile browsers zoom on focus
+  const min = compact || COARSE ? 1 : 0.8
+  return Math.round(Math.min(2.5, Math.max(min, s)) * 50) / 50
+}
 
 // sit exactly on the monitor's screen opening, so the desktop keeps the model's aspect ratio
 function useScreenRect() {
   const screen = useStore((s) => s.screen)
   const setDesk = useStore((s) => s.setDesk)
-  const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight })
+  const [vp, setVp] = useState(readViewport)
 
   useEffect(() => {
-    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    const onResize = () => setVp(readViewport())
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    window.visualViewport?.addEventListener('resize', onResize)
+    window.visualViewport?.addEventListener('scroll', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.visualViewport?.removeEventListener('resize', onResize)
+      window.visualViewport?.removeEventListener('scroll', onResize)
+    }
   }, [])
 
-  const rect = screen
-    ? fitScreen(screen, vp.w, vp.h).rect
-    : { left: 0, top: 0, width: vp.w, height: vp.h }
+  const compact = isCompact(vp.w, vp.h)
+  const rect =
+    compact || !screen
+      ? (vp.vv ?? { left: 0, top: 0, width: vp.w, height: vp.h })
+      : fitScreen(screen, vp.w, vp.h).rect
+  const scale = uiScale(rect.width, rect.height, compact)
+  const w = rect.width / scale
+  const h = rect.height / scale
 
-  useEffect(() => setDesk(rect.width, rect.height), [rect.width, rect.height, setDesk])
-  return rect
+  useEffect(() => setDesk(w, h, scale), [w, h, scale, setDesk])
+  return { rect, scale, w, h, compact }
 }
 
 type Box = { x0: number; y0: number; x1: number; y1: number }
@@ -88,7 +125,7 @@ export function Desktop() {
   const windows = useStore((s) => s.windows)
   const poweringOff = useStore((s) => s.poweringOff)
   const { open, closeAll, setMode } = useStore.getState()
-  const rect = useScreenRect()
+  const { rect, scale, w, h, compact } = useScreenRect()
   const { selected, setSelected, marquee, iconRefs, startMarquee } = useMarquee()
 
   // ref guard: StrictMode runs mount effects twice in dev
@@ -103,8 +140,8 @@ export function Desktop() {
 
   return (
     <div
-      className={`desktop ${poweringOff ? 'crt-off' : 'crt-on'}`}
-      style={{ ...rect, '--desk-h': `${rect.height}px` } as CSSProperties}
+      className={`desktop ${poweringOff ? 'crt-off' : 'crt-on'} ${compact ? 'compact' : ''}`}
+      style={rect}
       onPointerDownCapture={() => playClick()}
       onPointerUpCapture={() => playClick(true)}
       onAnimationEnd={(e) => {
@@ -114,62 +151,74 @@ export function Desktop() {
         }
       }}
     >
-      <div className="wallpaper" onPointerDown={startMarquee}>
-        <pre className="wallpaper-logo" aria-hidden>
-          {NIX_ASCII}
-        </pre>
-        <Snow />
-      </div>
+      {/* laid out at w×h desktop px, scaled up/down to fill the rect */}
+      <div
+        className="desk-ui"
+        style={
+          {
+            width: w,
+            height: h,
+            transform: `scale(${scale})`,
+            '--desk-h': `${h}px`,
+            '--taskbar-h': `${TASKBAR_H}px`,
+          } as CSSProperties
+        }
+      >
+        <div className="wallpaper" onPointerDown={startMarquee}>
+          <BrailleArt art={NIX_ASCII} className="wallpaper-logo" />
+          <Snow />
+        </div>
 
-      <div className="icons">
-        {LAUNCHABLE.map((id) => (
-          <button
-            key={id}
-            ref={(el) => {
-              if (el) iconRefs.current.set(id, el)
-              else iconRefs.current.delete(id)
+        <div className="icons">
+          {LAUNCHABLE.map((id) => (
+            <button
+              key={id}
+              ref={(el) => {
+                if (el) iconRefs.current.set(id, el)
+                else iconRefs.current.delete(id)
+              }}
+              className={`desk-icon ${selected.has(id) ? 'selected' : ''}`}
+              onClick={(e) => {
+                // ctrl/cmd-click toggles, plain click selects just this one
+                if (e.ctrlKey || e.metaKey) {
+                  const next = new Set(selected)
+                  if (!next.delete(id)) next.add(id)
+                  setSelected(next)
+                } else setSelected(new Set([id]))
+                // single tap opens on touch screens
+                if (matchMedia('(pointer: coarse)').matches) open(id)
+              }}
+              onDoubleClick={() => open(id)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                if (selected.size > 1) selected.forEach((s) => open(s))
+                else open(id)
+              }}
+            >
+              <Icon name={APPS[id].icon} size={40} />
+              <span>{APPS[id].label}</span>
+            </button>
+          ))}
+        </div>
+
+        {marquee && (
+          <div
+            className="marquee"
+            style={{
+              left: Math.min(marquee.x0, marquee.x1),
+              top: Math.min(marquee.y0, marquee.y1),
+              width: Math.abs(marquee.x1 - marquee.x0),
+              height: Math.abs(marquee.y1 - marquee.y0),
             }}
-            className={`desk-icon ${selected.has(id) ? 'selected' : ''}`}
-            onClick={(e) => {
-              // ctrl/cmd-click toggles, plain click selects just this one
-              if (e.ctrlKey || e.metaKey) {
-                const next = new Set(selected)
-                if (!next.delete(id)) next.add(id)
-                setSelected(next)
-              } else setSelected(new Set([id]))
-              // single tap opens on touch screens
-              if (matchMedia('(pointer: coarse)').matches) open(id)
-            }}
-            onDoubleClick={() => open(id)}
-            onKeyDown={(e) => {
-              if (e.key !== 'Enter') return
-              if (selected.size > 1) selected.forEach((s) => open(s))
-              else open(id)
-            }}
-          >
-            <Icon name={APPS[id].icon} size={40} />
-            <span>{APPS[id].label}</span>
-          </button>
+          />
+        )}
+
+        {windows.map((w) => (
+          <Window key={w.id} win={w} />
         ))}
+
+        <Taskbar />
       </div>
-
-      {marquee && (
-        <div
-          className="marquee"
-          style={{
-            left: Math.min(marquee.x0, marquee.x1),
-            top: Math.min(marquee.y0, marquee.y1),
-            width: Math.abs(marquee.x1 - marquee.x0),
-            height: Math.abs(marquee.y1 - marquee.y0),
-          }}
-        />
-      )}
-
-      {windows.map((w) => (
-        <Window key={w.id} win={w} />
-      ))}
-
-      <Taskbar />
       <div className="crt-overlay" />
     </div>
   )
