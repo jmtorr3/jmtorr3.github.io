@@ -8,6 +8,7 @@ import { Taskbar } from './Taskbar'
 import { Snow } from './Snow'
 import { NIX_ASCII } from './nixAscii'
 import { BrailleArt } from './BrailleArt'
+import { useDesktopIcons } from './useDesktopIcons'
 import { playPowerOn, playPowerOff, playClick } from './sound'
 
 const COARSE = matchMedia('(pointer: coarse)').matches
@@ -127,6 +128,7 @@ export function Desktop() {
   const { open, closeAll, setMode } = useStore.getState()
   const { rect, scale, w, h, compact } = useScreenRect()
   const { selected, setSelected, marquee, iconRefs, startMarquee } = useMarquee()
+  const icons = useDesktopIcons({ w, h, scale, selected, setSelected })
 
   // ref guard: StrictMode runs mount effects twice in dev
   const booted = useRef(false)
@@ -177,8 +179,11 @@ export function Desktop() {
                 if (el) iconRefs.current.set(id, el)
                 else iconRefs.current.delete(id)
               }}
-              className={`desk-icon ${selected.has(id) ? 'selected' : ''}`}
+              className={`desk-icon ${selected.has(id) ? 'selected' : ''} ${icons.isDragging(id) ? 'dragging' : ''}`}
+              style={icons.position(id)}
+              {...icons.handlers(id)}
               onClick={(e) => {
+                if (icons.consumeClick()) return
                 // ctrl/cmd-click toggles, plain click selects just this one
                 if (e.ctrlKey || e.metaKey) {
                   const next = new Set(selected)
