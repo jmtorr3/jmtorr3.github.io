@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
-import { fitScreen } from '../scene/screenFit'
+import { fitScreen, isCompact } from '../scene/screenFit'
 import { useStore, TASKBAR_H } from '../store'
 import { APPS, LAUNCHABLE, type AppId } from './apps/registry'
 import { Icon } from './Icon'
@@ -13,9 +13,6 @@ import { playPowerOn, playPowerOff, playClick } from './sound'
 
 const COARSE = matchMedia('(pointer: coarse)').matches
 
-// phones (either orientation) and portrait screens: the monitor's 5:4 opening would be
-// a tiny box, so the desktop fills the visible viewport instead
-const isCompact = (w: number, h: number) => w < 720 || h > w || Math.min(w, h) < 500
 
 const readViewport = () => {
   const v = window.visualViewport

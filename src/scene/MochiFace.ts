@@ -149,6 +149,9 @@ export class MochiFace {
   private t = 0
   private shownAt = 0 // when the current expression appeared, for ones that play out
   private reactUntil = 0 // a reaction is showing until then (react())
+  // the part of the canvas that's actually on screen (see setView)
+  private view = { scale: 1, x: FACE_W / 2, y: FACE_H / 2 }
+  private copy = new Uint8Array(FACE_W * FACE_H)
   private idle: boolean
 
   // idle: cycle through random moods by itself (off when something else drives it)
@@ -200,6 +203,13 @@ export class MochiFace {
   glance(x: number, y: number, hold = 1.2) {
     this.lookTarget = { x, y }
     this.nextLookAt = this.t + hold
+  }
+
+  // When the camera is so close that only part of the screen is visible (zooming
+  // in on a phone), shrink the face by `scale` and center it on canvas point (x, y)
+  // so it stays in view instead of being cropped.
+  setView(scale: number, x: number, y: number) {
+    this.view = { scale, x, y }
   }
 
   // A little squish, like it was poked.
@@ -593,6 +603,19 @@ export class MochiFace {
     for (let i = 0; i < 40; i++) this.dot(hash(i + 900) * FACE_W, hash(i + 1300) * FACE_H, hash(i + 1700) > 0.5 ? 1 : 0)
   }
 
+  // resample the finished face smaller and centered on the visible part
+  private fitView() {
+    const { scale, x: vx, y: vy } = this.view
+    this.copy.set(this.px)
+    for (let y = 0; y < FACE_H; y++)
+      for (let x = 0; x < FACE_W; x++) {
+        const sx = Math.floor((x - vx) / scale + FACE_W / 2)
+        const sy = Math.floor((y - vy) / scale + FACE_H / 2)
+        const inside = sx >= 0 && sy >= 0 && sx < FACE_W && sy < FACE_H
+        this.px[y * FACE_W + x] = inside ? this.copy[sy * FACE_W + sx] : 0
+      }
+  }
+
   private render() {
     this.px.fill(0)
     const expr = this.shown
@@ -615,6 +638,8 @@ export class MochiFace {
       this.eye(expr, 1, cx + lx + EYE_GAP, cy + ly)
       this.extras(expr, cx, cy)
       if (expr === 'glitch') this.glitch()
+      const v = this.view
+      if (v.scale < 0.999 || Math.abs(v.x - FACE_W / 2) > 0.5 || Math.abs(v.y - FACE_H / 2) > 0.5) this.fitView()
     }
     const d = this.img.data
     for (let i = 0; i < this.px.length; i++) {

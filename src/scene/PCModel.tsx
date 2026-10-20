@@ -4,7 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
-import { MochiFace, type Expression } from './MochiFace'
+import { MochiFace, FACE_W, FACE_H, type Expression } from './MochiFace'
 import { useStore } from '../store'
 import { unlockAudio, playSpinUp, playFaceSound } from '../os/sound'
 
@@ -34,12 +34,14 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
     // the screen glows with the Mochi face (black while the desktop is up)
     const face = new MochiFace()
     const screen = meshes[SCREEN_MESH_INDEX]
+    let screenBox: THREE.Box3 | null = null
     if (screen) {
       root.updateMatrixWorld(true)
-      screen.material = makeScreenMaterial(face.texture, new THREE.Box3().setFromObject(screen))
+      screenBox = new THREE.Box3().setFromObject(screen)
+      screen.material = makeScreenMaterial(face.texture, screenBox)
     }
     const mouse = meshes[MOUSE_MESH_INDEX]
-    return { root, meshes, face, material, mouse, mouseRest: mouse?.position.clone() }
+    return { root, meshes, face, material, mouse, mouseRest: mouse?.position.clone(), screenBox }
   }, [scene])
 
   const [hovered, setHovered] = useState(false)
@@ -73,7 +75,34 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
     }
   }, [])
 
+  const corner = useRef(new THREE.Vector3())
   useFrame(({ clock, camera, pointer }, dt) => {
+    // Up close (the phone zoom fills the view with the glass), only part of the
+    // screen is visible: find that part and fit the face into it.
+    const box = model.screenBox
+    if (box) {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity
+      let behind = false
+      for (const [x, y] of [[box.min.x, box.min.y], [box.max.x, box.min.y], [box.min.x, box.max.y], [box.max.x, box.max.y]]) {
+        const p = corner.current.set(x, y, box.min.z).project(camera)
+        if (p.z > 1) behind = true
+        x0 = Math.min(x0, p.x)
+        x1 = Math.max(x1, p.x)
+        y0 = Math.min(y0, p.y)
+        y1 = Math.max(y1, p.y)
+      }
+      if (!behind) {
+        // visible part of the screen, in NDC, then in face-canvas pixels
+        const vx0 = Math.max(-1, x0), vx1 = Math.min(1, x1)
+        const vy0 = Math.max(-1, y0), vy1 = Math.min(1, y1)
+        const fit = Math.min(1, (vx1 - vx0) / (x1 - x0), (vy1 - vy0) / (y1 - y0))
+        model.face.setView(
+          fit < 1 ? fit * 0.9 : 1, // a little margin when it's cropped
+          (((vx0 + vx1) / 2 - x0) / (x1 - x0)) * FACE_W,
+          ((y1 - (vy0 + vy1) / 2) / (y1 - y0)) * FACE_H,
+        )
+      }
+    }
     model.face.update(Math.min(dt, 0.1))
 
     if (model.mouse && model.mouseRest) {
