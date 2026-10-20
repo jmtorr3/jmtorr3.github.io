@@ -1340,12 +1340,51 @@ button.card:hover {
 
 /* narrow desktop (in desktop px, so it follows the UI scale, not the browser width) */
 @container (max-width: 640px) {
-  .places,
-  .resume-list {
-    display: none;
-  }
   .task span {
     display: none;
+  }
+
+  /* sidebars become a swipeable tab strip across the top of the window */
+  .skills,
+  .explorer-main,
+  .resume {
+    flex-direction: column;
+  }
+
+  .places,
+  .resume-list {
+    width: auto;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 6px;
+    padding: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: none;
+  }
+
+  .places-title,
+  .resume-list > p,
+  .resume-list .pick .muted:last-child {
+    display: none;
+  }
+
+  .places button,
+  .resume-list > * {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .resume-list .pick {
+    padding: 6px 10px;
+  }
+
+  /* phone browsers often can't show the PDF inline, so the open button comes first */
+  .resume-list .btn {
+    order: -1;
+    align-self: center;
   }
 }
 

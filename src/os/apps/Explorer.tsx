@@ -83,7 +83,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
         </div>
       </div>
       <div className="statusbar">
-        {sel ? `${sel.title} — ${sel.subtitle}` : `${items.length} items · double-click to open`}
+        {sel ? `${sel.title} — ${sel.subtitle}` : `${items.length} items · ${matchMedia('(pointer: coarse)').matches ? 'tap' : 'double-click'} to open`}
       </div>
     </div>
   )
