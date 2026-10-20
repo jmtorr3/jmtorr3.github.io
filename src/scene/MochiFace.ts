@@ -153,10 +153,14 @@ export class MochiFace {
   private view = { scale: 1, x: FACE_W / 2, y: FACE_H / 2 }
   private copy = new Uint8Array(FACE_W * FACE_H)
   private idle: boolean
+  private transparent: boolean
 
   // idle: cycle through random moods by itself (off when something else drives it)
-  constructor({ idle = true } = {}) {
+  // transparent: no black screen behind the face, just a dark outline, for
+  // floating it over other things (the Konsole)
+  constructor({ idle = true, transparent = false } = {}) {
     this.idle = idle
+    this.transparent = transparent
     const canvas = document.createElement('canvas')
     this.canvas = canvas
     canvas.width = FACE_W
@@ -603,6 +607,19 @@ export class MochiFace {
     for (let i = 0; i < 40; i++) this.dot(hash(i + 900) * FACE_W, hash(i + 1300) * FACE_H, hash(i + 1700) > 0.5 ? 1 : 0)
   }
 
+  // any lit pixel around pixel i (the 1px outline in transparent mode)
+  private touchesOn(i: number) {
+    const x = i % FACE_W
+    const y = (i - x) / FACE_W
+    for (let dy = -1; dy <= 1; dy++)
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx
+        const ny = y + dy
+        if (nx >= 0 && ny >= 0 && nx < FACE_W && ny < FACE_H && this.px[ny * FACE_W + nx]) return true
+      }
+    return false
+  }
+
   // resample the finished face smaller and centered on the visible part
   private fitView() {
     const { scale, x: vx, y: vy } = this.view
@@ -643,11 +660,12 @@ export class MochiFace {
     }
     const d = this.img.data
     for (let i = 0; i < this.px.length; i++) {
-      const v = this.px[i] ? 235 : 4
+      const on = this.px[i] === 1
+      const v = on ? 235 : 4
       d[i * 4] = v
       d[i * 4 + 1] = v
-      d[i * 4 + 2] = this.px[i] ? 240 : 6
-      d[i * 4 + 3] = 255
+      d[i * 4 + 2] = on ? 240 : 6
+      d[i * 4 + 3] = on || !this.transparent || this.touchesOn(i) ? 255 : 0
     }
     this.ctx.putImageData(this.img, 0, 0)
     this.texture.needsUpdate = true

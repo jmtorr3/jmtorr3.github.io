@@ -191,7 +191,7 @@ export function Terminal({ winId }: { winId: string }) {
 
 	// Mochi watches you type: eyes follow the text, reacts to each command,
 	// dozes off when you stop for a while and startles awake when you start again
-	const [face] = useState(() => new MochiFace({ idle: false }))
+	const [face] = useState(() => new MochiFace({ idle: false, transparent: true }))
 	const lastTyped = useRef(performance.now())
 	const dozing = useRef(false)
 	useEffect(() => {
@@ -212,6 +212,24 @@ export function Terminal({ winId }: { winId: string }) {
 		// look down at the line, following the end of the text
 		face.glance(Math.max(-10, Math.min(10, -10 + value.length * 0.7)), 5)
 		if (Math.random() < 0.15) face.poke()
+	}
+	// while you're typing (and just after), Mochi floats over to hover above the cursor
+	const konsoleRef = useRef<HTMLDivElement>(null)
+	const follow = () => {
+		const k = konsoleRef.current
+		const inp = inputRef.current
+		if (!k || !inp || performance.now() - lastTyped.current > 2500) return null
+		// rects are in screen px; the desktop is CSS-scaled, so convert back to layout px
+		const kr = k.getBoundingClientRect()
+		const ir = inp.getBoundingClientRect()
+		const s = kr.width / k.offsetWidth || 1
+		const charW = parseFloat(getComputedStyle(inp).fontSize) * 0.6
+		const caretX = (ir.left - kr.left) / s + Math.min(inp.value.length * charW, inp.offsetWidth)
+		// the face sprite is 110×88 with the face itself around its middle: hover above
+		// the line, or just below it when the line is at the very top
+		const lineTop = (ir.top - kr.top) / s
+		const above = lineTop - 72
+		return { x: caretX - 55, y: above >= 0 ? above : lineTop + inp.offsetHeight - 14 }
 	}
 	const react = (cmdline: string, out: string | null) => {
 		lastTyped.current = performance.now()
@@ -365,7 +383,7 @@ export function Terminal({ winId }: { winId: string }) {
 	)
 
 	return (
-		<div className="konsole">
+		<div className="konsole" ref={konsoleRef}>
 			<div className="terminal" ref={bodyRef} onClick={() => inputRef.current?.focus({ preventScroll: true })}>
 				{lines.map((l, i) =>
 					l.kind === 'in' ? (
@@ -396,6 +414,7 @@ export function Terminal({ winId }: { winId: string }) {
 			</div>
 			<MochiCam
 				face={face}
+				follow={follow}
 				onClick={() => {
 					// petting
 					face.react('love', 1.4)

@@ -1105,8 +1105,9 @@ button.card:hover {
   overflow: auto;
 }
 
-/* Konsole: the terminal plus Mochi's little screen on the right (on top when narrow) */
+/* Konsole: the terminal, with Mochi floating around over it */
 .konsole {
+  position: relative;
   display: flex;
   background: #0a1018;
 }
@@ -1117,36 +1118,18 @@ button.card:hover {
 }
 
 .mochi-cam {
-  flex: 0 0 auto;
-  width: 150px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #04060a;
-  border-left: 1px solid var(--border);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  cursor: pointer;
 }
 
 .mochi-cam canvas {
-  width: 140px;
-  height: 112px;
+  display: block;
+  width: 110px;
+  height: 88px;
   image-rendering: pixelated;
-}
-
-@container win (max-width: 460px) {
-  .konsole {
-    flex-direction: column;
-  }
-  .mochi-cam {
-    order: -1;
-    width: auto;
-    height: 92px;
-    border-left: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .mochi-cam canvas {
-    width: 100px;
-    height: 80px;
-  }
 }
 
 .terminal pre {
