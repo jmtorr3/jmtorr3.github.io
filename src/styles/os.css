@@ -68,6 +68,8 @@ a:hover {
 .scene {
   position: fixed !important;
   inset: 0;
+  /* finger drags orbit the PC instead of scrolling or zooming the page */
+  touch-action: none;
 }
 
 .hint {
@@ -108,22 +110,26 @@ a:hover {
 }
 
 .crt-on {
-  animation: crt-on 0.55s ease-out both;
+  animation: crt-on 0.45s ease-out both;
 }
 
 .crt-off {
   animation: crt-off 0.45s ease-in both;
 }
 
+/* crt-off played backwards: a dot, then a bright line, then the picture opens up */
 @keyframes crt-on {
-  0%,
-  45% {
-    transform: scale(1, 0.004);
-    filter: brightness(6);
+  0% {
+    transform: scale(0, 0);
+    filter: brightness(8);
   }
-  70% {
-    transform: scale(1, 1);
-    filter: brightness(2);
+  20% {
+    transform: scale(0.002, 0.004);
+    filter: brightness(8);
+  }
+  60% {
+    transform: scale(1, 0.004);
+    filter: brightness(5);
   }
   100% {
     transform: scale(1, 1);

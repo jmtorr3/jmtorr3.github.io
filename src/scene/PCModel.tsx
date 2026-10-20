@@ -78,9 +78,10 @@ export function PCModel({ onHover }: { onHover: (h: boolean) => void }) {
         onHover(false)
         setHovered(false)
       }}
-      onClick={(e: { stopPropagation: () => void }) => {
+      onClick={(e: { stopPropagation: () => void; delta: number }) => {
         e.stopPropagation()
-        if (mode !== 'room') return
+        // a drag that ends over the PC is an orbit, not a click
+        if (mode !== 'room' || e.delta > 6) return
         unlockAudio()
         setMode('zooming')
       }}

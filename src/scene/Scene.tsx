@@ -11,7 +11,8 @@ export function Scene() {
   const mode = useStore((s) => s.mode)
 
   useEffect(() => {
-    document.body.style.cursor = hovered && mode === 'room' ? 'pointer' : ''
+    // the PC is clickable; anywhere else in the room can be dragged to orbit
+    document.body.style.cursor = mode === 'room' ? (hovered ? 'pointer' : 'grab') : ''
   }, [hovered, mode])
 
   return (
