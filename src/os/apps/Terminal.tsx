@@ -85,6 +85,45 @@ function lookup(path: string): Node | null {
   return node
 }
 
+const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'ls', 'mochi', 'neofetch', 'open', 'poweroff', 'pwd', 'shutdown', 'sudo', 'whoami']
+
+// longest start shared by every candidate
+const commonPrefix = (xs: string[]) =>
+  xs.reduce((a, b) => {
+    let i = 0
+    while (i < a.length && a[i] === b[i]) i++
+    return a.slice(0, i)
+  })
+
+// Tab completion for the last word on the line: a command, a file or folder
+// (folders only for cd), or an app/project after "open". Returns the completed
+// line, or the options to list when it can't narrow down any further.
+function complete(line: string, cwd: string): { line: string; options: string[] } {
+  const words = line.split(' ')
+  const word = words[words.length - 1]
+  const head = line.slice(0, line.length - word.length)
+  let dirPart = ''
+  let base = word
+  let candidates: string[]
+  if (words.length === 1) candidates = COMMANDS.map((c) => c + ' ')
+  else if (words[0] === 'open') candidates = [...LAUNCHABLE, ...projects.map(slugOf)].map((c) => c + ' ')
+  else {
+    const slash = word.lastIndexOf('/')
+    dirPart = word.slice(0, slash + 1)
+    base = word.slice(slash + 1)
+    const node = lookup(dirPart ? resolve(cwd, dirPart) : cwd)
+    if (!node || node.type !== 'dir') return { line, options: [] }
+    candidates = Object.entries(node.children)
+      .filter(([, n]) => words[0] !== 'cd' || n.type === 'dir')
+      .map(([name, n]) => name + (n.type === 'dir' ? '/' : ' '))
+  }
+  const matches = candidates.filter((c) => c.startsWith(base))
+  if (!matches.length) return { line, options: [] }
+  const prefix = matches.length === 1 ? matches[0] : commonPrefix(matches)
+  if (prefix.length > base.length) return { line: head + dirPart + prefix, options: [] }
+  return { line, options: matches.length > 1 ? matches.map((m) => m.trimEnd()) : [] }
+}
+
 // how Mochi reacts to a command (unknown commands and errors get 'confused')
 const REACTIONS: Record<string, Expression> = {
   help: 'thinking',
@@ -129,6 +168,7 @@ const help = () => `available commands:
   open <project>    open a project by folder name
   neofetch          system info
   mochi             say hi to mochi
+  (Tab completes commands, files and app names)
   shutdown          power off and step away from the desk`
 
 interface Line {
@@ -287,6 +327,16 @@ export function Terminal({ winId }: { winId: string }) {
       if (input.trim()) setHistory((h) => [input, ...h])
       setHIdx(-1)
       setInput('')
+    } else if (e.key === 'Tab') {
+      e.preventDefault()
+      const done = complete(input, cwd)
+      if (done.line !== input) {
+        setInput(done.line)
+        onType(done.line)
+      } else if (done.options.length) {
+        // several matches and nothing more in common: list them, like bash
+        setLines((l) => [...l, { kind: 'in', text: input, cwd }, { kind: 'out', text: done.options.join('  ') }])
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       const i = Math.min(hIdx + 1, history.length - 1)
