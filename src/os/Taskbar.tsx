@@ -5,6 +5,9 @@ import { Icon } from './Icon'
 import { profile } from '../data/profile'
 import { useSound, unlockAudio } from './sound'
 
+// on touch screens, focusing the search box would pop up the on-screen keyboard
+const TOUCH = matchMedia('(pointer: coarse)').matches
+
 function SoundToggle() {
   const { muted, toggle } = useSound()
   return (
@@ -75,7 +78,7 @@ export function Taskbar() {
             <input
               className="start-search"
               placeholder="Search…"
-              autoFocus
+              autoFocus={!TOUCH}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && apps[0] && launch(apps[0])}
