@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { MenuItem } from './os/ContextMenu'
 import * as THREE from 'three'
 import { APPS, type AppId } from './os/apps/registry'
 
@@ -34,6 +35,8 @@ interface State {
   poweringOff: boolean
   // bumped when the user spins the PC around too fast (the face gets dizzy)
   spins: number
+  // the right-click menu (any app can open one; the Desktop draws it), at a screen point
+  menu: { clientX: number; clientY: number; items: MenuItem[] } | null
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
   screen: ScreenInfo | null
@@ -46,6 +49,8 @@ interface State {
   shutdown: () => void
   spunTooFast: () => void
   doFart: (at: [number, number, number], dir: [number, number, number]) => void
+  showMenu: (clientX: number, clientY: number, items: MenuItem[]) => void
+  hideMenu: () => void
   setScreen: (s: ScreenInfo) => void
   setDesk: (w: number, h: number, scale: number) => void
   open: (app: AppId, opts?: { title?: string; props?: Record<string, unknown>; key?: string }) => void
@@ -65,6 +70,7 @@ export const useStore = create<State>((set, get) => ({
   poweringOff: false,
   spins: 0,
   fart: null,
+  menu: null,
   screen: null,
   desk: { w: window.innerWidth, h: window.innerHeight, scale: 1 },
   windows: [],
@@ -75,6 +81,8 @@ export const useStore = create<State>((set, get) => ({
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
   shutdown: () => set({ poweringOff: true }),
   spunTooFast: () => set((s) => ({ spins: s.spins + 1 })),
+  showMenu: (clientX, clientY, items) => set({ menu: { clientX, clientY, items } }),
+  hideMenu: () => set({ menu: null }),
   doFart: (at, dir) => set((s) => ({ fart: { n: (s.fart?.n ?? 0) + 1, at, dir } })),
   setScreen: (screen) => set({ screen }),
   setDesk: (w, h, scale) => set({ desk: { w, h, scale } }),

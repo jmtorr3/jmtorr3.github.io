@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { profile } from '../../data/profile'
 import { education, coursework } from '../../data/about'
 import { resumes } from '../../data/resume'
@@ -10,7 +10,7 @@ import { plain } from '../richText'
 import { LAUNCHABLE, type AppId } from './registry'
 import { openProject } from './Explorer'
 import { SlumpyFace, type Expression } from '../../scene/SlumpyFace'
-import { SlumpyCam } from '../SlumpyCam'
+import { SlumpyCam, type SlumpyControl } from '../SlumpyCam'
 import { playFaceSound } from '../sound'
 
 // tiny virtual filesystem built from src/data
@@ -349,15 +349,20 @@ export function Terminal({ winId }: { winId: string }) {
 		}
 	}
 
+	// run a line as if it was typed and entered
+	const submit = (line: string) => {
+		const entry: Line = { kind: 'in', text: line, cwd }
+		const out = run(line)
+		react(line, out)
+		if (out !== null) setLines((l) => [...l, entry, ...(out ? [{ kind: 'out' as const, text: out }] : [])])
+		if (line.trim()) setHistory((h) => [line, ...h])
+		setHIdx(-1)
+		setInput('')
+	}
+
 	const onKey = (e: KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === 'Enter') {
-			const entry: Line = { kind: 'in', text: input, cwd }
-			const out = run(input)
-			react(input, out)
-			if (out !== null) setLines((l) => [...l, entry, ...(out ? [{ kind: 'out' as const, text: out }] : [])])
-			if (input.trim()) setHistory((h) => [input, ...h])
-			setHIdx(-1)
-			setInput('')
+			submit(input)
 		} else if (e.key === 'Tab') {
 			e.preventDefault()
 			const done = complete(input, cwd)
@@ -395,8 +400,55 @@ export function Terminal({ winId }: { winId: string }) {
 		</span>
 	)
 
+	const focusInput = () => inputRef.current?.focus({ preventScroll: true })
+	const pet = () => {
+		face.react('love', 1.4)
+		playFaceSound('love')
+		focusInput()
+	}
+	const slumpy = useRef<SlumpyControl>({})
+	const NAME = profile.host[0].toUpperCase() + profile.host.slice(1)
+
+	// right-click: Konsole-style menu (drawn by the Desktop so windows don't clip it)
+	const onMenu = (e: MouseEvent<HTMLDivElement>) => {
+		e.preventDefault()
+		e.stopPropagation()
+		const selection = window.getSelection()?.toString() ?? ''
+		// where it was clicked, in the Konsole's layout px (the desktop is CSS-scaled)
+		const k = konsoleRef.current!
+		const kr = k.getBoundingClientRect()
+		const s = kr.width / k.offsetWidth || 1
+		const at = { x: (e.clientX - kr.left) / s, y: (e.clientY - kr.top) / s }
+		useStore.getState().showMenu(e.clientX, e.clientY, [
+			{ label: 'Copy', icon: 'text', disabled: !selection, onClick: () => void navigator.clipboard?.writeText(selection) },
+			{
+				label: 'Paste',
+				icon: 'text',
+				onClick: () =>
+					navigator.clipboard
+						?.readText()
+						.then((text) => {
+							const v = input + text.replace(/\s*\n\s*/g, ' ')
+							setInput(v)
+							onType(v)
+						})
+						.catch(() => {}) // clipboard blocked
+						.finally(focusInput),
+			},
+			{ label: 'Clear', icon: 'terminal', onClick: () => (setLines([]), focusInput()) },
+			{ separator: true },
+			{ label: 'Run neofetch', icon: 'computer', onClick: () => (submit('neofetch'), focusInput()) },
+			{ label: 'Run help', icon: 'chip', onClick: () => (submit('help'), focusInput()) },
+			{ separator: true },
+			{ label: `Pet ${NAME}`, icon: 'user', onClick: pet },
+			{ label: `Call ${NAME} Here`, icon: 'user', onClick: () => slumpy.current.comeTo?.(at.x, at.y) },
+			{ separator: true },
+			{ label: 'Close Window', icon: 'power', onClick: () => useStore.getState().close(winId) },
+		])
+	}
+
 	return (
-		<div className="konsole" ref={konsoleRef}>
+		<div className="konsole" ref={konsoleRef} onContextMenu={onMenu}>
 			<div className="terminal" ref={bodyRef} onClick={() => inputRef.current?.focus({ preventScroll: true })}>
 				{lines.map((l, i) =>
 					l.kind === 'in' ? (
@@ -425,16 +477,7 @@ export function Terminal({ winId }: { winId: string }) {
 					/>
 				</div>
 			</div>
-			<SlumpyCam
-				face={face}
-				follow={follow}
-				onClick={() => {
-					// petting
-					face.react('love', 1.4)
-					playFaceSound('love')
-					inputRef.current?.focus({ preventScroll: true })
-				}}
-			/>
+			<SlumpyCam face={face} follow={follow} onClick={pet} control={slumpy} />
 		</div>
 	)
 }

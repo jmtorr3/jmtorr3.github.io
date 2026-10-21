@@ -1,5 +1,4 @@
 import {
-  useCallback,
   useEffect,
   useRef,
   useState,
@@ -148,8 +147,8 @@ export function Desktop() {
 
   // right-click menu, at a point in desktop px
   const deskRef = useRef<HTMLDivElement>(null)
-  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null)
-  const closeMenu = useCallback(() => setMenu(null), [])
+  const menu = useStore((s) => s.menu)
+  const closeMenu = useStore((s) => s.hideMenu)
   const [snow, setSnow] = useState(readSnow)
   const [refreshes, setRefreshes] = useState(0)
 
@@ -164,9 +163,11 @@ export function Desktop() {
 
   const openMenu = (e: ReactMouseEvent, items: MenuItem[]) => {
     e.preventDefault()
-    const r = deskRef.current!.getBoundingClientRect()
-    setMenu({ x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale, items })
+    useStore.getState().showMenu(e.clientX, e.clientY, items)
   }
+  // the menu is drawn in desktop px: convert from the screen point
+  const deskRect = deskRef.current?.getBoundingClientRect()
+  const menuAt = menu && deskRect ? { x: (menu.clientX - deskRect.left) / scale, y: (menu.clientY - deskRect.top) / scale } : null
 
   const desktopMenu: MenuItem[] = [
     { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal') },
@@ -288,7 +289,9 @@ export function Desktop() {
           <Window key={w.id} win={w} />
         ))}
 
-        {menu && <ContextMenu {...menu} bounds={{ w, h: h - TASKBAR_H }} onClose={closeMenu} />}
+        {menu && menuAt && (
+          <ContextMenu {...menuAt} items={menu.items} bounds={{ w, h: h - TASKBAR_H }} onClose={closeMenu} />
+        )}
 
         <Taskbar />
       </div>

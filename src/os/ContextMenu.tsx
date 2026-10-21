@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Icon, type IconName } from './Icon'
 
 export type MenuItem =
-  | { label: string; icon?: IconName; checked?: boolean; onClick: () => void }
+  | { label: string; icon?: IconName; checked?: boolean; disabled?: boolean; onClick: () => void }
   | { separator: true }
 
 // A right-click menu, placed at (x, y) in the desktop's own px and nudged back
@@ -57,6 +57,7 @@ export function ContextMenu({
           <button
             key={i}
             role="menuitem"
+            disabled={item.disabled}
             onClick={() => {
               onClose()
               item.onClick()

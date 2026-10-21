@@ -258,9 +258,14 @@ a:hover {
   cursor: var(--cursor-pointer);
 }
 
-.ctx-menu button:hover {
+.ctx-menu button:hover:not(:disabled) {
   background: var(--accent-dim);
   color: #fff;
+}
+
+.ctx-menu button:disabled {
+  color: var(--text-faint);
+  cursor: var(--cursor);
 }
 
 .ctx-check {

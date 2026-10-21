@@ -4,6 +4,9 @@ import { playBoing } from './sound'
 
 type Point = { x: number; y: number }
 
+// lets the app steer the sprite (the Konsole's "Call Slumpy Here")
+export type SlumpyControl = { comeTo?: (x: number, y: number) => void }
+
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
 
 // The Slumpy face as a little sprite floating over an app (the Konsole uses it).
@@ -11,15 +14,17 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 // top-left it should sit at, in the parent's px), it hurries over there instead.
 // It can be dragged: wherever it's dropped becomes its spot, where it stays
 // (it still pops over while `follow` wants it, then comes back). Fling it and it
-// flies off, bouncing around the edges until it slows to a stop.
+// flies off, bouncing around the edges until it slows to a stop, then roams again.
 export function SlumpyCam({
   face,
   follow,
   onClick,
+  control,
 }: {
   face: SlumpyFace
   follow?: () => Point | null
   onClick?: () => void
+  control?: { current: SlumpyControl }
 }) {
   const host = useRef<HTMLDivElement>(null)
   const followRef = useRef(follow)
@@ -96,13 +101,24 @@ export function SlumpyCam({
       }
       land()
     }
+    // set down: a gentle drop makes this its spot; after a throw it's free to roam again
     const land = () => {
+      const thrown = flying
       flying = false
-      home = { ...pos }
+      home = thrown ? null : { ...pos }
       target = { ...pos }
+      wanderAt = performance.now() + rand(1500, 3000) // catch its breath before wandering off
       if (bounces >= 3) face.react('dizzy', 2.2)
       else face.react('happy', 1.2)
     }
+    // fly over and settle with its face centered on (x, y), in the parent's px
+    if (control)
+      control.current.comeTo = (x, y) => {
+        flying = false
+        home = { x: x - el.offsetWidth / 2, y: y - el.offsetHeight / 2 }
+        face.react('happy', 1.2)
+      }
+
     el.addEventListener('pointerdown', down)
     el.addEventListener('pointermove', move)
     el.addEventListener('pointerup', up)
@@ -175,9 +191,10 @@ export function SlumpyCam({
       el.removeEventListener('pointermove', move)
       el.removeEventListener('pointerup', up)
       el.removeEventListener('pointercancel', up)
+      if (control) control.current.comeTo = undefined
       face.canvas.remove()
     }
-  }, [face])
+  }, [face, control])
 
   return <div className="slumpy-cam" ref={host} aria-hidden />
 }

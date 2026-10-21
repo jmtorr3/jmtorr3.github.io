@@ -7,7 +7,7 @@
     <link rel="icon" href="/favicon.ico" />
     <style>
       /* Boot screen: shown instantly, before the (large) app bundle loads.
-         Slumpy's "loading" face, drawn by the little script below. */
+         Slumpy's "loading" face on pure black, drawn by the little script below. */
       #boot {
         position: fixed;
         inset: 0;
@@ -16,8 +16,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 14px;
-        background: #0b0f22;
+        background: #000;
         transition: opacity 0.45s;
       }
       #boot.done {
@@ -28,22 +27,12 @@
         width: min(60vw, 300px);
         aspect-ratio: 5 / 4;
         image-rendering: pixelated;
-        background: #04060a;
-        border: 6px solid #1c3050;
-        box-shadow: 0 0 24px rgb(74 175 212 / 0.15);
-      }
-      #boot p {
-        margin: 0;
-        color: #4aafd4;
-        font: 14px monospace;
-        letter-spacing: 2px;
       }
     </style>
   </head>
   <body>
-    <div id="boot" role="progressbar" aria-label="Loading">
+    <div id="boot" role="progressbar" aria-label="Loading slumpy">
       <canvas width="100" height="80"></canvas>
-      <p>loading slumpy…</p>
     </div>
     <script>
       // Same pixels as SlumpyFace's 'loading' expression: a progress bar with a
@@ -63,7 +52,7 @@
           // creep toward 90% while waiting, then run to the end
           const target = ready ? 1 : 0.9 * (1 - Math.exp(-t / 2.5))
           progress += (target - progress) * (ready ? 0.15 : 0.08)
-          ctx.fillStyle = '#040406'
+          ctx.fillStyle = '#000'
           ctx.fillRect(0, 0, W, H)
           ctx.fillStyle = '#ebebf0'
           const r = (x, y, w, h) => ctx.fillRect(Math.round(x), Math.round(y), w, h)
