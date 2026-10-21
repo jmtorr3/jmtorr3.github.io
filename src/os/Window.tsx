@@ -2,6 +2,8 @@ import { useRef, type PointerEvent as RPointerEvent } from 'react'
 import { useStore, TASKBAR_H, type Win } from '../store'
 import { APPS } from './apps/registry'
 import { Icon } from './Icon'
+import { menuItemsFor } from './appMenu'
+import type { MenuItem } from './ContextMenu'
 
 const MIN_W = 220
 const MIN_H = 140
@@ -51,6 +53,18 @@ export function Window({ win }: { win: Win }) {
       className={`window ${focused ? 'focused' : ''} ${win.maximized ? 'maximized' : ''}`}
       style={{ ...style, display: win.minimized ? 'none' : undefined }}
       onPointerDown={() => !focused && focus(win.id)}
+      onContextMenu={(e) => {
+        // whatever the app added for what was clicked, then the window controls
+        e.preventDefault()
+        focus(win.id)
+        const controls: MenuItem[] = [
+          { label: 'Minimize', onClick: () => minimize(win.id) },
+          { label: win.maximized ? 'Restore' : 'Maximize', onClick: () => toggleMax(win.id) },
+          { label: 'Close', onClick: () => close(win.id) },
+        ]
+        const app = menuItemsFor(e.nativeEvent)
+        useStore.getState().showMenu(e.clientX, e.clientY, app.length ? [...app, { separator: true }, ...controls] : controls)
+      }}
       role="dialog"
       aria-label={win.title}
     >

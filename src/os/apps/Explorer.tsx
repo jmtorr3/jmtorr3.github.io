@@ -2,6 +2,19 @@ import { useEffect, useState } from 'react'
 import { projects, slugOf, type Project } from '../../data/projects'
 import { useStore } from '../../store'
 import { Icon } from '../Icon'
+import { addMenuItems, copyText, openUrl } from '../appMenu'
+import type { MenuItem } from '../ContextMenu'
+
+// a project's outside links, for right-click menus
+function projectLinks(p: Project): MenuItem[] {
+  const items: MenuItem[] = []
+  if (p.github) items.push({ label: 'Open on GitHub', icon: 'globe', onClick: () => openUrl(p.github!) })
+  if (p.demo) items.push({ label: `Open ${p.demoLabel ?? 'Demo'}`, icon: 'globe', onClick: () => openUrl(p.demo!) })
+  for (const l of p.links ?? []) items.push({ label: `Open ${l.label}`, icon: 'globe', onClick: () => openUrl(l.href) })
+  const link = p.github ?? p.demo
+  if (link) items.push({ label: 'Copy Link', icon: 'text', onClick: () => copyText(link) })
+  return items
+}
 
 export function findProject(slug: string) {
   return projects.find((p) => slugOf(p) === slug)
@@ -33,7 +46,26 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
   const sel = items.find((p) => slugOf(p) === selected)
 
   return (
-    <div className="explorer">
+    <div
+      className="explorer"
+      onContextMenu={(e) =>
+        // a folder's own menu is enough when one was clicked
+        !(e.target as Element).closest('.file') &&
+        addMenuItems(e, [
+          ...FOLDERS.map((f) => ({
+            label: f.label,
+            icon: 'folder' as const,
+            checked: folder === f.id,
+            onClick: () => {
+              setFolder(f.id)
+              setSelected(null)
+            },
+          })),
+          { separator: true },
+          { label: 'Open Konsole', icon: 'terminal', onClick: () => open('terminal') },
+        ])
+      }
+    >
       <div className="toolbar">
         <div className="address">
           <span className="nf accent">{''}</span> ~/{folder}
@@ -74,6 +106,10 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
                   if (matchMedia('(pointer: coarse)').matches) openProject(slug)
                 }}
                 onDoubleClick={() => openProject(slug)}
+                onContextMenu={(e) => {
+                  setSelected(slug)
+                  addMenuItems(e, [{ label: 'Open', icon: 'folder', onClick: () => openProject(slug) }, ...projectLinks(p)])
+                }}
               >
                 <FolderIcon p={p} />
                 <span>{p.title}</span>
@@ -117,7 +153,13 @@ export function ProjectViewer({ props }: { props?: Record<string, unknown> }) {
   if (!p) return <div className="pad">Project not found.</div>
 
   return (
-    <div className="project">
+    <div
+      className="project"
+      onContextMenu={(e) =>
+        !(e.target as Element).closest('.gallery') &&
+        addMenuItems(e, [...projectLinks(p), { label: 'Show in Projects', icon: 'folder', onClick: () => useStore.getState().open('projects') }])
+      }
+    >
       <header className="project-head">
         {p.logo && <img src={p.logo} alt="" className="project-logo" />}
         <div className="project-titles">
@@ -165,7 +207,17 @@ export function ProjectViewer({ props }: { props?: Record<string, unknown> }) {
       {p.images && p.images.length > 0 && (
         <div className="gallery">
           {p.images.map((img, i) => (
-            <button key={img.src} onClick={() => openImage(slug, i)} title={img.alt}>
+            <button
+              key={img.src}
+              onClick={() => openImage(slug, i)}
+              title={img.alt}
+              onContextMenu={(e) =>
+                addMenuItems(e, [
+                  { label: 'View Image', icon: 'image', onClick: () => openImage(slug, i) },
+                  { label: 'Open Image in New Tab', icon: 'globe', onClick: () => openUrl(img.src) },
+                ])
+              }
+            >
               <img src={img.src} alt={img.alt} loading="lazy" />
             </button>
           ))}
@@ -210,7 +262,18 @@ export function ImageViewer({ props }: { props?: Record<string, unknown> }) {
   const step = (d: number) => setI((n) => (n + d + images.length) % images.length)
 
   return (
-    <div className="image-viewer">
+    <div
+      className="image-viewer"
+      onContextMenu={(e) =>
+        addMenuItems(e, [
+          { label: 'Previous', disabled: images.length < 2, onClick: () => step(-1) },
+          { label: 'Next', disabled: images.length < 2, onClick: () => step(1) },
+          { separator: true },
+          { label: 'Open Image in New Tab', icon: 'globe', onClick: () => openUrl(img.src) },
+          { label: 'Copy Image Link', icon: 'text', onClick: () => copyText(new URL(img.src, location.href).href) },
+        ])
+      }
+    >
       <div className="image-stage">
         <img src={img.src} alt={img.alt} />
       </div>

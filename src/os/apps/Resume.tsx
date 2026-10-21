@@ -1,12 +1,23 @@
 import { useState } from 'react'
 import { resumes, resumeIntro } from '../../data/resume'
+import { addMenuItems, download, openUrl } from '../appMenu'
 
 export function Resume() {
   const [active, setActive] = useState(resumes[0].id)
   const r = resumes.find((x) => x.id === active) ?? resumes[0]
 
   return (
-    <div className="resume">
+    <div
+      className="resume"
+      onContextMenu={(e) =>
+        addMenuItems(e, [
+          ...resumes.map((x) => ({ label: x.title, checked: x.id === active, onClick: () => setActive(x.id) })),
+          { separator: true },
+          { label: 'Open PDF in New Tab', icon: 'globe', onClick: () => openUrl(r.file) },
+          { label: 'Download PDF', icon: 'text', onClick: () => download(r.file) },
+        ])
+      }
+    >
       <aside className="resume-list">
         <p className="muted small">{resumeIntro}</p>
         {resumes.map((x, i) => (

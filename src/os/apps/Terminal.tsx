@@ -11,6 +11,7 @@ import { LAUNCHABLE, type AppId } from './registry'
 import { openProject } from './Explorer'
 import { SlumpyFace, type Expression } from '../../scene/SlumpyFace'
 import { SlumpyCam, type SlumpyControl } from '../SlumpyCam'
+import { addMenuItems } from '../appMenu'
 import { playFaceSound } from '../sound'
 
 // tiny virtual filesystem built from src/data
@@ -132,6 +133,14 @@ function complete(line: string, cwd: string): { line: string; options: string[] 
 	return { line, options: matches.length > 1 ? matches.map((m) => m.trimEnd()) : [] }
 }
 
+// the computer says hi when the Konsole opens (a different line each time)
+const GREETINGS = [
+	`hey. i'm ${profile.host}, the computer. type "help" to look around.`,
+	`${profile.host} here. "help" lists what i can do.`,
+	`oh, hi. this is ${profile.host}'s terminal. try "help".`,
+]
+const greeting = () => GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
+
 // how Slumpy reacts to a command (unknown commands and errors get 'confused')
 const REACTIONS: Record<string, Expression> = {
 	help: 'thinking',
@@ -187,9 +196,7 @@ interface Line {
 
 export function Terminal({ winId }: { winId: string }) {
 	const [cwd, setCwd] = useState(HOME)
-	const [lines, setLines] = useState<Line[]>([
-		{ kind: 'out', text: `Welcome to ${profile.host}, ${profile.name}'s machine. Type "help" to get started.` },
-	])
+	const [lines, setLines] = useState<Line[]>(() => [{ kind: 'out', text: greeting() }])
 	const [input, setInput] = useState('')
 	const [history, setHistory] = useState<string[]>([])
 	const [hIdx, setHIdx] = useState(-1)
@@ -409,17 +416,15 @@ export function Terminal({ winId }: { winId: string }) {
 	const slumpy = useRef<SlumpyControl>({})
 	const NAME = profile.host[0].toUpperCase() + profile.host.slice(1)
 
-	// right-click: Konsole-style menu (drawn by the Desktop so windows don't clip it)
+	// right-click: Konsole-style items (the window adds its controls and shows the menu)
 	const onMenu = (e: MouseEvent<HTMLDivElement>) => {
-		e.preventDefault()
-		e.stopPropagation()
 		const selection = window.getSelection()?.toString() ?? ''
 		// where it was clicked, in the Konsole's layout px (the desktop is CSS-scaled)
 		const k = konsoleRef.current!
 		const kr = k.getBoundingClientRect()
 		const s = kr.width / k.offsetWidth || 1
 		const at = { x: (e.clientX - kr.left) / s, y: (e.clientY - kr.top) / s }
-		useStore.getState().showMenu(e.clientX, e.clientY, [
+		addMenuItems(e, [
 			{ label: 'Copy', icon: 'text', disabled: !selection, onClick: () => void navigator.clipboard?.writeText(selection) },
 			{
 				label: 'Paste',
@@ -442,8 +447,6 @@ export function Terminal({ winId }: { winId: string }) {
 			{ separator: true },
 			{ label: `Pet ${NAME}`, icon: 'user', onClick: pet },
 			{ label: `Call ${NAME} Here`, icon: 'user', onClick: () => slumpy.current.comeTo?.(at.x, at.y) },
-			{ separator: true },
-			{ label: 'Close Window', icon: 'power', onClick: () => useStore.getState().close(winId) },
 		])
 	}
 

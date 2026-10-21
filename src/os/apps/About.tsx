@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { profile } from '../../data/profile'
 import { education, coursework } from '../../data/about'
 import { rich } from '../richText'
+import { useStore } from '../../store'
+import { addMenuItems, copyText, openUrl } from '../appMenu'
 
 function useTyping(text: string, speed = 48) {
   const [n, setN] = useState(0)
@@ -18,7 +20,19 @@ export function About() {
   const [logoFailed, setLogoFailed] = useState(false)
 
   return (
-    <div className="about">
+    <div
+      className="about"
+      onContextMenu={(e) =>
+        addMenuItems(e, [
+          { label: 'GitHub Profile', icon: 'globe', onClick: () => openUrl(profile.github) },
+          { label: 'Projects', icon: 'folder', onClick: () => useStore.getState().open('projects') },
+          { label: 'Skills', icon: 'chip', onClick: () => useStore.getState().open('skills') },
+          { label: 'Resume', icon: 'text', onClick: () => useStore.getState().open('resume') },
+          { separator: true },
+          { label: 'Copy Name', icon: 'text', onClick: () => copyText(profile.name) },
+        ])
+      }
+    >
       <section className="about-hero">
         <div className="avatar">
           <img src={profile.avatar} alt={profile.name} />

@@ -178,7 +178,7 @@ export function Desktop() {
     { label: 'Snow', icon: 'image', checked: snow, onClick: toggleSnow },
     { label: 'Sound', icon: 'chip', checked: !sound.muted, onClick: sound.toggle },
     { separator: true },
-    { label: 'About This Computer', icon: 'user', onClick: () => open('about') },
+    { label: 'About This Computer', icon: 'computer', onClick: () => open('system') },
     { label: 'Shut Down', icon: 'power', onClick: () => useStore.getState().shutdown() },
   ]
 

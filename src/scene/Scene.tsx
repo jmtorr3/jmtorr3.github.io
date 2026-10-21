@@ -8,6 +8,9 @@ import { CameraRig } from './CameraRig'
 import { useStore } from '../store'
 import { FOV } from './screenFit'
 
+// touch screens have no hover, so the rainbow "you can tap this" outline stays on
+const TOUCH = matchMedia('(pointer: coarse)').matches
+
 export function Scene() {
   const [hovered, setHovered] = useState<HoverKind>(null)
   const mode = useStore((s) => s.mode)
@@ -35,7 +38,7 @@ export function Scene() {
         <DustPuff />
       </Suspense>
       <CameraRig />
-      <PicoPostFX hovered={hovered !== null && mode === 'room'} />
+      <PicoPostFX hovered={(TOUCH || hovered !== null) && mode === 'room'} />
     </Canvas>
   )
 }

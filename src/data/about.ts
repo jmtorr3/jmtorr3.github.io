@@ -1,4 +1,4 @@
-// About Me window: education card and coursework. The short intro is `bio` in profile.ts.
+// About My Creator window: education card and coursework. The short intro is `bio` in profile.ts.
 export const education = {
 	school: 'Virginia Tech',
 	logo: '/VT-logo.png',

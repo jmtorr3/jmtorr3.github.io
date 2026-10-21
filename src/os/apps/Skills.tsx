@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { skillGroups } from '../../data/skills'
+import { addMenuItems, copyText } from '../appMenu'
 
 // KDE System Settings layout: categories on the left, contents on the right
 export function Skills() {
@@ -7,7 +8,16 @@ export function Skills() {
   const group = skillGroups[active]
 
   return (
-    <div className="skills">
+    <div
+      className="skills"
+      onContextMenu={(e) =>
+        addMenuItems(e, [
+          ...skillGroups.map((g, i) => ({ label: g.category, checked: i === active, onClick: () => setActive(i) })),
+          { separator: true },
+          { label: `Copy ${group.category}`, icon: 'text', onClick: () => copyText(group.skills.map((s) => s.name).join(', ')) },
+        ])
+      }
+    >
       <aside className="places">
         <div className="places-title">Categories</div>
         {skillGroups.map((g, i) => (
