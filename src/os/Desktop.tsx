@@ -152,10 +152,15 @@ export function Desktop() {
   const closeMenu = useStore((s) => s.hideMenu)
   const [snow, setSnow] = useState(readSnow)
   const [refreshes, setRefreshes] = useState(0)
-  // there's one Slumpy: while the Konsole is the focused window it's in there
-  const inKonsole = useStore((s) => {
-    const w = s.windows.find((x) => x.id === s.focused)
-    return w?.app === 'terminal' && !w.minimized
+  // there's one Slumpy, and it leaves the wallpaper while it's somewhere else:
+  // the focused Konsole, the Start menu, or an open About This Computer
+  const slumpyAway = useStore((s) => {
+    const focused = s.windows.find((x) => x.id === s.focused)
+    return (
+      (focused?.app === 'terminal' && !focused.minimized) ||
+      s.startOpen ||
+      s.windows.some((x) => x.app === 'system' && !x.minimized)
+    )
   })
   // the welcome screen plays every time the PC turns on
   const [signedIn, setSignedIn] = useState(false)
@@ -245,7 +250,7 @@ export function Desktop() {
           }}
           onContextMenu={(e) => openMenu(e, desktopMenu)}
         >
-          <FaceScreen transparent className={`wallpaper-face ${inKonsole ? 'away' : ''}`} />
+          <FaceScreen transparent className={`wallpaper-face ${slumpyAway ? 'away' : ''}`} />
           {snow && <Snow />}
         </div>
 

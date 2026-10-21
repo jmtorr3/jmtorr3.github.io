@@ -37,6 +37,7 @@ interface State {
   spins: number
   // the right-click menu (any app can open one; the Desktop draws it), at a screen point
   menu: { clientX: number; clientY: number; items: MenuItem[] } | null
+  startOpen: boolean // the Start menu (its header shows Slumpy)
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
   screen: ScreenInfo | null
@@ -71,6 +72,7 @@ export const useStore = create<State>((set, get) => ({
   spins: 0,
   fart: null,
   menu: null,
+  startOpen: false,
   screen: null,
   desk: { w: window.innerWidth, h: window.innerHeight, scale: 1 },
   windows: [],

@@ -173,10 +173,12 @@ a:hover {
 }
 
 .wallpaper-face {
+  /* the whole screen, like the face on the monitor when the PC is off */
   position: absolute;
-  top: 46%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
   opacity: 0.85;
   /* glow follows the face's pixels, not the canvas box */
@@ -188,8 +190,9 @@ a:hover {
 
 .wallpaper-face canvas {
   display: block;
-  /* as big as fits: 5:4, at most ~60% of the desktop's width or height */
-  width: min(60cqw, 60cqh * 1.25);
+  /* the face canvas is the monitor's 5:4 screen: fill the desktop (on the
+     monitor that's exact; on phones, the biggest 5:4 that fits) */
+  width: min(100cqw, 100cqh * 1.25);
   aspect-ratio: 5 / 4;
   image-rendering: pixelated;
 }
@@ -197,7 +200,7 @@ a:hover {
 /* off in the Konsole */
 .wallpaper-face.away {
   opacity: 0;
-  transform: translate(-50%, -50%) scale(0.8);
+  transform: scale(0.8);
 }
 
 .slumpy-cam {

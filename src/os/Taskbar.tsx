@@ -44,6 +44,12 @@ export function Taskbar() {
   const [query, setQuery] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
 
+  // shared, so the wallpaper face can step aside while Slumpy is up here
+  useEffect(() => {
+    useStore.setState({ startOpen: menu })
+    return () => useStore.setState({ startOpen: false })
+  }, [menu])
+
   useEffect(() => {
     if (!menu) return
     const close = (e: PointerEvent) => {
