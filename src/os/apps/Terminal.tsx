@@ -100,7 +100,7 @@ const isChat = (line: string) => {
 	return GREETING.test(t) || QUESTION.test(t) || t.endsWith('?') || t.split(/\s+/).length >= 4
 }
 
-const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'ls', profile.host, 'neofetch', 'open', 'poweroff', 'pwd', 'shutdown', 'sudo', 'whoami']
+const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'logout', 'ls', profile.host, 'neofetch', 'open', 'pwd', 'sudo', 'whoami']
 
 // longest start shared by every candidate
 const commonPrefix = (xs: string[]) =>
@@ -163,8 +163,9 @@ const REACTIONS: Record<string, Expression> = {
 	sudo: 'angry',
 	rm: 'dizzy',
 	exit: 'sad',
-	shutdown: 'cry',
-	poweroff: 'cry',
+	logout: 'sad',
+	shutdown: 'suspicious', // nice try
+	poweroff: 'suspicious',
 	[profile.host]: 'love', // the computer is named after the host
 	hi: 'happy',
 	hello: 'happy',
@@ -192,7 +193,7 @@ const help = () => `available commands:
   neofetch          system info
   ${profile.host.padEnd(18)}say hi to ${profile.host}
   (Tab completes commands, files and app names)
-  shutdown          power off and step away from the desk`
+  logout            log off and step away from the desk`
 
 interface Line {
 	kind: 'in' | 'out'
@@ -209,6 +210,7 @@ export function Terminal({ winId }: { winId: string }) {
 	const inputRef = useRef<HTMLInputElement>(null)
 	const bodyRef = useRef<HTMLDivElement>(null)
 	const focused = useStore((s) => s.focused === winId)
+	const startOpen = useStore((s) => s.startOpen) // Slumpy's up in the Start menu then
 
 	// Slumpy watches you type: eyes follow the text, reacts to each command,
 	// dozes off when you stop for a while and startles awake when you start again
@@ -348,10 +350,12 @@ export function Terminal({ winId }: { winId: string }) {
 			case 'exit':
 				useStore.getState().close(winId)
 				return null
+			case 'logout':
+				useStore.getState().logOff()
+				return `${profile.user} logged off. bye.`
 			case 'shutdown':
 			case 'poweroff':
-				useStore.getState().shutdown()
-				return 'Broadcast message: the system is going down NOW!'
+				return `${profile.host} doesn't really turn off. try "logout".`
 			case 'sudo':
 				return `${profile.user} is not in the sudoers file. This incident will be reported.`
 			case profile.host:
@@ -486,8 +490,8 @@ export function Terminal({ winId }: { winId: string }) {
 					/>
 				</div>
 			</div>
-			{/* only here while the Konsole is focused; otherwise Slumpy is on the wallpaper */}
-			<SlumpyCam face={face} follow={follow} onClick={pet} control={slumpy} away={!focused} />
+			{/* only here while the Konsole is focused (and the Start menu, which takes him, is closed) */}
+			<SlumpyCam face={face} follow={follow} onClick={pet} control={slumpy} away={!focused || startOpen} />
 		</div>
 	)
 }

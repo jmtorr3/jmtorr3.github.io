@@ -96,7 +96,14 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     return { root, meshes, face, material, mouse, props, screenBox }
   }, [scene])
 
+  // the happy face is for pointing at the PC itself, not for messing with the
+  // keyboard and mouse (or carrying one over the PC)
   const [hovered, setHovered] = useState(false)
+  const hoverAt = (obj: THREE.Object3D) => {
+    const prop = CAN_GRAB && model.props.find(obj)
+    onHover(prop ? 'prop' : 'pc')
+    setHovered(!prop && !model.props.holding)
+  }
   const invalidate = useThree((s) => s.invalidate)
 
   useEffect(() => {
@@ -185,6 +192,17 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           ((y1 - (vy0 + vy1) / 2) / (y1 - y0)) * FACE_H,
         )
       }
+    }
+    // eyes follow the keyboard/mouse while it's being carried or is falling
+    const moving = model.props.props.find((p) => p.state === 'held') ?? model.props.props.find((p) => p.state === 'fall')
+    if (moving && model.screenBox && mode === 'room') {
+      const sx = (model.screenBox.min.x + model.screenBox.max.x) / 2
+      const sy = (model.screenBox.min.y + model.screenBox.max.y) / 2
+      const p = moving.mesh.position
+      // the screen faces -z, so the viewer's right is -x; face px: right +x, down +y
+      const right = sx - (p.x + moving.offset.x)
+      const down = sy - (p.y + moving.offset.y)
+      model.face.watch(THREE.MathUtils.clamp(right * 9, -10, 10), THREE.MathUtils.clamp(down * 6, -5, 5))
     }
     model.face.update(Math.min(dt, 0.1))
 
@@ -284,11 +302,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       object={model.root}
       onPointerOver={(e: { stopPropagation: () => void; object: THREE.Object3D }) => {
         e.stopPropagation()
-        onHover(CAN_GRAB && model.props.find(e.object) ? 'prop' : 'pc')
-        setHovered(true)
+        hoverAt(e.object)
       }}
       // moving between the PC and the keyboard/mouse doesn't re-fire "over"
-      onPointerMove={(e: { object: THREE.Object3D }) => onHover(CAN_GRAB && model.props.find(e.object) ? 'prop' : 'pc')}
+      onPointerMove={(e: { object: THREE.Object3D }) => hoverAt(e.object)}
       onPointerOut={() => {
         onHover(null)
         setHovered(false)

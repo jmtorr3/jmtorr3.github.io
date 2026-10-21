@@ -149,6 +149,7 @@ export class SlumpyFace {
   private t = 0
   private shownAt = 0 // when the current expression appeared, for ones that play out
   private reactUntil = 0 // a reaction is showing until then (react())
+  private watchUntil = 0 // keeping an eye on something until then (watch())
   // the part of the canvas that's actually on screen (see setView)
   private view = { scale: 1, x: FACE_W / 2, y: FACE_H / 2 }
   private copy = new Uint8Array(FACE_W * FACE_H)
@@ -212,6 +213,15 @@ export class SlumpyFace {
     this.nextLookAt = this.t + hold
   }
 
+  // Keep an eye on something moving (call every frame while it moves): look
+  // toward it, and drop the idle moods so the eyes are the plain ones that can
+  // actually look around. Reactions and set() expressions still take priority.
+  watch(x: number, y: number) {
+    this.glance(x, y, 0.4)
+    this.watchUntil = this.t + 0.6
+    if (!this.override && !this.reactUntil && this.next !== 'neutral') this.change('neutral')
+  }
+
   // When the camera is so close that only part of the screen is visible (zooming
   // in on a phone), shrink the face by `scale` and center it on canvas point (x, y)
   // so it stays in view instead of being cropped.
@@ -244,7 +254,7 @@ export class SlumpyFace {
     }
 
     // idle mood cycle
-    if (this.idle && !this.override && !this.reactUntil) {
+    if (this.idle && !this.override && !this.reactUntil && this.t > this.watchUntil) {
       if (this.next !== 'neutral' && this.t > this.moodUntil) this.change('neutral')
       if (this.next === 'neutral' && this.t > this.nextMoodAt) {
         const mood = pickMood()

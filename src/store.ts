@@ -47,7 +47,7 @@ interface State {
   focused: string | null
   topZ: number
   setMode: (m: Mode) => void
-  shutdown: () => void
+  logOff: () => void // end the desktop session (Slumpy itself stays on)
   spunTooFast: () => void
   doFart: (at: [number, number, number], dir: [number, number, number]) => void
   showMenu: (clientX: number, clientY: number, items: MenuItem[]) => void
@@ -81,7 +81,7 @@ export const useStore = create<State>((set, get) => ({
 
   setMode: (mode) => set({ mode, poweringOff: false }),
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
-  shutdown: () => set({ poweringOff: true }),
+  logOff: () => set({ poweringOff: true }),
   spunTooFast: () => set((s) => ({ spins: s.spins + 1 })),
   showMenu: (clientX, clientY, items) => set({ menu: { clientX, clientY, items } }),
   hideMenu: () => set({ menu: null }),

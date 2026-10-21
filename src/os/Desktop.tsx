@@ -193,7 +193,7 @@ export function Desktop() {
     { label: 'Sound', icon: 'chip', checked: !sound.muted, onClick: sound.toggle },
     { separator: true },
     { label: 'About This Computer', icon: 'computer', onClick: () => open('system') },
-    { label: 'Shut Down', icon: 'power', onClick: () => useStore.getState().shutdown() },
+    { label: 'Log Off', icon: 'logout', onClick: () => useStore.getState().logOff() },
   ]
 
   const iconMenu = (id: AppId): MenuItem[] => {

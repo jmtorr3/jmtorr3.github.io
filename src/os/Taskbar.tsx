@@ -39,7 +39,7 @@ function Clock() {
 export function Taskbar() {
   const windows = useStore((s) => s.windows)
   const focused = useStore((s) => s.focused)
-  const { open, focus, minimize, shutdown } = useStore.getState()
+  const { open, focus, minimize, logOff } = useStore.getState()
   const [menu, setMenu] = useState(false)
   const [query, setQuery] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
@@ -110,8 +110,8 @@ export function Taskbar() {
               ))}
             </div>
             <div className="start-foot">
-              <button onClick={shutdown}>
-                <Icon name="power" size={20} /> Shut Down
+              <button onClick={logOff}>
+                <Icon name="logout" size={20} /> Log Off
               </button>
             </div>
           </div>
