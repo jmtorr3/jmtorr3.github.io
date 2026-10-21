@@ -416,3 +416,13 @@ export function playBump(speed: number) {
   tone(c, t, 0.1, 'triangle', 190, 120, env(c, t, 0.3 * g, 0.002, 0.095))
   noise(c, t, 0.04, 'lowpass', 1200, env(c, t, 0.15 * g, 0.001, 0.035))
 }
+
+// Mochi bouncing off the edge of the Konsole after a fling; strength 0..1
+export function playBoing(strength: number) {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  const g = Math.max(0.15, Math.min(1, strength))
+  tone(c, t, 0.16, 'sine', 260, 620, env(c, t, 0.12 * g, 0.004, 0.15))
+  tone(c, t, 0.12, 'triangle', 520, 1100, env(c, t, 0.03 * g, 0.004, 0.11))
+}

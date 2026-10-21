@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { MochiFace } from '../scene/MochiFace'
+import { playBoing } from './sound'
 
 type Point = { x: number; y: number }
 
@@ -9,7 +10,8 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a)
 // It wanders around its parent on its own; when `follow` returns a point (the
 // top-left it should sit at, in the parent's px), it hurries over there instead.
 // It can be dragged: wherever it's dropped becomes its spot, where it stays
-// (it still pops over while `follow` wants it, then comes back).
+// (it still pops over while `follow` wants it, then comes back). Fling it and it
+// flies off, bouncing around the edges until it slows to a stop.
 export function MochiCam({
   face,
   follow,
@@ -40,6 +42,11 @@ export function MochiCam({
 
     // dragging, in the parent's layout px (the desktop is CSS-scaled)
     let drag: { id: number; dx: number; dy: number; x0: number; y0: number; moved: boolean } | null = null
+    // flinging: velocity in px/s, tracked while dragging and carried after release
+    const vel: Point = { x: 0, y: 0 }
+    let lastMove = { x: 0, y: 0, t: 0 }
+    let flying = false
+    let bounces = 0
     const toLocal = (e: PointerEvent) => {
       const parent = el.parentElement!
       const r = parent.getBoundingClientRect()
@@ -50,6 +57,9 @@ export function MochiCam({
       if (e.button !== 0) return
       const p = toLocal(e)
       drag = { id: e.pointerId, dx: p.x - pos.x, dy: p.y - pos.y, x0: e.clientX, y0: e.clientY, moved: false }
+      flying = false
+      vel.x = vel.y = 0
+      lastMove = { ...p, t: e.timeStamp }
       el.setPointerCapture(e.pointerId)
       e.preventDefault()
     }
@@ -64,6 +74,12 @@ export function MochiCam({
       const p = toLocal(e)
       pos.x = p.x - drag.dx
       pos.y = p.y - drag.dy
+      const dt = (e.timeStamp - lastMove.t) / 1000
+      if (dt > 0) {
+        vel.x = vel.x * 0.5 + ((p.x - lastMove.x) / dt) * 0.5
+        vel.y = vel.y * 0.5 + ((p.y - lastMove.y) / dt) * 0.5
+      }
+      lastMove = { ...p, t: e.timeStamp }
     }
     const up = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.id) return
@@ -71,9 +87,21 @@ export function MochiCam({
       drag = null
       el.classList.remove('dragging')
       if (!moved) return clickRef.current?.() // a tap, not a drag: petting
+      // held still before letting go: a drop, not a throw
+      if (e.timeStamp - lastMove.t > 80) vel.x = vel.y = 0
+      if (Math.hypot(vel.x, vel.y) > 300) {
+        flying = true
+        bounces = 0
+        return // keeps the surprised face until it lands
+      }
+      land()
+    }
+    const land = () => {
+      flying = false
       home = { ...pos }
       target = { ...pos }
-      face.react('happy', 1.2)
+      if (bounces >= 3) face.react('dizzy', 2.2)
+      else face.react('happy', 1.2)
     }
     el.addEventListener('pointerdown', down)
     el.addEventListener('pointermove', move)
@@ -95,6 +123,24 @@ export function MochiCam({
 
         if (drag?.moved) {
           Object.assign(pos, clamp(pos)) // held: right where the pointer is
+        } else if (flying) {
+          // thrown: fly, slow down, bounce off the edges
+          pos.x += vel.x * dt
+          pos.y += vel.y * dt
+          const friction = Math.exp(-dt * 1.6)
+          vel.x *= friction
+          vel.y *= friction
+          const bounce = (axis: 'x' | 'y', max: number) => {
+            if (pos[axis] >= 0 && pos[axis] <= max) return
+            pos[axis] = pos[axis] < 0 ? 0 : max
+            const hit = Math.abs(vel[axis])
+            vel[axis] = -vel[axis] * 0.75
+            bounces++
+            if (hit > 80) playBoing(hit / 1500)
+          }
+          bounce('x', maxX)
+          bounce('y', maxY)
+          if (Math.hypot(vel.x, vel.y) < 40) land()
         } else {
           const want = followRef.current?.()
           if (want) target = want
@@ -117,7 +163,7 @@ export function MochiCam({
             if (!want && !home) face.glance((dx / dist) * 10, (dy / dist) * 5, 0.3)
           }
         }
-        const bob = drag?.moved ? 0 : Math.sin(now / 320) * 2
+        const bob = drag?.moved || flying ? 0 : Math.sin(now / 320) * 2
         el.style.transform = `translate(${Math.round(pos.x)}px, ${Math.round(pos.y + bob)}px)`
       }
       raf = requestAnimationFrame(tick)
