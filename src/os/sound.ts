@@ -407,6 +407,20 @@ export function playLand(kind: 'keyboard' | 'mouse', speed: number) {
   }
 }
 
+// the keyboard or mouse poofing away (a soft whoosh down) or back (a pop up)
+export function playPoof(phase: 'vanish' | 'appear') {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  if (phase === 'vanish') {
+    noise(c, t, 0.22, 'bandpass', 1800, env(c, t, 0.14, 0.01, 0.2))
+    tone(c, t, 0.16, 'sine', 700, 220, env(c, t, 0.08, 0.005, 0.15))
+  } else {
+    noise(c, t, 0.12, 'highpass', 2500, env(c, t, 0.08, 0.005, 0.1))
+    tone(c, t, 0.09, 'sine', 300, 900, env(c, t, 0.12, 0.003, 0.08))
+  }
+}
+
 // knocked into the PC: a hollow plastic knock
 export function playBump(speed: number) {
   const c = audio()

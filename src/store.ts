@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { DeviceKind } from './data/devices'
 import type { MenuItem } from './os/ContextMenu'
 import * as THREE from 'three'
 import { APPS, type AppId } from './os/apps/registry'
@@ -41,6 +42,7 @@ interface State {
   signingIn: boolean // the welcome screen after power-on (shows Slumpy)
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
+  hoverDevice: DeviceKind | null // the keyboard or mouse under the pointer in the room (the hint names it)
   screen: ScreenInfo | null
   // desktop size in its own layout px; the Desktop is drawn at `scale`× that on screen
   desk: { w: number; h: number; scale: number }
@@ -51,6 +53,7 @@ interface State {
   logOff: () => void // end the desktop session (Slumpy itself stays on)
   spunTooFast: () => void
   doFart: (at: [number, number, number], dir: [number, number, number]) => void
+  setHoverDevice: (d: DeviceKind | null) => void
   showMenu: (clientX: number, clientY: number, items: MenuItem[]) => void
   hideMenu: () => void
   setScreen: (s: ScreenInfo) => void
@@ -72,6 +75,7 @@ export const useStore = create<State>((set, get) => ({
   poweringOff: false,
   spins: 0,
   fart: null,
+  hoverDevice: null,
   menu: null,
   startOpen: false,
   signingIn: false,
@@ -88,6 +92,7 @@ export const useStore = create<State>((set, get) => ({
   showMenu: (clientX, clientY, items) => set({ menu: { clientX, clientY, items } }),
   hideMenu: () => set({ menu: null }),
   doFart: (at, dir) => set((s) => ({ fart: { n: (s.fart?.n ?? 0) + 1, at, dir } })),
+  setHoverDevice: (hoverDevice) => get().hoverDevice !== hoverDevice && set({ hoverDevice }),
   setScreen: (screen) => set({ screen }),
   setDesk: (w, h, scale) => set({ desk: { w, h, scale } }),
 

@@ -108,7 +108,7 @@ a:hover {
   height: 36px;
   padding: 0;
   color: var(--accent-bright);
-  background: rgb(13 21 32 / 0.8);
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
   border: 1px solid var(--accent-dim);
   cursor: var(--cursor-pointer);
   transition:
@@ -972,7 +972,7 @@ button.card:hover {
   margin: 0;
   padding: 10px 12px;
   overflow: auto;
-  background: #0a1018;
+  background: var(--bg-deep);
   white-space: pre-wrap;
   font: inherit;
 }
@@ -1041,6 +1041,84 @@ button.card:hover {
     grid-template-columns: 1fr;
     gap: 0;
   }
+}
+
+/* system settings (shares the .skills layout) */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.theme-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  text-align: left;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  cursor: var(--cursor-pointer);
+}
+
+.theme-card:hover {
+  background: var(--bg-card-hover);
+}
+
+.theme-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  color: var(--accent-bright);
+}
+
+.theme-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 56px;
+  padding: 0 0 6px;
+  border: 1px solid;
+}
+
+.theme-preview span {
+  height: 4px;
+  margin: 0 6px;
+}
+
+.theme-preview span:first-child {
+  height: 10px;
+  margin: 0 0 4px;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.device {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+.device > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-note {
+  margin-top: 4px;
+  color: var(--text);
+  font-style: italic;
+}
+
+.device-status {
+  color: var(--ok);
+  white-space: nowrap;
 }
 
 /* explorer */
@@ -1201,7 +1279,7 @@ button.card:hover {
 .image-viewer {
   display: flex;
   flex-direction: column;
-  background: #05090f;
+  background: var(--bg-deep);
 }
 
 .image-stage {
@@ -1440,7 +1518,7 @@ button.card:hover {
 
 /* terminal */
 .terminal {
-  background: #0a1018;
+  background: var(--bg-deep);
   color: var(--text);
   font-size: 13px;
   line-height: 1.35;
@@ -1452,7 +1530,7 @@ button.card:hover {
 .konsole {
   position: relative;
   display: flex;
-  background: #0a1018;
+  background: var(--bg-deep);
 }
 
 .konsole .terminal {

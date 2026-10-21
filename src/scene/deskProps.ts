@@ -1,7 +1,9 @@
 import * as THREE from 'three'
+import type { DeviceKind } from '../data/devices'
 
-// The keyboard and mouse can be picked up and dropped around the desk. They stay
-// where they land until the desktop is shut down, then glide back home.
+// The keyboard and mouse (Chiba and Hanzo, see data/devices) can be picked up and
+// dropped around the desk. Left out of place for a while, they vanish in a puff
+// and pop back in at home; shutting down the desktop glides them back too.
 
 // while something is held, the camera doesn't orbit (CameraRig checks this)
 export const grabState = { active: false }
@@ -13,15 +15,20 @@ const MAX_LIFT = 1.4 // how high it can be raised when moving it up and down
 const KNOCK_GAP = 0.5
 const GRAVITY = 7
 const BOUNDS = 2.4 // how far from the PC a prop can go
+const POOF_AFTER = 20 // seconds a prop can sit out of place before it poofs home
+const AWAY_DIST = 0.05 // further than this from its spot counts as out of place
+// the poof: shrink away, stay gone a moment, pop back in at home (seconds)
+const POOF = { shrink: 0.15, gone: 0.6, pop: 0.2 }
 
-type State = 'rest' | 'held' | 'fall' | 'home'
-export type PropKind = 'keyboard' | 'mouse'
+type State = 'rest' | 'held' | 'fall' | 'home' | 'poof'
+export type PropKind = DeviceKind
 
 export type Prop = {
   kind: PropKind
   mesh: THREE.Object3D
   rest: THREE.Vector3 // where it started (and goes back to)
   restRot: THREE.Euler
+  restScale: THREE.Vector3
   anchor: THREE.Vector3 // where it's sitting now (the desk mouse wiggles around this)
   vel: THREE.Vector3
   state: State
@@ -29,6 +36,8 @@ export type Prop = {
   half: THREE.Vector3 // half the bounding-box size
   lastTouch: number // when it last touched the PC (for KNOCK_GAP)
   lastClack: number // when it last bumped the other prop
+  away: number // seconds it's been out of place (for POOF_AFTER)
+  poofT: number // time into the poof
 }
 
 export class DeskProps {
@@ -53,6 +62,7 @@ export class DeskProps {
   onLand?: (p: Prop, speed: number) => void
   onBump?: (p: Prop, speed: number) => void
   onClack?: (p: Prop, speed: number) => void // the keyboard and mouse bumping each other
+  onPoof?: (p: Prop, at: THREE.Vector3, phase: 'vanish' | 'appear') => void
 
   // obstacle: the PC's footprint. Props can't go into it, and they can't go further
   // back than its middle (the PC faces -z), so they never end up behind it.
@@ -72,6 +82,7 @@ export class DeskProps {
         mesh,
         rest: mesh.position.clone(),
         restRot: mesh.rotation.clone(),
+        restScale: mesh.scale.clone(),
         anchor: mesh.position.clone(),
         vel: new THREE.Vector3(),
         state: 'rest' as State,
@@ -79,6 +90,8 @@ export class DeskProps {
         half: box.getSize(new THREE.Vector3()).multiplyScalar(0.5),
         lastTouch: -Infinity,
         lastClack: -Infinity,
+        away: 0,
+        poofT: 0,
       }
     })
   }
@@ -96,6 +109,7 @@ export class DeskProps {
   // the pointer up and down raises and lowers the prop; looking down from above
   // it's the desk plane, so up and down is forward and back.
   grab(prop: Prop, ray: THREE.Ray, camDir: THREE.Vector3) {
+    if (prop.state === 'poof') return // can't catch it mid-poof
     const down = THREE.MathUtils.radToDeg(Math.asin(THREE.MathUtils.clamp(-camDir.y, -1, 1)))
     const upright = THREE.MathUtils.clamp((50 - down) / 30, 0, 1) // 1 at <=20° down, 0 at >=50°
     // blend between facing the camera (upright) and facing up (the desk plane)
@@ -126,14 +140,33 @@ export class DeskProps {
   // send everything back where it started
   reset() {
     this.release()
-    for (const p of this.props) p.state = 'home'
+    for (const p of this.props) {
+      p.state = 'home'
+      p.away = 0
+      p.mesh.visible = true
+      p.mesh.scale.copy(p.restScale)
+    }
   }
 
   update(dt: number, ray: THREE.Ray) {
     this.time += dt
     for (const p of this.props) {
       const pos = p.mesh.position
-      if (p.state === 'held') {
+      // been left out of place too long: poof it home
+      if (p.state === 'rest' || p.state === 'fall') {
+        const at = p.state === 'rest' ? p.anchor : pos // (the resting mouse wiggles around its anchor)
+        p.away = at.distanceTo(p.rest) > AWAY_DIST ? p.away + dt : 0
+        if (p.away > POOF_AFTER) {
+          p.state = 'poof'
+          p.poofT = 0
+          p.away = 0
+          this.onPoof?.(p, pos, 'vanish')
+        }
+      } else if (p.state === 'held') p.away = 0
+
+      if (p.state === 'poof') {
+        this.poof(p, dt)
+      } else if (p.state === 'held') {
         if (!ray.intersectPlane(this.plane, this.hit)) continue
         this.target.copy(this.hit).add(this.grabOffset)
         this.target.y = THREE.MathUtils.clamp(this.target.y, p.rest.y + 0.1, p.rest.y + MAX_LIFT)
@@ -203,7 +236,7 @@ export class DeskProps {
     const desk = p.rest.y - p.half.y // bottom height when lying on the desk
     let best = { y: p.rest.y, under: null as Prop | null, tiltX: 0, tiltZ: 0 }
     for (const q of this.props) {
-      if (q === p || q.state === 'held' || q.state === 'home' || !this.overlapXZ(p, q)) continue
+      if (q === p || q.state === 'held' || q.state === 'home' || q.state === 'poof' || !this.overlapXZ(p, q)) continue
       if (this.top(q) > this.top(p) - 0.02) continue // q isn't below p
       const qTop = this.top(q)
       const dx = q.mesh.position.x - p.mesh.position.x
@@ -243,7 +276,8 @@ export class DeskProps {
   // it's put; otherwise the lighter mouse is the one that gets shoved.
   private separate() {
     const [a, b] = this.props
-    if (!a || !b || a.state === 'home' || b.state === 'home' || !this.overlapXZ(a, b)) return
+    const away = (p: Prop) => p.state === 'home' || p.state === 'poof'
+    if (!a || !b || away(a) || away(b) || !this.overlapXZ(a, b)) return
     // one on top of (or leaning on) the other isn't a sideways bump
     if (this.bottom(a) >= this.top(b) - 0.01 || this.bottom(b) >= this.top(a) - 0.01) return
     if (this.floor(a).under === b || this.floor(b).under === a) return
@@ -269,6 +303,32 @@ export class DeskProps {
     this.collide(mover)
     if (this.time - mover.lastClack > KNOCK_GAP && speed > 0.4) this.onClack?.(mover, speed)
     mover.lastClack = this.time
+  }
+
+  // shrink into the puff, gone for a moment, then pop back in at home
+  private poof(p: Prop, dt: number) {
+    const before = p.poofT
+    const t = (p.poofT += dt)
+    const { shrink, gone, pop } = POOF
+    if (t < shrink) {
+      p.mesh.scale.copy(p.restScale).multiplyScalar(1 - t / shrink)
+    } else if (before < shrink) {
+      p.mesh.visible = false
+      p.mesh.position.copy(p.rest)
+      p.mesh.rotation.copy(p.restRot)
+      p.anchor.copy(p.rest)
+      p.vel.set(0, 0, 0)
+    }
+    if (t >= shrink + gone) {
+      if (before < shrink + gone) {
+        p.mesh.visible = true
+        this.onPoof?.(p, p.rest, 'appear')
+      }
+      // grows back with a little overshoot
+      const k = Math.min(1, (t - shrink - gone) / pop)
+      p.mesh.scale.copy(p.restScale).multiplyScalar(k < 1 ? Math.sin(k * Math.PI * 0.6) / Math.sin(Math.PI * 0.6) : 1)
+      if (k >= 1) p.state = 'rest'
+    }
   }
 
   private settleRotation(p: Prop, dt: number) {

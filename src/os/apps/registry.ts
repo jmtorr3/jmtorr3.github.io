@@ -9,6 +9,7 @@ import { Terminal } from './Terminal'
 import { Contact } from './Contact'
 import { SystemInfo } from './SystemInfo'
 import { TextView } from './TextView'
+import { Settings } from './Settings'
 
 export interface AppDef {
   title: string
@@ -30,6 +31,7 @@ export const APPS = {
   project: { title: 'Project', label: 'Project', icon: 'folder', size: [580, 540], component: ProjectViewer },
   image: { title: 'Image Viewer', label: 'Image Viewer', icon: 'image', size: [640, 480], component: ImageViewer },
   textview: { title: 'KWrite', label: 'KWrite', icon: 'text', size: [520, 380], component: TextView },
+  settings: { title: 'System Settings', label: 'Settings', icon: 'settings', size: [560, 400], component: Settings },
   system: { title: 'About This Computer', label: 'About This Computer', icon: 'computer', size: [480, 580], component: SystemInfo },
 } satisfies Record<string, AppDef>
 
@@ -39,4 +41,4 @@ export type AppId = keyof typeof APPS
 export const LAUNCHABLE: AppId[] = ['about', 'projects', 'skills', 'resume', 'blog', 'contact', 'terminal']
 
 // extra Start menu entries, below the apps (not on the desktop)
-export const START_EXTRAS: AppId[] = ['system']
+export const START_EXTRAS: AppId[] = ['settings', 'system']

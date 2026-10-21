@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from
 import { profile } from '../../data/profile'
 import { projects, slugOf } from '../../data/projects'
 import { useStore, slumpyLocation } from '../../store'
-import { LAUNCHABLE, type AppId } from './registry'
+import { LAUNCHABLE, START_EXTRAS, type AppId } from './registry'
+import { devices, DEVICE_KINDS } from '../../data/devices'
+import { THEMES, useTheme } from '../theme'
 import { CREATOR_HOME, lookup, openPath, openProject, pretty, resolve } from '../vfs'
 import type { Expression } from '../../scene/SlumpyFace'
 import { useSlumpy } from '../slumpy'
@@ -20,7 +22,7 @@ const isChat = (line: string) => {
 	return GREETING.test(t) || QUESTION.test(t) || t.endsWith('?') || t.split(/\s+/).length >= 4
 }
 
-const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'logout', 'ls', profile.host, 'neofetch', 'open', 'pwd', 'sudo', 'whoami']
+const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'logout', 'ls', 'lsusb', profile.host, 'neofetch', 'open', 'pwd', 'sudo', 'whoami']
 
 // longest start shared by every candidate
 const commonPrefix = (xs: string[]) =>
@@ -110,6 +112,7 @@ const help = () => `available commands:
   open <app>        open a window: ${LAUNCHABLE.join(', ')}
   open <project>    open a project by folder name
   open <path>       open a file or folder, like double-clicking it
+  lsusb             list connected devices
   neofetch          system info
   ${profile.host.padEnd(18)}say hi to ${profile.host}
   (Tab completes commands, files and app names)
@@ -261,7 +264,7 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 			}
 			case 'open': {
 				if (!arg) return 'open: what should I open?'
-				if ((LAUNCHABLE as string[]).includes(arg)) {
+				if (([...LAUNCHABLE, ...START_EXTRAS] as string[]).includes(arg)) {
 					useStore.getState().open(arg as AppId)
 					return `opening ${arg}...`
 				}
@@ -270,6 +273,12 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				if (openPath(resolve(cwd, arg))) return `opening ${arg}...`
 				return `open: ${arg}: not found. try "ls"`
 			}
+			case 'lsusb':
+				// Chiba and Hanzo, plugged into the root hub
+				return [
+					'Bus 001 Device 001: ID 1d6b:0001 Linux Foundation 1.1 root hub',
+					...DEVICE_KINDS.map((k, i) => `Bus 001 Device 00${i + 2}: ID ${devices[k].usbId} ${devices[k].name} ${devices[k].type}`),
+				].join('\n')
 			case 'neofetch': {
 				const art = ['   ▄▄▄▄▄▄▄', '   █ ▀▀▀ █', '   █▄▄▄▄▄█', '    ▄▄█▄▄', '  ▄▀▀▀▀▀▀▀▄', '  ▀▀▀▀▀▀▀▀▀']
 				const info = [
@@ -280,6 +289,9 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 					`Location: ${profile.location}`,
 					'OS: slumpyOS 1.0',
 					'Shader: picoCAD dither',
+					`Theme: ${THEMES.find((t) => t.id === useTheme.getState().theme)?.label}`,
+					`Keyboard: ${devices.keyboard.name}`,
+					`Mouse: ${devices.mouse.name}`,
 				]
 				// side by side when it fits, otherwise the logo goes above the info (phones)
 				const body = bodyRef.current

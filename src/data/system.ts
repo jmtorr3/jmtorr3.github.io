@@ -1,6 +1,8 @@
 // "About This Computer" (desktop right-click). Slumpy's made-up specs, shown as
 // label / value rows. The name comes from profile.host.
 
+import { devices } from './devices'
+
 export const systemTagline = 'a small beige computer. mostly harmless.'
 
 // also shown under the name in the Start menu
@@ -14,6 +16,8 @@ export const systemSpecs: { label: string; value: string }[] = [
   { label: 'Display', value: '15" CRT, 5:4, needs a second to warm up' },
   { label: 'Storage', value: '1.44 MB floppy: a few projects, one resume' },
   { label: 'Sound', value: 'a beeper, a fan, opinions' },
+  { label: 'Keyboard', value: `${devices.keyboard.name} (${devices.keyboard.model})` },
+  { label: 'Mouse', value: `${devices.mouse.name} (${devices.mouse.model})` },
   { label: 'Cooling', value: 'one rear fan. do not click it' },
   { label: 'Operating System', value: `${systemOS} (React + three.js)` },
 ]

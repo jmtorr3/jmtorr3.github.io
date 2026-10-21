@@ -1,5 +1,7 @@
-/* Colors + fonts for the virtual desktop — from the old portfolio (NixOS navy + cyan).
-   Change these and every window, the taskbar and the wallpaper follow. */
+/* Colors + fonts for the virtual desktop. :root is the default theme (Nix Night,
+   from the old portfolio); the [data-theme] blocks below override it, picked in
+   System Settings > Appearance (os/theme.ts). Every window, the taskbar and the
+   wallpaper follow these. */
 
 @font-face {
   font-family: 'MonocraftNF';
@@ -9,6 +11,7 @@
 
 :root {
   --bg: #0d1520;
+  --bg-deep: #0a1018; /* terminals, text views */
   --bg-card: #111e2e;
   --bg-card-hover: #162538;
   --border: #1c3050;
@@ -39,4 +42,69 @@
   --wall-bottom: #132238;
 
   --font: 'MonocraftNF', 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ---------- themes (os/theme.ts lists them) ---------- */
+
+[data-theme='amber'] {
+  --bg: #140d05;
+  --bg-deep: #0c0803;
+  --bg-card: #1c1307;
+  --bg-card-hover: #26190a;
+  --border: #3d2a10;
+  --accent: #ffb000;
+  --accent-bright: #ffd27a;
+  --accent-dim: #7a5200;
+  --accent-glow: rgba(255, 176, 0, 0.15);
+  --text: #ffe9c2;
+  --text-muted: #c09a5e;
+  --text-faint: #6b5230;
+  --title-top: #a86f00;
+  --title-mid: #7a5100;
+  --title-bottom: #553800;
+  --title-inactive: #2a1d0c;
+  --wall-top: #140d05;
+  --wall-bottom: #22160a;
+}
+
+[data-theme='phosphor'] {
+  --bg: #04120a;
+  --bg-deep: #020a05;
+  --bg-card: #071a0e;
+  --bg-card-hover: #0b2414;
+  --border: #12391f;
+  --accent: #39ff7a;
+  --accent-bright: #9dffbe;
+  --accent-dim: #1b7a3d;
+  --accent-glow: rgba(57, 255, 122, 0.13);
+  --text: #ccffd9;
+  --text-muted: #6fb487;
+  --text-faint: #2c5a3b;
+  --title-top: #1f8a45;
+  --title-mid: #146032;
+  --title-bottom: #0d4223;
+  --title-inactive: #0c2416;
+  --wall-top: #04120a;
+  --wall-bottom: #0a2414;
+}
+
+[data-theme='sakura'] {
+  --bg: #1b1220;
+  --bg-deep: #120c16;
+  --bg-card: #251829;
+  --bg-card-hover: #2f1f34;
+  --border: #4a2d4f;
+  --accent: #ff8fc8;
+  --accent-bright: #ffc2e1;
+  --accent-dim: #8a3d68;
+  --accent-glow: rgba(255, 143, 200, 0.15);
+  --text: #fbe6f2;
+  --text-muted: #c79ab6;
+  --text-faint: #6e4c63;
+  --title-top: #b4568a;
+  --title-mid: #873f68;
+  --title-bottom: #5e2c4a;
+  --title-inactive: #2a1a2c;
+  --wall-top: #1b1220;
+  --wall-bottom: #2b1830;
 }

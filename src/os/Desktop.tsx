@@ -203,6 +203,7 @@ export function Desktop() {
     { label: 'Snow', icon: 'image', checked: snow, onClick: toggleSnow },
     { label: 'Sound', icon: 'chip', checked: !sound.muted, onClick: sound.toggle },
     { separator: true },
+    { label: 'System Settings', icon: 'settings', onClick: () => open('settings') },
     { label: 'About This Computer', icon: 'computer', onClick: () => open('system') },
     { label: 'Log Off', icon: 'logout', onClick: () => useStore.getState().logOff() },
   ]

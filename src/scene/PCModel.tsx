@@ -6,8 +6,9 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
 import { useStore } from '../store'
-import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump } from '../os/sound'
+import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof } from '../os/sound'
 import { DeskProps } from './deskProps'
+import { poofAt } from './DustPuff'
 
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
@@ -93,6 +94,11 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     props.onGrab = () => playPickup()
     props.onLand = (p, speed) => playLand(p.kind, speed)
     props.onClack = (p, speed) => playLand(p.kind, Math.min(speed, 2) * 0.6)
+    // left out too long: gone in a puff, back home in another
+    props.onPoof = (_, at, phase) => {
+      poofAt(at)
+      playPoof(phase)
+    }
     const mouse = props.find(meshes[MOUSE_MESH_INDEX])
     return { root, meshes, face, material, mouse, props, screenBox }
   }, [scene])
@@ -103,6 +109,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const hoverAt = (obj: THREE.Object3D) => {
     const prop = CAN_GRAB && model.props.find(obj)
     onHover(prop ? 'prop' : 'pc')
+    useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
   }
   const invalidate = useThree((s) => s.invalidate)
@@ -309,6 +316,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       onPointerMove={(e: { object: THREE.Object3D }) => hoverAt(e.object)}
       onPointerOut={() => {
         onHover(null)
+        useStore.getState().setHoverDevice(null)
         setHovered(false)
       }}
       onPointerDown={(e: PressEvent) => {

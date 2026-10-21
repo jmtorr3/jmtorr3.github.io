@@ -3,11 +3,18 @@ import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
 
-// Easter egg: a puff of dust blowing out of the fan on the back of the PC.
+// Easter egg: a puff of dust blowing out of the fan on the back of the PC. Also
+// the little clouds the keyboard and mouse vanish and reappear in (poofAt).
 // Square pixel particles that drift out, slow down, rise a little and fade out
 // with a picoCAD-style dither (no transparency, so the outline pass stays clean).
 
-const N = 60
+const N = 160 // shared by every puff, reused oldest first
+const FART_N = 60
+const POOF_N = 30
+
+const poofs: THREE.Vector3[] = []
+// a quick round cloud at a point (picked up on the next frame)
+export const poofAt = (at: THREE.Vector3) => void poofs.push(at.clone())
 
 const vertexShader = /* glsl */ `
   attribute float aSize;
@@ -64,14 +71,23 @@ export function DustPuff() {
     const life = new Float32Array(N).fill(1)
     const maxLife = new Float32Array(N).fill(1)
     const baseSize = new Float32Array(N)
-    return { geo, pos, size, fade, shade, vel, life, maxLife, baseSize, material, points }
+    let next = 0
+    // start `count` particles; init sets each one's position, velocity, timing and look
+    const emit = (count: number, init: (i: number) => void) => {
+      for (let n = 0; n < count; n++) {
+        init(next)
+        next = (next + 1) % N
+      }
+      geo.attributes.aShade.needsUpdate = true
+    }
+    return { geo, pos, size, fade, shade, vel, life, maxLife, baseSize, material, points, emit }
   }, [])
 
   useEffect(() => {
     if (!fart) return
     const [ax, ay, az] = fart.at
     const dir = new THREE.Vector3(...fart.dir).normalize()
-    for (let i = 0; i < N; i++) {
+    sim.emit(FART_N, (i) => {
       // out of the fan in a cone, with a bit of upward drift
       const spread = new THREE.Vector3(Math.random() - 0.5, (Math.random() - 0.5) * 0.5, Math.random() - 0.5).multiplyScalar(0.8)
       const v = dir.clone().multiplyScalar(0.6 + Math.random() * 1.2).add(spread)
@@ -81,12 +97,23 @@ export function DustPuff() {
       sim.maxLife[i] = 0.9 + Math.random() * 1.1
       sim.baseSize[i] = 0.05 + Math.random() * 0.06
       sim.shade[i] = 0.75 + Math.random() * 0.35
-    }
-    sim.geo.attributes.aShade.needsUpdate = true
+    })
   }, [fart, sim])
 
   useFrame((_, dt) => {
     dt = Math.min(dt, 0.05)
+    for (const at of poofs.splice(0)) {
+      // bursts out every way at once, quick and pale
+      sim.emit(POOF_N, (i) => {
+        const v = new THREE.Vector3(Math.random() - 0.5, Math.random() * 0.6 - 0.2, Math.random() - 0.5).normalize().multiplyScalar(0.7 + Math.random() * 0.9)
+        sim.pos.set([at.x + v.x * 0.05, at.y + v.y * 0.05, at.z + v.z * 0.05], i * 3)
+        sim.vel.set([v.x, v.y + 0.3, v.z], i * 3)
+        sim.life[i] = 0
+        sim.maxLife[i] = 0.35 + Math.random() * 0.45
+        sim.baseSize[i] = 0.05 + Math.random() * 0.05
+        sim.shade[i] = 1.3 + Math.random() * 0.25
+      })
+    }
     const drag = Math.pow(0.12, dt)
     let alive = false
     for (let i = 0; i < N; i++) {
