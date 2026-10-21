@@ -35,3 +35,6 @@ export type AppId = keyof typeof APPS
 
 // what shows on the desktop and in the start menu, in order
 export const LAUNCHABLE: AppId[] = ['about', 'projects', 'skills', 'resume', 'blog', 'contact', 'terminal']
+
+// extra Start menu entries, below the apps (not on the desktop)
+export const START_EXTRAS: AppId[] = ['system']

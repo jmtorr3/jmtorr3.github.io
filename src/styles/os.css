@@ -16,6 +16,8 @@ body,
   font-size: 13px;
   /* no double-tap zoom on phones */
   touch-action: manipulation;
+  /* long-press opens the site's own menu (os/longPress.ts), not iOS's callout */
+  -webkit-touch-callout: none;
   cursor: var(--cursor);
 }
 
@@ -1460,6 +1462,12 @@ button.card:hover {
 .start-list button:hover {
   background: var(--accent-glow);
   color: var(--accent-bright);
+}
+
+.start-sep {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--border);
 }
 
 .start-foot {

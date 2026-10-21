@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
-import { APPS, LAUNCHABLE } from './apps/registry'
+import { APPS, LAUNCHABLE, START_EXTRAS, type AppId } from './apps/registry'
 import { Icon } from './Icon'
 import { profile } from '../data/profile'
 import { useSound, unlockAudio } from './sound'
@@ -51,9 +51,11 @@ export function Taskbar() {
     return () => window.removeEventListener('pointerdown', close)
   }, [menu])
 
-  const apps = LAUNCHABLE.filter((id) => APPS[id].label.toLowerCase().includes(query.toLowerCase()))
+  const matches = (id: AppId) => APPS[id].label.toLowerCase().includes(query.toLowerCase())
+  const apps = LAUNCHABLE.filter(matches)
+  const extras = START_EXTRAS.filter(matches)
 
-  const launch = (id: (typeof LAUNCHABLE)[number]) => {
+  const launch = (id: AppId) => {
     open(id)
     setMenu(false)
     setQuery('')
@@ -81,10 +83,17 @@ export function Taskbar() {
               autoFocus={!TOUCH}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && apps[0] && launch(apps[0])}
+              onKeyDown={(e) => e.key === 'Enter' && (apps[0] ?? extras[0]) && launch(apps[0] ?? extras[0])}
             />
             <div className="start-list">
               {apps.map((id) => (
+                <button key={id} onClick={() => launch(id)}>
+                  <Icon name={APPS[id].icon} size={24} />
+                  {APPS[id].label}
+                </button>
+              ))}
+              {extras.length > 0 && apps.length > 0 && <div className="start-sep" />}
+              {extras.map((id) => (
                 <button key={id} onClick={() => launch(id)}>
                   <Icon name={APPS[id].icon} size={24} />
                   {APPS[id].label}
