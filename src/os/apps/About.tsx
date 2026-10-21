@@ -45,7 +45,6 @@ export function About() {
               {profile.status}
             </div>
           )}
-          <p className="muted">{profile.greeting}</p>
           <h1 className="hero-name">{profile.name}</h1>
           <p className="hero-role">
             <span className="accent">{'>'}</span> {shown}
