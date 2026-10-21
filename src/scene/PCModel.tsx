@@ -179,8 +179,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
-    // off: the power button is the only thing on him that can be clicked
-    const dead = !prop && obj !== model.button && useStore.getState().poweredOff
+    // off or booting: the power button is the only thing on him that can be clicked
+    const { poweredOff, booting } = useStore.getState()
+    const dead = !prop && obj !== model.button && (poweredOff || booting)
     onHover(prop ? 'prop' : dead ? null : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
@@ -417,7 +418,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     later(3000, () => inRoom() && model.face.react('happy', 1.4))
   }
   // clicking the PC: the camera zooms into the screen and the desktop's sign-in
-  // comes up. Straight from booting (or tapped mid-boot), the boot log stays on the
+  // comes up. Straight from booting, the boot log stays on the
   // screen all the way in and the sign-in fades in over it (see Desktop), which
   // clears `booting`.
   const signIn = () => {
@@ -434,6 +435,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     clearTimers()
     useStore.getState().setPoweredOff(false)
     playPowerOn() // the tube thunking on (its flash opens the boot log)
+    model.props.poofHome() // a keyboard or mouse left lying around goes back where it belongs
     playSpinUp(1.6)
     setAsleep(true)
     setBooting(true)
@@ -542,7 +544,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         }
         unlockAudio()
         if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
-        if (useStore.getState().poweredOff) return // off: only the power button does anything
+        // off, or booting (the log finishes and heads into the sign-in by itself):
+        // only the power button does anything
+        if (useStore.getState().poweredOff || useStore.getState().booting) return
         if (hitFan(e)) {
           // the fan blows out along the face it's on
           const dir = (e.face?.normal ?? new THREE.Vector3(0, 0, 1)).clone().transformDirection(e.object.matrixWorld)
