@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { useStore } from '../store'
 import { THEMES, useTheme } from '../os/theme'
 import { makePicoMaterial } from './PicoMaterial'
-import { playBoing, playClick, playLand, playMagnet, playPickup, playPoof, playStep, playZap, setBrainHum } from '../os/sound'
+import { playBoing, playClick, playLand, playMagnet, playPickup, playStep, playZap, setBrainHum } from '../os/sound'
 import { makeBrainWire } from './BrainWire'
 import { makeBrainBuddy } from './BrainBuddy'
 import { makeBrainRoom, type BrainRoom } from './BrainRoom'
@@ -186,7 +186,6 @@ export const brainBusy = { current: false }
 // it away), then the cable reels it in and the hatch shuts. While he's off, the
 // hatch opens and shuts by hand (toggleHatch).
 type Mode = 'inside' | 'show' | 'tug' | 'held' | 'loose'
-// lastSpot: where it last settled (or was picked up from), for when it's thrown out of the room
 // joined: the plugs are together (the brain's on its cable). After plugging it
 // back in: hanging (out on its cable, waiting), hold (seconds left of that),
 // settle (seconds left gliding over to where it hangs), reelNow (the hatch was clicked)
@@ -196,7 +195,6 @@ const B = {
   hatchK: 0,
   vel: new THREE.Vector3(),
   spin: new THREE.Vector3(),
-  lastSpot: null as THREE.Vector3 | null,
   joined: true,
   hanging: false,
   hold: 0,
@@ -224,6 +222,7 @@ const B = {
 }
 export const brainState: Readonly<typeof B> & { at?: THREE.Vector3; reach?: number } = B // (where it is, for tests and the curious)
 const GRAVITY = 9
+const TOUCH = matchMedia('(pointer: coarse)').matches
 const RADIUS = 0.17 // about how big it is, for bumping into things
 const MAX_THROW = 6
 const SNAP = 0.5 // brought this close to the cable's dangling end (hatch open), the plugs snap together
@@ -269,12 +268,10 @@ const crossesPC = (a: THREE.Vector3, b: THREE.Vector3) => {
 // and it thinks: little sparks flicker across it, like neurons firing (faster
 // while it's out of the PC and on its own)
 const SPARKS = { count: 6, size: 0.026, life: 0.14, rate: 7, rateLoose: 14 } // rate: new sparks a second
-const ROOM = 4.5 // further than this from the PC, it poofs back to the last spot it was in
-const RESPAWN = new THREE.Vector3(1.8, RADIUS, 0.9) // (if it's never been anywhere: on the desk beside the PC)
-const inRoom = (p: THREE.Vector3) => Math.hypot(p.x - 0.56, p.z - 0.9) <= ROOM && p.y <= 6
-// grabbing and throwing it is a mouse/trackpad thing: on a touch screen it just
-// pops out and spins (dragging there turns the view)
-const CAN_GRAB = !matchMedia('(pointer: coarse)').matches
+// the room's edge, this far from the PC: thrown that far, it bounces back off it
+// (an invisible wall, so it's always somewhere you can zoom out and find it)
+const ROOM = 4.5
+const ROOM_MIDDLE = new THREE.Vector2(0.56, 0.9)
 
 // the hatch is open by hand (to put the brain back): a click on it shuts it
 export const hatchOpenByHand = () => B.hatchGoal === 1 && B.mode !== 'show'
@@ -313,6 +310,12 @@ export function Brain() {
     const group = new THREE.Group()
     group.add(model)
     group.visible = false
+    // a finger's not as precise as a mouse: on touch screens there's a bigger
+    // invisible ball round it to grab it by
+    if (TOUCH) {
+      const reach = new THREE.Mesh(new THREE.SphereGeometry(SIZE * 0.75, 12, 8), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }))
+      group.add(reach)
+    }
     // the brain stem's tip (its lowest point, in the brain's own space): where the cable plugs in
     group.updateMatrixWorld(true)
     const stem = new THREE.Vector3(0, Infinity, 0)
@@ -397,25 +400,6 @@ export function Brain() {
   const onDown = (e: ThreeEvent<PointerEvent>) => {
     if (B.mode !== 'show' && B.mode !== 'loose') return
     e.stopPropagation()
-    // on touch there's no dragging it about: a tap pulls it off its cable and it
-    // tumbles out onto the desk (and tapped again lying there, it jumps)
-    if (!CAN_GRAB) {
-      if (B.mode === 'show') {
-        tug.home.copy(brain.position)
-        separate()
-        endBuddy()
-        B.mode = 'loose'
-        B.looseSince = nowRef.current
-        B.vel.set((Math.random() - 0.5) * 0.6, 1.2, 0.7)
-      } else {
-        endBuddy()
-        B.looseSince = nowRef.current
-        B.vel.set((Math.random() - 0.5) * 0.8, 2, (Math.random() - 0.5) * 0.8)
-      }
-      B.spin.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6)
-      playPickup()
-      return
-    }
     grab.plane.setFromNormalAndCoplanarPoint(e.camera.getWorldDirection(grab.hit).clone(), e.point)
     grab.offset.copy(brain.position).sub(e.point)
     grabState.active = true // (dragging doesn't spin the view)
@@ -432,7 +416,6 @@ export function Brain() {
     endBuddy() // (picked up, it's just a brain again)
     B.mode = 'held'
     B.vel.set(0, 0, 0)
-    B.lastSpot = brain.position.clone() // where it came from
     playPickup()
   }
   // the plugs pulled apart: it's free, and he's off without it
@@ -442,7 +425,6 @@ export function Brain() {
     B.tuck = 1 // (its end's out of the hatch already)
     B.vel.set(0, 0, 0)
     brain.scale.setScalar(1)
-    B.lastSpot = tug.home.clone()
     playMagnet(false)
     poofAt(plugAt) // a little spark where they came apart
     const s = useStore.getState()
@@ -568,7 +550,7 @@ export function Brain() {
         latched.current = false
         playClick() // the hatch unlatching
         setTimeout(() => playBoing(1), T.out[0] * 1000) // and out it pops
-        pickable(true) // (on touch, a tap pulls it free)
+        pickable(true)
       }
     }
 
@@ -808,8 +790,6 @@ export function Brain() {
         B.vel.x *= Math.exp(-dt * 5)
         B.vel.z *= Math.exp(-dt * 5)
         B.spin.multiplyScalar(Math.exp(-dt * 4))
-        // come to rest somewhere in the room: that's its spot now
-        if (B.vel.y === 0 && Math.hypot(B.vel.x, B.vel.z) < 0.05 && inRoom(p)) (B.lastSpot ??= new THREE.Vector3()).copy(p)
       }
       collide(p, B.vel)
       g.rotation.x += B.spin.x * dt
@@ -847,14 +827,21 @@ export function Brain() {
         playBoing(0.3)
       }
       if (atPlug()) reconnect()
-      // thrown out of the room: back where it last was, in a puff
-      else if (!inRoom(p)) {
-        poofAt(p)
-        p.copy(B.lastSpot ?? RESPAWN)
-        B.spin.set(0, 0, 0)
-        B.vel.set(0, 0, 0)
-        poofAt(p)
-        playPoof('appear')
+      // thrown at the room's edge: it bounces back off it (losing some speed)
+      else {
+        const out = scratch.set(p.x - ROOM_MIDDLE.x, 0, p.z - ROOM_MIDDLE.y)
+        const d = out.length()
+        if (d > ROOM) {
+          out.divideScalar(d)
+          p.x = ROOM_MIDDLE.x + out.x * ROOM
+          p.z = ROOM_MIDDLE.y + out.z * ROOM
+          const into = B.vel.x * out.x + B.vel.z * out.z
+          if (into > 0) {
+            B.vel.x -= out.x * into * 1.6
+            B.vel.z -= out.z * into * 1.6
+            if (into > 1) playLand('mouse', into * 0.5)
+          }
+        }
       }
     }
     // thinking: sparks flicker on and off across it
@@ -930,7 +917,7 @@ export function Brain() {
         onClick={(e: ThreeEvent<MouseEvent>) => e.stopPropagation()} // (not a click on the PC behind it)
         onPointerOver={(e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation()
-          if (CAN_GRAB && (B.mode === 'show' || B.mode === 'loose')) document.body.style.cursor = 'var(--cursor-pointer)'
+          if (B.mode === 'show' || B.mode === 'loose') document.body.style.cursor = 'var(--cursor-pointer)'
         }}
         onPointerOut={() => B.mode !== 'held' && B.mode !== 'tug' && restoreCursor()}
       />

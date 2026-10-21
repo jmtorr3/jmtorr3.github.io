@@ -18,6 +18,10 @@ body,
   touch-action: manipulation;
   /* long-press opens the site's own menu (os/longPress.ts), not iOS's callout */
   -webkit-touch-callout: none;
+  /* and holding a finger down (orbiting, dragging the brain) doesn't start a text
+     selection, with iOS's magnifying glass: only what's in windows can be selected */
+  -webkit-user-select: none;
+  user-select: none;
   /* no grey/blue flash over whatever a finger presses (Android, older iOS) */
   -webkit-tap-highlight-color: transparent;
 }
@@ -96,6 +100,15 @@ a:hover {
 
 .small {
   font-size: 11px;
+}
+
+/* (text in windows, and anything typed into, can still be selected and copied) */
+.window-body,
+input,
+textarea,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .scene {
