@@ -49,6 +49,7 @@ export function SlumpyCam({
     let target: Point = { x: 0, y: 0 }
     let wanderAt = 0
     let home: Point | null = null // where the user dropped it
+    let called = false // home is where it was called to: stays put there even while you type
     let raf = 0
     let last = performance.now()
 
@@ -112,6 +113,7 @@ export function SlumpyCam({
     const land = () => {
       const thrown = flying
       flying = false
+      called = false
       home = thrown ? null : { ...pos }
       target = { ...pos }
       wanderAt = performance.now() + rand(1500, 3000) // catch its breath before wandering off
@@ -122,6 +124,7 @@ export function SlumpyCam({
     if (control)
       control.current.comeTo = (x, y) => {
         flying = false
+        called = true
         home = { x: x - el.offsetWidth / 2, y: y - el.offsetHeight / 2 }
         face.react('happy', 1.2)
       }
@@ -164,7 +167,7 @@ export function SlumpyCam({
           bounce('y', maxY)
           if (Math.hypot(vel.x, vel.y) < 40) land()
         } else {
-          const want = followRef.current?.()
+          const want = called ? null : followRef.current?.()
           if (want) target = want
           else if (home) target = home
           else if (now > wanderAt) {
