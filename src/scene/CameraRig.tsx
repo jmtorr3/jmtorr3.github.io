@@ -32,6 +32,10 @@ const MIN_ROOM_DISTANCE = 2.2
 // how far up/down the user can orbit, as angles from straight up (radians)
 const MIN_POLAR = 0.35
 const MAX_POLAR = 1.45 // just above the desk
+// while he boots from the power button, the camera leans in toward the screen
+// so the boot log is big enough to read: this many times the desktop zoom's distance
+const LEAN_DISTANCE = 1.5
+const LEAN_SPEED = 3 // how quickly it eases in and back out
 
 // Travel between two camera spots along an arc around the PC rather than a straight
 // line, so zooming in from behind swings around the side instead of going through it.
@@ -106,6 +110,7 @@ export function CameraRig() {
   const orbit = useRef({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0, dragging: false, x: 0, y: 0, at: 0, lastInput: 0, returning: false, touch: false })
   // recent turning (fades out over about a second) and when it last got dizzy
   const spin = useRef({ amount: 0, lastYaw: 0, dizzyAt: -Infinity })
+  const lean = useRef(0) // 0..1, leaning in to read the boot log
 
   // any input counts as "not idle" and stops a return in progress
   useEffect(() => {
@@ -228,12 +233,12 @@ export function CameraRig() {
     return { pos: ROOM_TARGET.clone().add(new THREE.Vector3().setFromSpherical(sph)), target: ROOM_TARGET }
   }
 
-  const screenPose = () => {
+  const screenPose = (farther = 1) => {
     const screen = useStore.getState().screen
     if (!screen) return { pos: ROOM_POS, target: ROOM_TARGET }
     const { distance } = fitScreen(screen, size.width, size.height)
     return {
-      pos: screen.center.clone().addScaledVector(screen.normal, distance),
+      pos: screen.center.clone().addScaledVector(screen.normal, distance * farther),
       target: screen.center,
     }
   }
@@ -262,6 +267,16 @@ export function CameraRig() {
     if (mode === 'room' || mode === 'exiting') goal = roomPose(state.clock.elapsedTime, delta)
     else goal = screenPose()
 
+    // booting: lean in toward the screen, then back out to wherever the orbit is
+    const booting = mode === 'room' && useStore.getState().booting
+    lean.current += ((booting ? 1 : 0) - lean.current) * (1 - Math.exp(-delta * LEAN_SPEED))
+    if (mode === 'room' && lean.current > 0.001) {
+      const peek = screenPose(LEAN_DISTANCE)
+      const k = ease(lean.current)
+      goal = { pos: goal.pos.clone().lerp(peek.pos, k), target: goal.target.clone().lerp(peek.target, k) }
+      centering = 1 - k
+    }
+
     if (mode === 'zooming' || mode === 'exiting') {
       t.current = Math.min(1, t.current + delta / DURATION)
       const k = ease(t.current)
@@ -276,8 +291,10 @@ export function CameraRig() {
         const k = 1 - Math.exp(-delta * 10)
         camera.position.copy(arcBetween(camera.position, goal.pos, k))
         // and never closer to the PC's middle than its outer edge plus a margin
+        // (except leaning in to read the boot log, which comes up to the screen)
+        const min = MIN_ROOM_DISTANCE * (1 - ease(lean.current))
         const d = camera.position.distanceTo(ROOM_TARGET)
-        if (d < MIN_ROOM_DISTANCE) camera.position.sub(ROOM_TARGET).multiplyScalar(MIN_ROOM_DISTANCE / d).add(ROOM_TARGET)
+        if (d < min) camera.position.sub(ROOM_TARGET).multiplyScalar(min / d).add(ROOM_TARGET)
         lookAt.current.lerp(goal.target, k)
       } else {
         camera.position.copy(goal.pos)

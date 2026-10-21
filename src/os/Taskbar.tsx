@@ -39,7 +39,7 @@ function Clock() {
 export function Taskbar() {
   const windows = useStore((s) => s.windows)
   const focused = useStore((s) => s.focused)
-  const { open, focus, minimize, logOff } = useStore.getState()
+  const { open, focus, minimize, logOff, shutDown } = useStore.getState()
   const [menu, setMenu] = useState(false)
   const slumpyHere = useStore((s) => slumpyLocation(s) === 'start')
   const [query, setQuery] = useState('')
@@ -113,6 +113,9 @@ export function Taskbar() {
             <div className="start-foot">
               <button onClick={logOff}>
                 <Icon name="logout" size={20} /> Log Off
+              </button>
+              <button onClick={() => shutDown()}>
+                <Icon name="power" size={20} /> Shut Down
               </button>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { resumes } from '../data/resume'
 import { contactLinks } from '../data/contact'
 import { projects, slugOf, type Project } from '../data/projects'
 import { skillGroups } from '../data/skills'
+import { devices } from '../data/devices'
 import { create } from 'zustand'
 import { useStore } from '../store'
 import { plain } from './richText'
@@ -14,6 +15,12 @@ import type { IconName } from './Icon'
 // open) and Dolphin both browse it, and every file knows what opening it does,
 // so double-clicking in Dolphin and `open` in the Konsole agree.
 //
+// Laid out like a real Linux box:
+//
+//   /bin -> usr/bin, /sbin -> usr/sbin
+//   /boot/                  the kernel
+//   /dev/                   null, zero, random, tty
+//   /etc/                   hostname, hosts, os-release, passwd, shells, motd
 //   /home/guest/            ~, the visitor
 //     readme.txt
 //     Desktop/              a .desktop launcher per desktop icon, same order
@@ -22,13 +29,20 @@ import type { IconName } from './Icon'
 //     resume/*.pdf
 //     projects/<project>/README.txt
 //     other/<project>/README.txt
+//   /root/                  locked
+//   /tmp/                   anyone can write here
+//   /usr/bin/               every installed program: the apps, and the Konsole's commands
+//   /usr/sbin/              shutdown, poweroff, reboot, halt
+//   /var/log/boot.log
 //
-// The guest can write in their own home (Notepad saves, "New Text File"); the
-// rest is read-only. Writes last until the page is reloaded.
+// The guest can write in their own home and /tmp (Notepad saves, "New Text
+// File"); the rest is read-only. Writes last until the page is reloaded.
 
 // open: what opening it does when it belongs to an app (app: that app's name, for "Open in …")
-export type VFile = { type: 'file'; text: string; icon: IconName; open?: () => void; app?: string }
-export type VDir = { type: 'dir'; children: Record<string, VNode>; project?: Project }
+// bin: it's a program (in /usr/bin or /usr/sbin), run by its name
+export type VFile = { type: 'file'; text: string; icon: IconName; open?: () => void; app?: string; bin?: boolean }
+// link: a symlink's target (/bin -> usr/bin); locked: the guest can't look inside
+export type VDir = { type: 'dir'; children: Record<string, VNode>; project?: Project; link?: string; locked?: boolean }
 export type VNode = VFile | VDir
 
 export const HOME = `/home/${profile.user}` // ~
@@ -71,25 +85,165 @@ const projectDir = (folder: 'projects' | 'other') =>
     ),
   )
 
+// ---- programs ----
+
+// The installed apps, by the name you'd run them by. run gets the arguments and
+// the working directory, and returns what it prints. The desktop launchers run
+// these too (their Exec= line), so a launcher and typing it in the Konsole agree.
+type Program = { app: AppId; run?: (args: string[], cwd: string) => string }
+let konsoles = 0
+const PROGRAMS: Record<string, Program> = {
+  about: { app: 'about' },
+  blog: { app: 'blog' },
+  contact: { app: 'contact' },
+  // a folder (the Projects launcher passes the projects folder, so it gets there
+  // even in a Dolphin that's already open somewhere else)
+  dolphin: {
+    app: 'projects',
+    run: ([a], cwd) => {
+      if (!a) return open('projects'), ''
+      const path = resolve(cwd, a)
+      const node = lookup(path)
+      if (node?.type !== 'dir') return `dolphin: ${a}: No such directory`
+      open('projects', { path, at: Date.now() })
+      return ''
+    },
+  },
+  kinfocenter: { app: 'system' },
+  // a new window each time, starting where you are
+  konsole: { app: 'terminal', run: (_, cwd) => (useStore.getState().open('terminal', { key: `k${++konsoles}`, props: { cwd } }), '') },
+  notepad: {
+    app: 'notepad',
+    run: ([a], cwd) => {
+      if (!a) return openNotepad(), ''
+      const path = resolve(cwd, a)
+      const node = lookup(path)
+      if (node?.type === 'dir') return `notepad: ${a}: Is a directory`
+      // a new file opens empty; it's created when it's saved
+      if (node) openNotepad(path)
+      else useStore.getState().open('notepad', { key: path, title: `${a.split('/').pop()} - Notepad`, props: { path } })
+      return ''
+    },
+  },
+  // KDE's document viewer: the resumes
+  okular: {
+    app: 'resume',
+    run: ([a], cwd) => {
+      if (!a) return open('resume'), ''
+      const node = lookup(resolve(cwd, a))
+      if (node?.type !== 'file' || node.app !== APPS.resume.label) return `okular: could not open ${a}`
+      node.open?.()
+      return ''
+    },
+  },
+  // a module name picks the page: `systemsettings skills`
+  systemsettings: { app: 'settings', run: ([a]) => (open(a === 'skills' ? 'skills' : 'settings'), '') },
+}
+
+// the Konsole's own commands that are programs on a real system too (cd, help,
+// exit and the like are shell builtins, so they're not in /usr/bin)
+export const TOOLS = ['cat', 'clear', 'date', 'echo', 'ls', 'lsusb', 'neofetch', 'pwd', profile.host, 'sudo', 'whoami', 'which']
+export const ADMIN_TOOLS = ['halt', 'poweroff', 'reboot', 'shutdown']
+
+export const PATH = ['/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin']
+
+// where a command lives, like `which`
+export function which(name: string): string | null {
+  for (const d of PATH) {
+    const n = lookup(`${d}/${name}`)
+    if (n?.type === 'file' && n.bin) return `${d}/${name}`
+  }
+  return null
+}
+
+// every program on the PATH, for tab completion
+export const programs = () => [...new Set(PATH.flatMap((d) => Object.keys((lookup(d) as VDir | null)?.children ?? {})))]
+
+// the program a path points at (like /usr/bin/ls or ./dolphin), or null
+export function programAt(path: string): string | null {
+  const n = lookup(path)
+  return n?.type === 'file' && n.bin ? path.slice(path.lastIndexOf('/') + 1) : null
+}
+
+// Run an installed app; null when it isn't one (the Konsole runs the rest itself)
+export function exec(name: string, args: string[] = [], cwd = HOME): string | null {
+  const p = PROGRAMS[name]
+  if (!p) return null
+  if (p.run) return p.run(args, cwd)
+  open(p.app)
+  return ''
+}
+
+// what cat shows for a program: the start of an ELF binary
+const elf = (name: string) =>
+  `\u007fELF\u0002\u0001\u0001\u0000\u0003\u0000>\u0000\u0001\u0000\u0000\u0000\ufffd\ufffd@\u0000\u0000\u0000\n` +
+  `/lib64/ld-linux-x86-64.so.2\u0000GNU\u0000\ufffd\ufffd\u0004\u0000libc.so.6\u0000${name}\u0000GLIBC_2.34\u0000\ufffd\ufffdH\ufffd\ufffd\ufffd\n` +
+  `__libc_start_main\u0000__cxa_finalize\u0000.shstrtab\u0000.text\u0000.data\u0000.bss\u0000\ufffd`
+const program = (name: string, icon: IconName, onOpen?: () => void, app?: string): VFile => ({ ...file(elf(name), icon, onOpen, app), bin: true })
+
 // what each desktop icon's launcher runs, KDE-style
-const EXEC: Partial<Record<AppId, string>> = { projects: `dolphin ${PROJECTS_DIR}`, terminal: 'konsole', skills: 'systemsettings' }
+const binOf = (id: AppId) => Object.keys(PROGRAMS).find((n) => PROGRAMS[n].app === id) ?? id
+const EXEC: Partial<Record<AppId, string>> = { projects: `dolphin ${PROJECTS_DIR}`, skills: 'systemsettings skills' }
+const execLine = (id: AppId) => EXEC[id] ?? binOf(id)
 const launcherName = (id: AppId) => APPS[id].label.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.desktop'
+
+// runs a launcher's Exec= line
+const runLine = (line: string) => {
+  const [name, ...args] = line.split(' ')
+  exec(name, args)
+}
+
+const etc = () =>
+  dir({
+    hostname: file(profile.host, 'settings'),
+    hosts: file(`127.0.0.1\tlocalhost\n127.0.1.1\t${profile.host}\n::1\t\tlocalhost ip6-localhost ip6-loopback`, 'settings'),
+    motd: file(`welcome to ${profile.host}. be nice to him.`, 'settings'),
+    'os-release': file(
+      ['NAME="slumpyOS"', 'VERSION="1.0"', 'ID=slumpyos', 'PRETTY_NAME="slumpyOS 1.0"', `HOME_URL="${profile.github}"`].join('\n'),
+      'settings',
+    ),
+    passwd: file(
+      [
+        'root:x:0:0:root:/root:/bin/bash',
+        `${profile.creator}:x:1000:1000:${profile.name}:${CREATOR_HOME}:/bin/bash`,
+        `${profile.user}:x:1001:1001:Guest:${HOME}:/bin/bash`,
+      ].join('\n'),
+      'settings',
+    ),
+    shells: file('/bin/sh\n/bin/bash', 'settings'),
+  })
 
 function build(): VDir {
   const desktop = Object.fromEntries(
     LAUNCHABLE.map((id) => [
       launcherName(id),
       file(
-        ['[Desktop Entry]', 'Type=Application', `Name=${APPS[id].label}`, `Exec=${EXEC[id] ?? id}`, `Icon=${APPS[id].icon}`].join('\n'),
+        ['[Desktop Entry]', 'Type=Application', `Name=${APPS[id].label}`, `Exec=${execLine(id)}`, `Icon=${APPS[id].icon}`].join('\n'),
         APPS[id].icon,
-        // the Projects launcher goes to the projects folder, even in a file
-        // manager that's already open somewhere else (like double-clicking it from ~/Desktop)
-        id === 'projects' ? () => open('projects', { path: PROJECTS_DIR, at: Date.now() }) : () => open(id),
+        () => runLine(execLine(id)),
         APPS[id].label,
       ),
     ]),
   )
+  const usrBin = dir(
+    Object.fromEntries([
+      ...Object.entries(PROGRAMS).map(([name, p]) => [name, program(name, APPS[p.app].icon, () => exec(name), APPS[p.app].label)]),
+      ...TOOLS.map((name) => [name, program(name, 'terminal')]),
+      ['bash', program('bash', 'terminal')],
+      ['sh', program('sh', 'terminal')],
+    ]),
+  )
+  const usrSbin = dir(Object.fromEntries(ADMIN_TOOLS.map((name) => [name, program(name, 'terminal')])))
   return dir({
+    bin: { ...usrBin, link: 'usr/bin' },
+    boot: dir({ 'vmlinuz-6.1.0-slumpy': file(elf('linux'), 'chip') }),
+    dev: dir({
+      null: file('', 'chip'),
+      random: file('\ufffd\u0012\ufffdq\ufffd\ufffd\u0007\ufffdZ\ufffd\u001b\ufffd', 'chip'),
+      tty: file('', 'chip'),
+      zero: file('', 'chip'),
+    }),
+    etc: etc(),
     home: dir({
       [profile.user]: dir({
         'readme.txt': file(`you're a guest on ${profile.host}. ${profile.creator}'s stuff is in ${CREATOR_HOME}:\n  cd ${CREATOR_HOME}`),
@@ -124,6 +278,24 @@ function build(): VDir {
         ),
         projects: projectDir('projects'),
         other: projectDir('other'),
+      }),
+    }),
+    root: { ...dir({}), locked: true },
+    sbin: { ...usrSbin, link: 'usr/sbin' },
+    tmp: dir({}),
+    usr: dir({ bin: usrBin, local: dir({ bin: dir({}) }), sbin: usrSbin }),
+    var: dir({
+      log: dir({
+        'boot.log': file(
+          [
+            '[  OK  ] Mounted /home.',
+            '[  OK  ] Started Picocad dither renderer.',
+            '[  OK  ] Started Slumpy face service.',
+            `[  OK  ] Found devices: ${devices.keyboard.name}, ${devices.mouse.name}.`,
+            '[  OK  ] Reached target Graphical Interface.',
+            `[  OK  ] Started Session 1 of user ${profile.user}.`,
+          ].join('\n'),
+        ),
       }),
     }),
   })
@@ -179,12 +351,12 @@ export function openNotepad(path?: string) {
   useStore.getState().open('notepad', { key, title: `${path ? path.split('/').pop() : 'Untitled'} - Notepad`, props: { path } })
 }
 
-// ---- writing (the guest's own home only) ----
+// ---- writing (the guest's own home and /tmp only) ----
 
 // bumped on every write, so file listings re-render
 export const useVfs = create<{ version: number }>(() => ({ version: 0 }))
 
-export const canWrite = (path: string) => path.startsWith(HOME + '/')
+export const canWrite = (path: string) => path.startsWith(HOME + '/') || path.startsWith('/tmp/')
 
 const parent = (path: string) => path.slice(0, path.lastIndexOf('/')) || '/'
 

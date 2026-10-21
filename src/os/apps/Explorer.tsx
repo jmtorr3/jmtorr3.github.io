@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { slugOf, type Project } from '../../data/projects'
 import { profile } from '../../data/profile'
 import { useStore } from '../../store'
@@ -32,6 +32,7 @@ const PLACES: { label: string; icon: IconName; path: string }[] = [
   { label: profile.creator, icon: 'folder', path: CREATOR_HOME },
   { label: 'Projects', icon: 'folder', path: PROJECTS_DIR },
   { label: 'Other', icon: 'folder', path: `${CREATOR_HOME}/other` },
+  { label: 'Root', icon: 'computer', path: '/' },
 ]
 
 const TOUCH = matchMedia('(pointer: coarse)').matches
@@ -59,7 +60,7 @@ const parent = (path: string) => path.slice(0, path.lastIndexOf('/')) || '/'
 export function Explorer({ props }: { props?: Record<string, unknown> }) {
   const [path, setPath] = useState((props?.path as string) ?? PROJECTS_DIR)
   const [back, setBack] = useState<string[]>([])
-  const [selected, setSelected] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string[]>([])
   const open = useStore((s) => s.open)
 
   const go = (to: string) => {
@@ -67,7 +68,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
       if (from !== to) setBack((b) => [...b, from])
       return to
     })
-    setSelected(null)
+    setSelected([])
   }
   // opening a folder from elsewhere (the Konsole, another window, a launcher)
   // navigates here; `at` makes the same folder count again when it's re-opened
@@ -80,7 +81,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
     if (!prev) return
     setBack(back.slice(0, -1))
     setPath(prev)
-    setSelected(null)
+    setSelected([])
   }
 
   useVfs((s) => s.version) // re-list when a file is saved or created
@@ -90,13 +91,49 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
   const newTextFile = () => {
     const full = join(path, freshName(path))
     if (writeFile(full, '')) return
-    setSelected(full.slice(full.lastIndexOf('/') + 1))
+    setSelected([full.slice(full.lastIndexOf('/') + 1)])
     openNotepad(full)
   }
   // folders first, then files, alphabetical
-  const entries = node?.type === 'dir' ? Object.entries(node.children).sort(([a, x], [b, y]) => (x.type === y.type ? a.localeCompare(b) : x.type === 'dir' ? -1 : 1)) : []
+  const entries = node?.type === 'dir' && !node.locked ? Object.entries(node.children).sort(([a, x], [b, y]) => (x.type === y.type ? a.localeCompare(b) : x.type === 'dir' ? -1 : 1)) : []
   const activate = (name: string, n: VNode) => (n.type === 'dir' && !n.project ? go(join(path, name)) : openPath(join(path, name)))
-  const sel = entries.find(([name]) => name === selected)?.[1]
+  const sel = selected.length === 1 ? entries.find(([name]) => name === selected[0])?.[1] : undefined
+
+  // rubber band: drag on the empty space to select everything the rectangle
+  // touches (Ctrl/Cmd adds to what's already selected)
+  const filesRef = useRef<HTMLDivElement>(null)
+  const [band, setBand] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const banded = useRef(false) // a drag just ended: the click that follows isn't "select nothing"
+  const startBand = (e: PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch' || e.button !== 0 || (e.target as Element).closest('.file')) return
+    const box = filesRef.current!
+    // in the folder view's own px, scrolled content included (the desktop is CSS-scaled)
+    const at = (ev: { clientX: number; clientY: number }) => {
+      const r = box.getBoundingClientRect()
+      const s = r.width / box.offsetWidth || 1
+      return { x: (ev.clientX - r.left) / s + box.scrollLeft, y: (ev.clientY - r.top) / s + box.scrollTop }
+    }
+    const a = at(e)
+    const before = e.ctrlKey || e.metaKey ? selected : []
+    banded.current = false
+    const move = (ev: globalThis.PointerEvent) => {
+      const b = at(ev)
+      const r = { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) }
+      if (!banded.current && r.w + r.h < 4) return
+      banded.current = true
+      setBand(r)
+      const hit = [...box.querySelectorAll<HTMLElement>('.file')]
+        .filter((el) => el.offsetLeft < r.x + r.w && el.offsetLeft + el.offsetWidth > r.x && el.offsetTop < r.y + r.h && el.offsetTop + el.offsetHeight > r.y)
+        .map((el) => el.dataset.name!)
+      setSelected([...new Set([...before, ...hit])])
+    }
+    const up = () => {
+      window.removeEventListener('pointermove', move)
+      setBand(null)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up, { once: true })
+  }
 
   const itemMenu = (name: string, n: VNode): MenuItem[] => {
     const full = join(path, name)
@@ -152,19 +189,31 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
             <Icon name="terminal" size={16} /> Konsole
           </button>
         </aside>
-        <div className="files" onClick={() => setSelected(null)}>
+        <div
+          className="files"
+          ref={filesRef}
+          onPointerDown={startBand}
+          onClick={() => {
+            if (banded.current) banded.current = false
+            else setSelected([])
+          }}
+        >
           {entries.map(([name, n]) => (
             <button
               key={name}
-              className={`file ${selected === name ? 'selected' : ''}`}
+              data-name={name}
+              // current: the one selected item, which shows its whole name (not while banding: items would jump)
+              className={`file ${selected.includes(name) ? 'selected' : ''} ${sel === n && !band ? 'current' : ''}`}
               onClick={(e) => {
                 e.stopPropagation()
-                setSelected(name)
+                // Ctrl/Cmd-click adds or removes one
+                if (e.ctrlKey || e.metaKey) return setSelected((s) => (s.includes(name) ? s.filter((x) => x !== name) : [...s, name]))
+                setSelected([name])
                 if (TOUCH) activate(name, n)
               }}
               onDoubleClick={() => activate(name, n)}
               onContextMenu={(e) => {
-                setSelected(name)
+                if (!selected.includes(name)) setSelected([name])
                 addMenuItems(e, itemMenu(name, n))
               }}
             >
@@ -174,14 +223,18 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
             </button>
           ))}
           {node?.type !== 'dir' && <p className="muted">{pretty(path)}: no such folder</p>}
+          {node?.type === 'dir' && node.locked && <p className="muted">{pretty(path)}: permission denied</p>}
+          {band && <div className="band" style={{ left: band.x, top: band.y, width: band.w, height: band.h }} />}
         </div>
       </div>
       <div className="statusbar">
-        {sel?.type === 'dir' && sel.project
-          ? `${sel.project.title} — ${sel.project.subtitle}`
-          : selected
-            ? selected
-            : `${entries.length} items · ${TOUCH ? 'tap' : 'double-click'} to open`}
+        {selected.length > 1
+          ? `${selected.length} items selected`
+          : sel?.type === 'dir' && sel.project
+            ? `${sel.project.title} — ${sel.project.subtitle}`
+            : selected.length
+              ? selected[0]
+              : `${entries.length} items · ${TOUCH ? 'tap' : 'double-click'} to open`}
       </div>
     </div>
   )

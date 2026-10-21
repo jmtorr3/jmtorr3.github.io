@@ -214,6 +214,7 @@ export function Desktop() {
     { label: 'System Settings', icon: 'settings', onClick: () => open('settings') },
     { label: 'About This Computer', icon: 'computer', onClick: () => open('system') },
     { label: 'Log Off', icon: 'logout', onClick: () => useStore.getState().logOff() },
+    { label: 'Shut Down', icon: 'power', onClick: () => useStore.getState().shutDown() },
   ]
 
   const iconMenu = (id: AppId): MenuItem[] => {
@@ -247,9 +248,12 @@ export function Desktop() {
   useEffect(() => {
     if (!poweringOff) return
     playPowerOff()
-    // waves goodbye on the way out
-    speak('bye bye!')
-    slumpy.react('happy', 1.5)
+    // waves goodbye on the way out (or says goodnight, if he's being shut down)
+    const { poweredOff, rebooting } = useStore.getState()
+    if (rebooting) speak('be right back!')
+    else if (poweredOff) speak('nighty night!', 0.85)
+    else speak('bye bye!')
+    slumpy.react(poweredOff && !rebooting ? 'sleepy' : 'happy', 1.5)
   }, [poweringOff, slumpy])
 
   return (

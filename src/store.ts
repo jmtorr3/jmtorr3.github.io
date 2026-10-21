@@ -34,6 +34,11 @@ export interface ScreenInfo {
 interface State {
   mode: Mode
   poweringOff: boolean
+  // Slumpy is shut down: the screen and lights stay dark in the room until the
+  // power button on the case is pressed (only for this visit: a reload turns him on)
+  poweredOff: boolean
+  rebooting: boolean // shut down to come straight back on
+  booting: boolean // turned on from the power button: the boot log is scrolling by (the camera leans in to read it)
   // bumped when the user spins the PC around too fast (the face gets dizzy)
   spins: number
   // the right-click menu (any app can open one; the Desktop draws it), at a screen point
@@ -51,6 +56,8 @@ interface State {
   topZ: number
   setMode: (m: Mode) => void
   logOff: () => void // end the desktop session (Slumpy itself stays on)
+  shutDown: (reboot?: boolean) => void // log off and turn Slumpy off too
+  setPoweredOff: (off: boolean) => void // the power button, in the room
   spunTooFast: () => void
   doFart: (at: [number, number, number], dir: [number, number, number]) => void
   setHoverDevice: (d: DeviceKind | null) => void
@@ -74,6 +81,9 @@ let spawn = 0
 export const useStore = create<State>((set, get) => ({
   mode: 'room',
   poweringOff: false,
+  poweredOff: false,
+  rebooting: false,
+  booting: false,
   spins: 0,
   fart: null,
   hoverDevice: null,
@@ -89,6 +99,8 @@ export const useStore = create<State>((set, get) => ({
   setMode: (mode) => set({ mode, poweringOff: false }),
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
   logOff: () => set({ poweringOff: true }),
+  shutDown: (reboot = false) => set({ poweringOff: true, poweredOff: true, rebooting: reboot }),
+  setPoweredOff: (poweredOff) => set({ poweredOff, rebooting: false }),
   spunTooFast: () => set((s) => ({ spins: s.spins + 1 })),
   showMenu: (clientX, clientY, items) => set({ menu: { clientX, clientY, items } }),
   hideMenu: () => set({ menu: null }),

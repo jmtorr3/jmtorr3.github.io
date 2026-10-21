@@ -31,6 +31,7 @@ export type Expression =
   | 'music'
   | 'yawn'
   | 'loading'
+  | 'boot' // a Linux boot log scrolling by (see bootLog), when he's turned on
   | 'glitch'
   | 'hypno'
   | 'off'
@@ -111,6 +112,57 @@ const UWU = ['#...#...#', '#..#.#..#', '.##...##.']
 
 const WAVY = ['.##...##..', '#..#.#..#.', '....#....#']
 
+// a 3×5 pixel font for the boot log (rows of 3, top to bottom; lowercase draws as uppercase)
+const FONT: Record<string, string> = {
+  A: '.#.#.#####.##.#',
+  B: '##.#.###.#.###.',
+  C: '.###..#..#...##',
+  D: '##.#.##.##.###.',
+  E: '####..##.#..###',
+  F: '####..##.#..#..',
+  G: '.###..#.##.#.##',
+  H: '#.##.#####.##.#',
+  I: '###.#..#..#.###',
+  J: '..#..#..##.#.#.',
+  K: '#.##.###.#.##.#',
+  L: '#..#..#..#..###',
+  M: '#.########.##.#',
+  N: '##.#.##.##.##.#',
+  O: '.#.#.##.##.#.#.',
+  P: '##.#.###.#..#..',
+  Q: '.#.#.##.###..##',
+  R: '##.#.###.#.##.#',
+  S: '.###...#...###.',
+  T: '###.#..#..#..#.',
+  U: '#.##.##.##.####',
+  V: '#.##.##.##.#.#.',
+  W: '#.##.########.#',
+  X: '#.##.#.#.#.##.#',
+  Y: '#.##.#.#..#..#.',
+  Z: '###..#.#.#..###',
+  0: '####.##.##.####',
+  1: '.#.##..#..#.###',
+  2: '##...#.#.#..###',
+  3: '##...#.#...###.',
+  4: '#.##.####..#..#',
+  5: '####..##...###.',
+  6: '.###..####.####',
+  7: '###..#.#..#..#.',
+  8: '####.#####.####',
+  9: '####.####..###.',
+  '[': '##.#..#..#..##.',
+  ']': '.##..#..#..#.##',
+  '.': '.............#.',
+  '/': '..#..#.#.#..#..',
+  '-': '......###......',
+  ':': '....#.....#....',
+  '(': '.#.#..#..#...#.',
+  ')': '.#...#..#..#.#.',
+  '_': '............###',
+}
+const CHAR_W = 4 // 3px glyph + 1px gap
+const LINE_H = 6
+
 const MOUTH_O = ['.###.', '#...#', '#...#', '#...#', '.###.']
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -156,6 +208,8 @@ export class SlumpyFace {
   private view = { scale: 1, x: FACE_W / 2, y: FACE_H / 2 }
   private copy = new Uint8Array(FACE_W * FACE_H)
   private idle: boolean
+  // what 'boot' prints: each line shows up `at` seconds in
+  bootLog: { at: number; text: string }[] = []
   private transparent: boolean
 
   // idle: cycle through random moods by itself (off when something else drives it)
@@ -620,6 +674,23 @@ export class SlumpyFace {
     }
   }
 
+  private text(s: string, x: number, y: number) {
+    ;[...s.toUpperCase()].forEach((c, i) => {
+      const g = FONT[c]
+      if (g) for (let j = 0; j < 15; j++) if (g[j] === '#') this.dot(x + i * CHAR_W + (j % 3), y + Math.floor(j / 3))
+    })
+  }
+
+  // the lines printed so far, scrolling up once the screen's full, and a
+  // blinking cursor under the last one
+  private drawBootLog() {
+    const shown = this.bootLog.filter((l) => l.at <= this.since).map((l) => l.text)
+    const fits = Math.floor((FACE_H - 4) / LINE_H) - 1 // room for the cursor
+    const lines = shown.slice(-fits)
+    lines.forEach((l, i) => this.text(l, 2, 2 + i * LINE_H))
+    if (Math.floor(this.t * 3) % 2 === 0) this.text('_', 2, 2 + lines.length * LINE_H)
+  }
+
   // CRT-style tearing: shift bands of rows sideways and sprinkle static
   private glitch() {
     const seed = Math.floor(this.t * 12)
@@ -666,7 +737,8 @@ export class SlumpyFace {
   private render() {
     this.px.fill(0)
     const expr = this.shown
-    if (expr !== 'off') {
+    if (expr === 'boot') this.drawBootLog()
+    else if (expr !== 'off') {
       // look only moves plain eyes; the expressive ones stay put
       const moves = ['neutral', 'sad', 'angry', 'glitch'].includes(expr)
       let lx = moves ? this.look.x : 0

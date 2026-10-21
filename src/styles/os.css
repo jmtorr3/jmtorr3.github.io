@@ -162,6 +162,37 @@ a:hover {
   animation: blink 1.2s steps(2) infinite;
 }
 
+/* the arrow beside the power button while Slumpy is off (see PowerHint);
+   positioned by its transform, at the button */
+.power-hint {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 5;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff1e8;
+  font-size: 16px;
+  text-shadow: 2px 2px 0 #000;
+  white-space: nowrap;
+  cursor: var(--cursor-pointer);
+}
+
+.power-hint span {
+  display: block;
+  /* just right of the button, pointing back at it */
+  margin: -0.6em 0 0 14px;
+  padding: 6px 4px;
+  animation: nudge 0.7s steps(2) infinite;
+}
+
+@keyframes nudge {
+  50% {
+    transform: translateX(6px);
+  }
+}
+
 @keyframes blink {
   50% {
     opacity: 0;
@@ -1263,6 +1294,16 @@ button.card:hover {
   align-content: flex-start;
   gap: 6px;
   overflow: auto;
+  position: relative; /* the rubber band (and items' offsetTop) are in here */
+  user-select: none;
+}
+
+/* the rubber-band selection rectangle */
+.files .band {
+  position: absolute;
+  border: 1px solid var(--accent);
+  background: var(--accent-glow);
+  pointer-events: none;
 }
 
 .file {
@@ -1289,7 +1330,7 @@ button.card:hover {
 }
 
 /* names stay inside their own item: wrapped, at most two lines (with …) until
-   the item is selected, which shows the whole name like Dolphin does */
+   the item is the one selected, which shows the whole name like Dolphin does */
 .file span {
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -1300,7 +1341,7 @@ button.card:hover {
   overflow: hidden;
 }
 
-.file.selected span {
+.file.current span {
   -webkit-line-clamp: unset;
   line-clamp: unset;
 }
@@ -1890,6 +1931,7 @@ button.card:hover {
 .start-foot {
   display: flex;
   justify-content: flex-end;
+  gap: 2px;
   padding: 4px;
   border-top: 1px solid var(--border);
   background: var(--bg-card);

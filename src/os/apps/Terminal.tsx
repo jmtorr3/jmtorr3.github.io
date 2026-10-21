@@ -5,7 +5,7 @@ import { useStore, slumpyLocation } from '../../store'
 import { LAUNCHABLE, START_EXTRAS, type AppId } from './registry'
 import { devices, DEVICE_KINDS } from '../../data/devices'
 import { THEMES, useTheme } from '../theme'
-import { CREATOR_HOME, lookup, openNotepad, openPath, openProject, pretty, resolve } from '../vfs'
+import { CREATOR_HOME, HOME, PATH, exec, lookup, openPath, openProject, pretty, programAt, programs, resolve, which } from '../vfs'
 import type { Expression } from '../../scene/SlumpyFace'
 import { useSlumpy } from '../slumpy'
 import { SlumpyCam, type SlumpyControl } from '../SlumpyCam'
@@ -22,7 +22,11 @@ const isChat = (line: string) => {
 	return GREETING.test(t) || QUESTION.test(t) || t.endsWith('?') || t.split(/\s+/).length >= 4
 }
 
-const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'logout', 'ls', 'lsusb', profile.host, 'neofetch', 'notepad', 'open', 'pwd', 'sudo', 'whoami']
+// the shell's own commands; everything else is a program on the PATH (/usr/bin)
+const BUILTINS = ['cd', 'exit', 'help', 'logout', 'open']
+
+// $VARS echo expands
+const ENV: Record<string, string> = { HOME, USER: profile.user, HOSTNAME: profile.host, SHELL: '/bin/bash', PATH: PATH.join(':') }
 
 // longest start shared by every candidate
 const commonPrefix = (xs: string[]) =>
@@ -42,7 +46,7 @@ function complete(line: string, cwd: string): { line: string; options: string[] 
 	let dirPart = ''
 	let base = word
 	let candidates: string[]
-	if (words.length === 1) candidates = COMMANDS.map((c) => c + ' ')
+	if (words.length === 1) candidates = [...BUILTINS, ...programs()].sort().map((c) => c + ' ')
 	else if (words[0] === 'open') candidates = [...LAUNCHABLE, ...projects.map(slugOf)].map((c) => c + ' ')
 	else {
 		const slash = word.lastIndexOf('/')
@@ -86,8 +90,9 @@ const REACTIONS: Record<string, Expression> = {
 	rm: 'dizzy',
 	exit: 'sad',
 	logout: 'sad',
-	shutdown: 'suspicious', // nice try
-	poweroff: 'suspicious',
+	shutdown: 'sleepy',
+	poweroff: 'sleepy',
+	reboot: 'dizzy',
 	[profile.host]: 'love', // the computer is named after the host
 	hi: 'happy',
 	hello: 'happy',
@@ -98,7 +103,9 @@ function reactionFor(cmdline: string, out: string | null): Expression | null {
 	if (!line) return null
 	if ((line.includes(profile.host) || /love|<3/.test(line)) && !line.startsWith('sudo')) return 'love'
 	if (out && /not found|No such|missing|Not a directory|Is a directory/.test(out)) return 'confused'
-	return REACTIONS[line.split(/\s+/)[0]] ?? 'confused'
+	const cmd = line.split(/\s+/)[0]
+	// any other installed program is a happy surprise
+	return REACTIONS[cmd] ?? (which(cmd) ? 'excited' : 'confused')
 }
 
 
@@ -112,12 +119,60 @@ const help = () => `available commands:
   open <app>        open a window: ${LAUNCHABLE.join(', ')}
   open <project>    open a project by folder name
   open <path>       open a file or folder, like double-clicking it
-  notepad [file]    edit a text file (you can save in ~)
+  notepad [file]    edit a text file (you can save in ~ and /tmp)
+  dolphin [dir]     browse files; also konsole, okular, systemsettings...
+  which <command>   where a program lives (ls /usr/bin for all of them)
   lsusb             list connected devices
   neofetch          system info
   ${profile.host.padEnd(18)}say hi to ${profile.host}
   (Tab completes commands, files and app names)
-  logout            log off and step away from the desk`
+  logout            log off and step away from the desk
+  poweroff, reboot  turn ${profile.host} off (or off and on again)
+  shutdown [+min]   turn off later (-c cancels, -r restarts, "now" for now)`
+
+// a `shutdown` waiting to happen (one per machine, like the real thing)
+let scheduled: { timer: number; at: Date } | null = null
+
+// what the shell prints as the machine goes down
+const goingDown = (reboot: boolean) =>
+	`\nBroadcast message from ${profile.user}@${profile.host} (pts/0) (${new Date().toString().slice(0, 24)}):\n\nThe system will ${reboot ? 'reboot' : 'power off'} now!`
+
+// shutdown [-r|-h|-P|-c] [now|+minutes|hh:mm]
+function shutdown(args: string[]): string {
+	const reboot = args.includes('-r')
+	if (args.includes('-c')) {
+		if (!scheduled) return 'shutdown: no scheduled shutdown to cancel'
+		clearTimeout(scheduled.timer)
+		scheduled = null
+		return ''
+	}
+	const when = args.find((a) => !a.startsWith('-')) ?? '+1'
+	let mins: number
+	if (when === 'now') mins = 0
+	else if (/^\+?\d+$/.test(when)) mins = parseInt(when.replace('+', ''), 10)
+	else if (/^\d{1,2}:\d{2}$/.test(when)) {
+		const [h, m] = when.split(':').map(Number)
+		const t = new Date()
+		t.setHours(h, m, 0, 0)
+		if (t.getTime() <= Date.now()) t.setDate(t.getDate() + 1)
+		mins = (t.getTime() - Date.now()) / 60_000
+	} else return `shutdown: invalid time value '${when}'`
+	if (scheduled) clearTimeout(scheduled.timer)
+	scheduled = null
+	if (mins <= 0) {
+		useStore.getState().shutDown(reboot)
+		return goingDown(reboot)
+	}
+	const at = new Date(Date.now() + mins * 60_000)
+	scheduled = {
+		at,
+		timer: window.setTimeout(() => {
+			scheduled = null
+			if (useStore.getState().mode === 'desktop') useStore.getState().shutDown(reboot)
+		}, mins * 60_000),
+	}
+	return `${reboot ? 'Reboot' : 'Shutdown'} scheduled for ${at.toString().slice(0, 24)}, use 'shutdown -c' to cancel.`
+}
 
 interface Line {
 	kind: 'in' | 'out'
@@ -219,7 +274,17 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 	}, [focused])
 
 	const run = (cmdline: string): string | null => {
-		const [cmd, ...args] = cmdline.trim().split(/\s+/)
+		let [cmd, ...args] = cmdline.trim().split(/\s+/)
+		// a path to a program runs it (/usr/bin/ls, ./dolphin); any other path doesn't
+		if (cmd?.includes('/')) {
+			const path = resolve(cwd, cmd)
+			const node = lookup(path)
+			if (!node) return `bash: ${cmd}: No such file or directory`
+			if (node.type === 'dir') return `bash: ${cmd}: Is a directory`
+			const name = programAt(path)
+			if (!name) return `bash: ${cmd}: Permission denied`
+			cmd = name
+		}
 		const arg = args[0]
 		switch (cmd) {
 			case undefined:
@@ -234,7 +299,12 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 			case 'date':
 				return new Date().toString()
 			case 'echo':
-				return args.join(' ')
+				return args.join(' ').replace(/\$(\w+)/g, (_, v: string) => ENV[v] ?? '')
+			case 'which':
+				return args
+					.map(which)
+					.filter(Boolean)
+					.join('\n')
 			case 'clear':
 				setLines([])
 				return null
@@ -242,10 +312,12 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				const node = lookup(resolve(cwd, arg))
 				if (!node) return `ls: cannot access '${arg}': No such file or directory`
 				if (node.type === 'file') return arg ?? ''
+				if (node.locked) return `ls: cannot open directory '${arg ?? '.'}': Permission denied`
 				// alphabetical, like real ls (and Dolphin)
 				return Object.entries(node.children)
 					.sort(([a], [b]) => a.localeCompare(b))
-					.map(([name, n]) => (n.type === 'dir' ? `${name}/` : name))
+					// like ls -F: folders/, links@, programs*
+					.map(([name, n]) => (n.type === 'dir' ? `${name}${n.link ? '@' : '/'}` : n.bin ? `${name}*` : name))
 					.join('  ')
 			}
 			case 'cd': {
@@ -253,6 +325,7 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				const node = lookup(target)
 				if (!node) return `cd: ${arg}: No such file or directory`
 				if (node.type !== 'dir') return `cd: ${arg}: Not a directory`
+				if (node.locked) return `cd: ${arg}: Permission denied`
 				setCwd(target)
 				return ''
 			}
@@ -273,19 +346,6 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				// any file or folder, same as double-clicking it in Dolphin
 				if (openPath(resolve(cwd, arg))) return `opening ${arg}...`
 				return `open: ${arg}: not found. try "ls"`
-			}
-			case 'notepad': {
-				if (!arg) {
-					openNotepad()
-					return 'opening notepad...'
-				}
-				const target = resolve(cwd, arg)
-				const node = lookup(target)
-				if (node?.type === 'dir') return `notepad: ${arg}: Is a directory`
-				// a new file opens empty; it's created when it's saved
-				if (node) openNotepad(target)
-				else useStore.getState().open('notepad', { key: target, title: `${arg} - Notepad`, props: { path: target } })
-				return `opening ${pretty(target)}...`
 			}
 			case 'lsusb':
 				// Chiba and Hanzo, plugged into the root hub
@@ -322,15 +382,25 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				useStore.getState().logOff()
 				return `${profile.user} logged off. bye.`
 			case 'shutdown':
+				return shutdown(args)
 			case 'poweroff':
-				return `${profile.host} doesn't really turn off. try "logout".`
+			case 'halt':
+				useStore.getState().shutDown()
+				return goingDown(false)
+			case 'reboot':
+				useStore.getState().shutDown(true)
+				return goingDown(true)
 			case 'sudo':
 				return `${profile.user} is not in the sudoers file. This incident will be reported.`
 			case profile.host:
 				return `(\u25d5\u203f\u25d5) hi! i'm ${profile.host}, this computer.`
-			default:
+			default: {
+				// an installed app (dolphin, konsole, notepad...)
+				const out = exec(cmd, args, cwd)
+				if (out !== null) return out
 				if (isChat(cmdline)) return `${cmd}: command not found: I'm not an LLM`
 				return `${cmd}: command not found`
+			}
 		}
 	}
 

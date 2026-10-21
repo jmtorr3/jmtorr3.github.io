@@ -6,10 +6,12 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
 import { useStore } from '../store'
-import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, speak, speakSoon } from '../os/sound'
+import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
 import { restoreCursor, type HoverKind } from './cursor'
+import { devices } from '../data/devices'
+import { profile } from '../data/profile'
 
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
@@ -28,6 +30,33 @@ const CAN_GRAB = !matchMedia('(pointer: coarse)').matches
 // keep setting off the smile. Holding a finger still on him does it instead.
 const TOUCH_HOLD_MS = 450
 const TOUCH_SLOP = 10 // px the finger can drift before it's a drag, not a hold
+// the power button, added to the case (the model doesn't have one): the right end
+// of the front panel as you face it (the PC faces -z, so the viewer's right is -x).
+// at: the middle of where it meets the panel
+const POWER_BUTTON = { at: new THREE.Vector3(0, 0.19, 0.4375), size: 0.09, depth: 0.025, travel: 0.015 }
+const BUTTON_COLOR = [0x8c, 0x86, 0x79] // a shade darker than the beige case
+
+// what scrolls by on the screen as he boots from the power button (up to 24
+// characters a line fit), and when each line shows up, in seconds
+// (it starts once the camera has mostly leaned in to read it)
+const BOOT_LOG = [
+  [0.6, 'SLUMPYOS 1.0 TTY1'],
+  [0.9, 'LINUX 6.1.0-SLUMPY'],
+  [1.3, '[ OK ] MOUNTED /HOME'],
+  [1.6, '[ OK ] PICOCAD DITHER'],
+  [1.8, `[ OK ] FOUND ${devices.keyboard.name}`],
+  [1.95, `[ OK ] FOUND ${devices.mouse.name}`],
+  [2.3, '[ OK ] STARTED SOUND'],
+  [2.7, '[ OK ] STARTED FACE'],
+  [3.0, '[ OK ] REACHED GUI'],
+  [3.5, `${profile.host} LOGIN: ${profile.user}`],
+  [3.9, `WAKING UP ${profile.host}...`],
+].map(([at, text]) => ({ at: at as number, text: (text as string).slice(0, 24) }))
+const BOOT_MS = 4900 // the log, plus a moment on the last line
+
+// where the power button is on screen (CSS px), for the arrow pointing at it
+// while Slumpy is off (see PowerHint)
+export const powerButtonOnScreen = { x: 0, y: 0, visible: false }
 
 type ClickEvent = {
   stopPropagation: () => void
@@ -78,6 +107,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
 
     // the screen glows with the Slumpy face (black while the desktop is up)
     const face = new SlumpyFace()
+    face.bootLog = BOOT_LOG
     const screen = meshes[SCREEN_MESH_INDEX]
     let screenBox: THREE.Box3 | null = null
     if (screen) {
@@ -108,7 +138,13 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       playPoof(phase)
     }
     const mouse = props.find(meshes[MOUSE_MESH_INDEX])
-    return { root, meshes, face, material, mouse, props, screenBox }
+
+    const tex = new THREE.DataTexture(new Uint8Array([...BUTTON_COLOR, 255]), 1, 1)
+    const { at, size, depth } = POWER_BUTTON
+    const button = new THREE.Mesh(new THREE.BoxGeometry(size, size, depth), makePicoMaterial(tex))
+    button.position.set(at.x, at.y, at.z - depth / 2) // sticking out of the panel
+    root.add(button)
+    return { root, meshes, face, material, mouse, props, screenBox, button }
   }, [scene])
 
   // the happy face is for pointing at the PC itself, not for messing with the
@@ -117,10 +153,18 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   // asleep from the start, so the loading screen fades onto a sleepy face; he
   // wakes up just after (the wake-up effect below)
   const [asleep, setAsleep] = useState(true)
+  // shut down (the screen and lights go dark), and the loading face while he
+  // turns back on from the power button
+  const poweredOff = useStore((s) => s.poweredOff)
+  const rebooting = useStore((s) => s.rebooting)
+  const booting = useStore((s) => s.booting)
+  const setBooting = (booting: boolean) => useStore.setState({ booting })
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
-    onHover(prop ? 'prop' : 'pc')
+    // off: the power button is the only thing on him that can be clicked
+    const dead = !prop && obj !== model.button && useStore.getState().poweredOff
+    onHover(prop ? 'prop' : dead ? null : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
   }
@@ -156,8 +200,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
 
   useEffect(() => {
     let expr: Expression | null = null // idle: cycles moods by itself
-    if (mode === 'desktop' || mode === 'exiting') expr = 'off'
+    if (mode === 'desktop' || mode === 'exiting' || poweredOff) expr = 'off'
     else if (mode === 'zooming') expr = 'surprised'
+    else if (booting) expr = 'boot'
     else if (asleep) expr = 'asleep'
     else if (hovered) expr = 'happy'
     // hovering on and off shouldn't cut a reaction short (getting hit, a fart, …)
@@ -166,7 +211,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     invalidate()
     // leaving the desktop puts the keyboard and mouse back where they belong
     if (mode === 'exiting') model.props.reset()
-  }, [mode, hovered, asleep, model, invalidate])
+  }, [mode, hovered, asleep, booting, poweredOff, model, invalidate])
 
   // spun around too fast: dizzy for a few seconds (its sound plays via onChange)
   const spins = useStore((s) => s.spins)
@@ -206,7 +251,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const raycaster = useRef(new THREE.Raycaster())
   const jolt = useRef(0) // seconds of shake left (fan easter egg)
   const clockRef = useRef(0)
-  useFrame(({ clock, camera, pointer }, dt) => {
+  const pressedUntil = useRef(0) // the power button is pushed in until then (clock seconds)
+  const buttonAt = useRef(new THREE.Vector3())
+  useFrame(({ clock, camera, pointer, size }, dt) => {
     clockRef.current = clock.elapsedTime
     if (++framesDrawn.current === 3) (window as { __bootDone?: () => void }).__bootDone?.()
     // a little shudder after the fan goes off
@@ -255,6 +302,14 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     }
     model.face.update(Math.min(dt, 0.1))
 
+    const b = POWER_BUTTON
+    model.button.position.z = b.at.z - b.depth / 2 + (clock.elapsedTime < pressedUntil.current ? b.travel : 0)
+    // the arrow only points at it while he's off and it's in view (from the front)
+    const p = buttonAt.current.set(b.at.x, b.at.y, b.at.z - b.depth).project(camera)
+    powerButtonOnScreen.x = ((p.x + 1) / 2) * size.width
+    powerButtonOnScreen.y = ((1 - p.y) / 2) * size.height
+    powerButtonOnScreen.visible = poweredOff && mode === 'room' && p.z < 1 && camera.position.z < b.at.z
+
     raycaster.current.setFromCamera(pointer, camera)
     model.props.update(Math.min(dt, 0.05), raycaster.current.ray)
 
@@ -275,7 +330,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
 
     const t = clock.elapsedTime
     const l = lights.current
-    const busy = mode === 'zooming' // booting: everything goes
+    const busy = mode === 'zooming' || booting // starting up: everything goes
     // drive light: random bursts of flicker, constant while booting
     if (!busy && t > l.hddUntil && Math.random() < dt * 0.6) l.hddUntil = t + 0.3 + Math.random() * 0.7
     if (t > l.hddNext) {
@@ -287,7 +342,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const green = l.hddOn ? 1 : 0.08
     l.faceLeft = Math.max(0, l.faceLeft - dt)
     const blue = busy ? blink(10) : l.faceLeft > 0 ? blink(12) : 0.08
-    model.material.uniforms.leds.value.set(red, green, blue)
+    if (poweredOff) model.material.uniforms.leds.value.set(0, 0, 0)
+    else model.material.uniforms.leds.value.set(red, green, blue)
+    model.material.uniforms.powered.value = poweredOff ? 0 : 1
   })
 
   // getting hit with the keyboard or mouse: reacts by how hard (the keyboard hits
@@ -316,29 +373,76 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     }
   }, [model])
 
+  // the wake-up and power-button sequences (cleared if they're interrupted)
+  const timers = useRef<number[]>([])
+  const later = (ms: number, f: () => void) => timers.current.push(window.setTimeout(f, ms))
+  const clearTimers = () => {
+    timers.current.forEach(clearTimeout)
+    timers.current = []
+  }
+  const talkingUntil = useRef(0) // no expression bleeps while he's talking
+  const inRoom = () => useStore.getState().mode === 'room'
+  // once the loading screen is gone (or he's been turned back on), he wakes up:
+  // still sleepy for a moment, a little yawn ("mmhmm?", if the browser already
+  // allows sound; usually it waits for a tap), then blinks awake and smiles.
+  // ("hellooo" is for when the PC is clicked; clicking it before he's awake
+  // wakes him right away.)
+  const wake = () => {
+    unlockAudio() // only starts if the browser already allows sound here
+    later(700, () => {
+      if (inRoom() && speak('mmhmm?', 0.8)) talkingUntil.current = performance.now() + 700
+    })
+    // eyes open, a couple of blinks to get going, then a smile
+    later(1700, () => setAsleep(false))
+    later(2300, () => inRoom() && model.face.blink(2))
+    later(3000, () => inRoom() && model.face.react('happy', 1.4))
+  }
+  // turned on: the boot log scrolls by while the drive light goes, then he wakes up
+  const powerOn = () => {
+    clearTimers()
+    useStore.getState().setPoweredOff(false)
+    playSpinUp(1.6)
+    setAsleep(true)
+    setBooting(true)
+    later(BOOT_MS, () => {
+      setBooting(false)
+      wake()
+    })
+  }
+  // turned off from the room: a sleepy goodnight, then the screen goes dark
+  const powerOff = () => {
+    clearTimers()
+    setBooting(false)
+    if (speak('nighty night!', 0.85)) talkingUntil.current = performance.now() + 900
+    model.face.react('sleepy', 2)
+    later(1100, () => useStore.getState().setPoweredOff(true))
+  }
+  const pressPower = () => {
+    pressedUntil.current = clockRef.current + 0.18
+    playClick()
+    later(140, () => playClick(true))
+    if (useStore.getState().poweredOff) powerOn()
+    else powerOff()
+  }
+  useEffect(() => clearTimers, [])
+  // shut down to restart (`reboot` in the Konsole): back in the room, it comes right back on
+  useEffect(() => {
+    if (mode !== 'room' || !poweredOff || !rebooting) return
+    const id = setTimeout(powerOn, 1200)
+    return () => clearTimeout(id)
+  }, [mode, poweredOff, rebooting])
+  // the HTML arrow pointing at the button can be tapped too (the button is small on a phone)
+  useEffect(() => {
+    const onPress = () => useStore.getState().poweredOff && pressPower()
+    window.addEventListener('press-power', onPress)
+    return () => window.removeEventListener('press-power', onPress)
+  }) // every render: pressPower closes over this render's state
+
   useEffect(() => {
     // the face bleeps as it changes expression (the spin-up covers the zoom)
-    let talkingUntil = 0
     model.face.onChange = (expr) => {
       lights.current.faceLeft = 0.5
-      if (useStore.getState().mode === 'room' && performance.now() > talkingUntil) playFaceSound(expr)
-    }
-    // once the loading screen is gone, he wakes up: still sleepy for a moment, a
-    // little yawn ("mmhmm?", if the browser already allows sound; usually it
-    // waits for a tap), then blinks awake and smiles. ("hellooo" is for when the
-    // PC is clicked; clicking it before he's awake wakes him right away.)
-    const wakeTimers: number[] = []
-    const later = (ms: number, f: () => void) => wakeTimers.push(window.setTimeout(f, ms))
-    const inRoom = () => useStore.getState().mode === 'room'
-    const wake = () => {
-      unlockAudio() // only starts if the browser already allows sound here
-      later(700, () => {
-        if (inRoom() && speak('mmhmm?', 0.8)) talkingUntil = performance.now() + 700
-      })
-      // eyes open, a couple of blinks to get going, then a smile
-      later(1700, () => setAsleep(false))
-      later(2300, () => inRoom() && model.face.blink(2))
-      later(3000, () => inRoom() && model.face.react('happy', 1.4))
+      if (useStore.getState().mode === 'room' && performance.now() > talkingUntil.current) playFaceSound(expr)
     }
     const booted = window as { __booted?: boolean }
     if (booted.__booted) wake()
@@ -349,7 +453,6 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     window.addEventListener('keydown', unlock, { once: true })
     return () => {
       model.face.onChange = undefined
-      wakeTimers.forEach(clearTimeout)
       window.removeEventListener('booted', wake)
       window.removeEventListener('pointerdown', unlock)
       window.removeEventListener('keydown', unlock)
@@ -404,6 +507,8 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           return
         }
         unlockAudio()
+        if (e.object === model.button) return pressPower()
+        if (useStore.getState().poweredOff) return // off: only the power button does anything
         if (hitFan(e)) {
           // the fan blows out along the face it's on
           const dir = (e.face?.normal ?? new THREE.Vector3(0, 0, 1)).clone().transformDirection(e.object.matrixWorld)
