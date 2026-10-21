@@ -23,6 +23,10 @@ const FAN_TEXELS = { x0: 60, x1: 67, y0: 51, y1: 58 }
 // picking up the keyboard and mouse is a mouse/trackpad thing; on touch screens
 // dragging orbits the camera and tapping them turns the PC on like the rest of it
 const CAN_GRAB = !matchMedia('(pointer: coarse)').matches
+// on a touch screen a finger on the PC isn't "hovering": rotating the view would
+// keep setting off the smile. Holding a finger still on him does it instead.
+const TOUCH_HOLD_MS = 450
+const TOUCH_SLOP = 10 // px the finger can drift before it's a drag, not a hold
 
 type ClickEvent = {
   stopPropagation: () => void
@@ -37,6 +41,9 @@ type PressEvent = {
   stopPropagation: () => void
   button: number
   pointerId: number
+  pointerType: string
+  clientX: number
+  clientY: number
   object: THREE.Object3D
   ray: THREE.Ray
   camera: THREE.Camera
@@ -107,12 +114,41 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   // keyboard and mouse (or carrying one over the PC)
   const [hovered, setHovered] = useState(false)
   const hoverAt = (obj: THREE.Object3D) => {
+    if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
     onHover(prop ? 'prop' : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
   }
   const invalidate = useThree((s) => s.invalidate)
+
+  // touch: a finger held still on the PC is the "hover" (happy face) until it lifts
+  const touchHold = useRef({ timer: 0, held: false })
+  const holdStart = (e: PressEvent) => {
+    if (CAN_GRAB || e.pointerType !== 'touch' || mode !== 'room') return
+    const h = touchHold.current
+    clearTimeout(h.timer)
+    h.held = false
+    const x0 = e.clientX
+    const y0 = e.clientY
+    const stop = () => {
+      clearTimeout(h.timer)
+      setHovered(false)
+      window.removeEventListener('pointermove', moved)
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+    }
+    const moved = (ev: PointerEvent) => {
+      if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > TOUCH_SLOP) stop() // rotating the view
+    }
+    h.timer = window.setTimeout(() => {
+      h.held = true
+      setHovered(true)
+    }, TOUCH_HOLD_MS)
+    window.addEventListener('pointermove', moved)
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
+  }
 
   useEffect(() => {
     let expr: Expression | null = null // idle: cycles moods by itself
@@ -320,6 +356,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         setHovered(false)
       }}
       onPointerDown={(e: PressEvent) => {
+        holdStart(e)
         const prop = model.props.find(e.object)
         if (!CAN_GRAB || mode !== 'room' || e.button !== 0 || !prop) return
         // pick up the keyboard or mouse
@@ -333,6 +370,11 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         // a drag that ends over the PC is an orbit, not a click; the keyboard and
         // mouse are for picking up, not for turning it on
         if (mode !== 'room' || e.delta > 6 || (CAN_GRAB && model.props.find(e.object))) return
+        // lifting the finger after a hold isn't a tap: don't turn it on
+        if (touchHold.current.held) {
+          touchHold.current.held = false
+          return
+        }
         unlockAudio()
         if (hitFan(e)) {
           // the fan blows out along the face it's on

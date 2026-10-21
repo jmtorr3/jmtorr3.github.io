@@ -140,6 +140,7 @@ export class SlumpyFace {
   private closing = false
   private nextBlinkAt = rand(1, 3)
   private doubleBlink = false
+  private blinksLeft = 0 // queued by blink()
   private look = { x: 0, y: 0 }
   private lookTarget = { x: 0, y: 0 }
   private nextLookAt = 1
@@ -229,6 +230,14 @@ export class SlumpyFace {
     this.view = { scale, x, y }
   }
 
+  // Blink now, `times` times in a row (arriving somewhere, waking up a bit).
+  blink(times = 1) {
+    if (this.shown === 'off') return
+    this.blinksLeft = times
+    this.doubleBlink = false
+    this.closing = true
+  }
+
   // A little squish, like it was poked.
   poke() {
     if (this.shown === 'neutral') this.squish = 1
@@ -276,7 +285,11 @@ export class SlumpyFace {
           this.shown = this.next
           this.shownAt = this.t
         }
-        if (this.doubleBlink) {
+        if (this.blinksLeft > 0) {
+          // the queued ones, then a normal pause
+          this.blinksLeft--
+          this.nextBlinkAt = this.t + (this.blinksLeft ? 0.18 : rand(2, 5))
+        } else if (this.doubleBlink) {
           this.doubleBlink = false
           this.nextBlinkAt = this.t + 0.22
         } else {

@@ -17,6 +17,7 @@ import { Taskbar } from './Taskbar'
 import { Snow } from './Snow'
 import { FaceScreen } from './FaceScreen'
 import { HOME } from './vfs'
+import { useSlumpy } from './slumpy'
 import { useDesktopIcons } from './useDesktopIcons'
 import { playPowerOn, playPowerOff, playClick, useSound } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -176,6 +177,13 @@ export function Desktop() {
     useStore.setState({ signingIn: !signedIn })
     return () => useStore.setState({ signingIn: false })
   }, [signedIn])
+  // signed in: Slumpy lands on the wallpaper and blinks a few times, getting his bearings
+  const slumpy = useSlumpy()
+  useEffect(() => {
+    if (!signedIn) return
+    const id = setTimeout(() => slumpy.blink(3), 450)
+    return () => clearTimeout(id)
+  }, [signedIn, slumpy])
 
   const toggleSnow = () => {
     setSnow(!snow)
