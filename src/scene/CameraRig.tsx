@@ -51,6 +51,8 @@ function arcBetween(from: THREE.Vector3, to: THREE.Vector3, k: number) {
   return _v.setFromSpherical(_a).add(ROOM_TARGET)
 }
 
+const _zero = new THREE.Vector2()
+
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 // The zoom/exit move. Like arcBetween, but the turn around the PC starts at the
@@ -79,6 +81,10 @@ function zoomArc(from: THREE.Vector3, to: THREE.Vector3, t: number, spin: number
   return _v.setFromSpherical(_a).add(ROOM_TARGET)
 }
 const MAX_SPIN = 10 // radians per second; keeps the camera from lagging half a turn behind
+// drag sensitivity: a drag across the screen turns about one and a half times
+// around, but measured on at least this many px, so on a phone a thumb swipe
+// turns about as far per px as a mouse drag does on a desktop screen
+const MIN_DRAG_WIDTH = 1100
 
 export function CameraRig() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
@@ -97,7 +103,7 @@ export function CameraRig() {
   const shiftReady = useRef(false)
   const gl = useThree((s) => s.gl)
   // drag (mouse or finger) to orbit the PC; velocity keeps it gliding after release
-  const orbit = useRef({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0, dragging: false, x: 0, y: 0, at: 0, lastInput: 0, returning: false })
+  const orbit = useRef({ yaw: 0, pitch: 0, vYaw: 0, vPitch: 0, dragging: false, x: 0, y: 0, at: 0, lastInput: 0, returning: false, touch: false })
   // recent turning (fades out over about a second) and when it last got dizzy
   const spin = useRef({ amount: 0, lastYaw: 0, dizzyAt: -Infinity })
 
@@ -105,9 +111,10 @@ export function CameraRig() {
   useEffect(() => {
     const o = orbit.current
     o.lastInput = performance.now()
-    const active = () => {
+    const active = (e: Event) => {
       o.lastInput = performance.now()
       o.returning = false
+      if (e instanceof PointerEvent) o.touch = e.pointerType === 'touch'
     }
     const events = ['pointermove', 'pointerdown', 'keydown', 'wheel'] as const
     events.forEach((ev) => window.addEventListener(ev, active, { passive: true }))
@@ -136,8 +143,7 @@ export function CameraRig() {
         o.dragging = false
         return
       }
-      // a full drag across the screen turns about one and a half times around
-      const k = (Math.PI * 3) / Math.max(400, window.innerWidth)
+      const k = (Math.PI * 3) / Math.max(MIN_DRAG_WIDTH, window.innerWidth)
       const dYaw = -(e.clientX - o.x) * k
       const dPitch = -(e.clientY - o.y) * k
       o.yaw += dYaw
@@ -207,8 +213,10 @@ export function CameraRig() {
       if (Math.abs(o.yaw) < 0.005 && Math.abs(o.pitch) < 0.005) o.returning = false
     }
 
-    // slow idle drift plus a little pointer parallax (not while dragging)
-    if (!o.dragging) sway.current.lerp(pointer, 0.05)
+    // slow idle drift plus a little parallax toward the hovering mouse (not while
+    // dragging). A finger doesn't hover: where it last touched isn't somewhere to
+    // lean toward, so on touch the view settles back to the middle
+    if (!o.dragging) sway.current.lerp(o.touch ? _zero : pointer, 0.05)
     const offset = ROOM_POS.clone().sub(ROOM_TARGET)
     const sph = new THREE.Spherical().setFromVector3(offset)
     // tall (phone) screens see less side to side, so back up until the PC fits
