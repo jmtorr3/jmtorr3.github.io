@@ -35,10 +35,11 @@ const TOUCH_SLOP = 10 // px the finger can drift before it's a drag, not a hold
 // at: the middle of where it meets the panel
 const POWER_BUTTON = { at: new THREE.Vector3(0, 0.19, 0.4375), size: 0.09, depth: 0.025, travel: 0.015 }
 const BUTTON_COLOR = [0x8c, 0x86, 0x79] // a shade darker than the beige case
-// on a touch screen the button is a few px across: while he's off, an invisible
-// box this many times its size around it takes the tap (when he's on, a tap
-// there is just a tap on the PC, so it doesn't shut him down by accident)
-const BUTTON_TOUCH_AREA = 3.5
+// on a touch screen the button is a few px across: there, tapping the right end
+// of the case's front panel (around the button) presses it too. Texels in the
+// atlas, like the fan; the front panel is u 45..66 (left to right as you face it), v 46..51
+const POWER_PANEL_TEXELS = { x0: 59, x1: 66, y0: 46, y1: 51 }
+const CASE_MESH_INDEX = 0
 
 // what scrolls by on the screen as he boots from the power button (up to 24
 // characters a line fit), and when each line shows up, in seconds
@@ -91,6 +92,18 @@ const hitFan = (e: ClickEvent) => {
   const x = Math.floor(e.uv.x * 128)
   const y = Math.floor(e.uv.y * 128)
   return x >= FAN_TEXELS.x0 && x <= FAN_TEXELS.x1 && y >= FAN_TEXELS.y0 && y <= FAN_TEXELS.y1
+}
+
+// the right end of the front panel (the atlas reuses some of these texels on
+// other faces, so it has to be the front-facing side: the PC faces -z)
+const _n = new THREE.Vector3()
+const hitPowerPanel = (e: ClickEvent) => {
+  if (!e.uv || !e.face) return false
+  if (_n.copy(e.face.normal).transformDirection(e.object.matrixWorld).z > -0.5) return false
+  const x = Math.floor(e.uv.x * 128)
+  const y = Math.floor(e.uv.y * 128)
+  const t = POWER_PANEL_TEXELS
+  return x >= t.x0 && x <= t.x1 && y >= t.y0 && y <= t.y1
 }
 
 export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
@@ -148,13 +161,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const button = new THREE.Mesh(new THREE.BoxGeometry(size, size, depth), makePicoMaterial(tex))
     button.position.set(at.x, at.y, at.z - depth / 2) // sticking out of the panel
     root.add(button)
-    const s = size * BUTTON_TOUCH_AREA
-    const buttonArea = new THREE.Mesh(new THREE.BoxGeometry(s, s, depth * 3), new THREE.MeshBasicMaterial({ visible: false }))
-    buttonArea.position.copy(button.position)
-    // the raycaster hits invisible meshes too: it only gets the layer while active
-    buttonArea.layers.disableAll()
-    root.add(buttonArea)
-    return { root, meshes, face, material, mouse, props, screenBox, button, buttonArea }
+    return { root, meshes, face, material, mouse, props, screenBox, button }
   }, [scene])
 
   // the happy face is for pointing at the PC itself, not for messing with the
@@ -168,16 +175,12 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const poweredOff = useStore((s) => s.poweredOff)
   const rebooting = useStore((s) => s.rebooting)
   const booting = useStore((s) => s.booting)
-  useEffect(() => {
-    if (poweredOff && !CAN_GRAB) model.buttonArea.layers.enable(0)
-    else model.buttonArea.layers.disableAll()
-  }, [poweredOff, model])
   const setBooting = (booting: boolean) => useStore.setState({ booting })
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
     // off: the power button is the only thing on him that can be clicked
-    const dead = !prop && obj !== model.button && obj !== model.buttonArea && useStore.getState().poweredOff
+    const dead = !prop && obj !== model.button && useStore.getState().poweredOff
     onHover(prop ? 'prop' : dead ? null : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
@@ -538,7 +541,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           return
         }
         unlockAudio()
-        if (e.object === model.button || e.object === model.buttonArea) return pressPower()
+        if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
         if (useStore.getState().poweredOff) return // off: only the power button does anything
         if (hitFan(e)) {
           // the fan blows out along the face it's on
