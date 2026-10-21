@@ -3,6 +3,9 @@
 
 export const systemTagline = 'a small beige computer. mostly harmless.'
 
+// also shown under the name in the Start menu
+export const systemOS = 'slumpyOS 1.0'
+
 export const systemSpecs: { label: string; value: string }[] = [
   { label: 'Model', value: 'SLMP-64 Beige Edition (1997)' },
   { label: 'Processor', value: '1× Slumpy Core @ 4.77 MHz (turbo button: decorative)' },
@@ -12,5 +15,5 @@ export const systemSpecs: { label: string; value: string }[] = [
   { label: 'Storage', value: '1.44 MB floppy: a few projects, one resume' },
   { label: 'Sound', value: 'a beeper, a fan, opinions' },
   { label: 'Cooling', value: 'one rear fan. do not click it' },
-  { label: 'Operating System', value: 'slumpyOS 1.0 (React + three.js)' },
+  { label: 'Operating System', value: `${systemOS} (React + three.js)` },
 ]

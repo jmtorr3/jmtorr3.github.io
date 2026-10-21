@@ -426,3 +426,20 @@ export function playBoing(strength: number) {
   tone(c, t, 0.16, 'sine', 260, 620, env(c, t, 0.12 * g, 0.004, 0.15))
   tone(c, t, 0.12, 'triangle', 520, 1100, env(c, t, 0.03 * g, 0.004, 0.11))
 }
+
+// login: a soft key tick while the password types itself, and a little chime
+export function playKeyTick() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  noise(c, t, 0.015, 'bandpass', 3500 + Math.random() * 1500, env(c, t, 0.06, 0.001, 0.012))
+}
+
+export function playLoginChime() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  // a rising major arpeggio over a soft pad
+  ;[523, 659, 784, 1047].forEach((f, i) => tone(c, t + i * 0.09, 0.5, 'triangle', f, f, env(c, t + i * 0.09, 0.06, 0.01, 0.48)))
+  tone(c, t, 0.9, 'sine', 262, 262, env(c, t, 0.05, 0.15, 0.75))
+}

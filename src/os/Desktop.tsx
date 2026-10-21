@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -13,11 +14,11 @@ import { Icon } from './Icon'
 import { Window } from './Window'
 import { Taskbar } from './Taskbar'
 import { Snow } from './Snow'
-import { NIX_ASCII } from './nixAscii'
-import { BrailleArt } from './BrailleArt'
+import { FaceScreen } from './FaceScreen'
 import { useDesktopIcons } from './useDesktopIcons'
 import { playPowerOn, playPowerOff, playClick, useSound } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
+import { LoginScreen } from './LoginScreen'
 
 const COARSE = matchMedia('(pointer: coarse)').matches
 
@@ -151,6 +152,14 @@ export function Desktop() {
   const closeMenu = useStore((s) => s.hideMenu)
   const [snow, setSnow] = useState(readSnow)
   const [refreshes, setRefreshes] = useState(0)
+  // there's one Slumpy: while the Konsole is the focused window it's in there
+  const inKonsole = useStore((s) => {
+    const w = s.windows.find((x) => x.id === s.focused)
+    return w?.app === 'terminal' && !w.minimized
+  })
+  // the welcome screen plays every time the PC turns on
+  const [signedIn, setSignedIn] = useState(false)
+  const finishLogin = useCallback(() => setSignedIn(true), [])
 
   const toggleSnow = () => {
     setSnow(!snow)
@@ -227,8 +236,16 @@ export function Desktop() {
           } as CSSProperties
         }
       >
-        <div className="wallpaper" onPointerDown={startMarquee} onContextMenu={(e) => openMenu(e, desktopMenu)}>
-          <BrailleArt art={NIX_ASCII} className="wallpaper-logo" />
+        <div
+          className="wallpaper"
+          onPointerDown={(e) => {
+            // clicking the desktop takes focus away from windows (and brings Slumpy back out here)
+            useStore.setState({ focused: null })
+            startMarquee(e)
+          }}
+          onContextMenu={(e) => openMenu(e, desktopMenu)}
+        >
+          <FaceScreen transparent className={`wallpaper-face ${inKonsole ? 'away' : ''}`} />
           {snow && <Snow />}
         </div>
 
@@ -294,6 +311,7 @@ export function Desktop() {
         )}
 
         <Taskbar />
+        {!signedIn && <LoginScreen onDone={finishLogin} />}
       </div>
       <div className="crt-overlay" />
     </div>

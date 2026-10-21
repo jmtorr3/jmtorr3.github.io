@@ -17,7 +17,8 @@ import { playFaceSound } from '../sound'
 // tiny virtual filesystem built from src/data
 type Node = { type: 'file'; text: string } | { type: 'dir'; children: Record<string, Node> }
 
-const HOME = `/home/${profile.user}`
+const HOME = `/home/${profile.user}` // the visitor's (guest's) home: ~
+const CREATOR_HOME = `/home/${profile.creator}` // where the content lives, and where the Konsole starts
 const file = (text: string): Node => ({ type: 'file', text })
 const dir = (children: Record<string, Node>): Node => ({ type: 'dir', children })
 
@@ -46,6 +47,11 @@ const projectDir = (folder: 'projects' | 'other') =>
 const FS: Node = dir({
 	home: dir({
 		[profile.user]: dir({
+			'readme.txt': file(
+				`you're a guest on ${profile.host}. ${profile.creator}'s stuff is in ${CREATOR_HOME}:\n  cd ${CREATOR_HOME}`,
+			),
+		}),
+		[profile.creator]: dir({
 			'about.txt': file(
 				[
 					`${profile.name} — ${profile.role}`,
@@ -195,7 +201,7 @@ interface Line {
 }
 
 export function Terminal({ winId }: { winId: string }) {
-	const [cwd, setCwd] = useState(HOME)
+	const [cwd, setCwd] = useState(CREATOR_HOME)
 	const [lines, setLines] = useState<Line[]>(() => [{ kind: 'out', text: greeting() }])
 	const [input, setInput] = useState('')
 	const [history, setHistory] = useState<string[]>([])
@@ -480,7 +486,8 @@ export function Terminal({ winId }: { winId: string }) {
 					/>
 				</div>
 			</div>
-			<SlumpyCam face={face} follow={follow} onClick={pet} control={slumpy} />
+			{/* only here while the Konsole is focused; otherwise Slumpy is on the wallpaper */}
+			<SlumpyCam face={face} follow={follow} onClick={pet} control={slumpy} away={!focused} />
 		</div>
 	)
 }

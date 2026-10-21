@@ -10,7 +10,9 @@ export const profile = {
 	avatarHover: '/slumpy.png', // swapped in on hover; '' to disable
 	github: 'https://github.com/jmtorr3',
 
-	// terminal identity: user@host
-	user: 'jmtorr3',
+	// terminal: visitors are user@host (a guest on the computer, which is named
+	// after the host); your files live in /home/<creator>, where the Konsole starts
+	user: 'guest',
 	host: 'slumpy',
+	creator: 'jmtorr3',
 }

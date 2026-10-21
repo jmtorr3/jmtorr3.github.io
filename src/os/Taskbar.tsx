@@ -3,6 +3,8 @@ import { useStore } from '../store'
 import { APPS, LAUNCHABLE, START_EXTRAS, type AppId } from './apps/registry'
 import { Icon } from './Icon'
 import { profile } from '../data/profile'
+import { systemOS } from '../data/system'
+import { FaceScreen } from './FaceScreen'
 import { useSound, unlockAudio } from './sound'
 
 // on touch screens, focusing the search box would pop up the on-screen keyboard
@@ -70,11 +72,12 @@ export function Taskbar() {
         </button>
         {menu && (
           <div className="start-menu">
+            {/* the account is the computer's own */}
             <div className="start-head">
-              <img src={profile.avatar} alt="" className="start-avatar" />
+              <FaceScreen className="start-avatar" />
               <span>
-                {profile.name}
-                <span className="start-role">{profile.role}</span>
+                {profile.host}
+                <span className="start-role">{systemOS}</span>
               </span>
             </div>
             <input

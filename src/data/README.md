@@ -4,9 +4,9 @@ Everything you see on the virtual desktop comes from these files. Edit, save, an
 
 | File | Controls |
 |---|---|
-| `profile.ts` | Name, role (typed out in About My Creator), location, "open to work" badge, bio, avatar, terminal `user@host` |
+| `profile.ts` | Name, role (typed out in About My Creator), location, "open to work" badge, bio, avatar; terminal `user@host` (visitors are `guest@slumpy`) and `creator` (your handle: your files are in `/home/<creator>`) |
 | `about.ts` | About My Creator education card and coursework |
-| `projects.ts` | Projects window + `~/projects` in the terminal. `folder: 'other'` puts one in the Other folder |
+| `projects.ts` | Projects window + `/home/<creator>/projects` in the terminal. `folder: 'other'` puts one in the Other folder |
 | `skills.ts` | Skills window categories. `icon` = Nerd Font codepoint (https://www.nerdfonts.com/cheat-sheet) |
 | `resume.ts` | The resume variants; PDFs go in `public/resume/` |
 | `contact.ts` | Contact window links |

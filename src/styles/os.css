@@ -172,33 +172,50 @@ a:hover {
   overflow: hidden;
 }
 
-.wallpaper-logo {
+.wallpaper-face {
   position: absolute;
   top: 46%;
   left: 50%;
   transform: translate(-50%, -50%);
-  /* canvas dots are drawn in this color (see BrailleArt) */
-  color: var(--accent);
   pointer-events: none;
-  animation: ascii-breathe 4s ease-in-out infinite alternate;
+  opacity: 0.85;
+  /* glow follows the face's pixels, not the canvas box */
+  filter: drop-shadow(0 0 3px var(--accent)) drop-shadow(0 0 12px var(--accent-glow));
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
 }
 
-/* same glow pulse as the old portfolio's hero ASCII; drop-shadow follows the dots, not the canvas box */
-@keyframes ascii-breathe {
-  0% {
-    opacity: 0.25;
-    filter: drop-shadow(0 0 2px var(--accent));
-  }
-  100% {
-    opacity: 0.75;
-    filter: drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px var(--accent)) drop-shadow(0 0 10px var(--accent));
-  }
+.wallpaper-face canvas {
+  display: block;
+  /* as big as fits: 5:4, at most ~60% of the desktop's width or height */
+  width: min(60cqw, 60cqh * 1.25);
+  aspect-ratio: 5 / 4;
+  image-rendering: pixelated;
+}
+
+/* off in the Konsole */
+.wallpaper-face.away {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.8);
+}
+
+.slumpy-cam {
+  transition:
+    opacity 0.3s,
+    scale 0.3s;
+}
+
+.slumpy-cam.away {
+  opacity: 0;
+  scale: 0.6;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wallpaper-logo {
-    animation: none;
-    opacity: 0.5;
+  .wallpaper-face,
+  .slumpy-cam {
+    transition: none;
   }
 }
 
@@ -784,6 +801,103 @@ button.card:hover {
   color: var(--text);
   font-size: 12px;
   line-height: 1.3;
+}
+
+/* welcome screen after power-on (LoginScreen) */
+.login {
+  position: absolute;
+  inset: 0;
+  /* over the taskbar (same layer, later in the page), under the CRT overlay */
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(var(--wall-top), var(--wall-bottom));
+  transition: opacity 0.4s;
+}
+
+.login.leaving {
+  opacity: 0;
+}
+
+.login-tile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 22px 16px 16px;
+  background: rgb(0 0 0 / 0.25);
+  border: 1px solid var(--accent-dim);
+  border-radius: 8px;
+  animation: login-in 0.4s ease-out both;
+}
+
+@keyframes login-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.login-avatar {
+  padding: 3px;
+  background: #000;
+  border: 2px solid var(--accent);
+  border-radius: 4px;
+}
+
+.login-avatar canvas {
+  display: block;
+  width: 80px;
+  height: 64px;
+  image-rendering: pixelated;
+}
+
+.login-who {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 150px;
+}
+
+.login-user {
+  font-size: 20px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.login-password {
+  padding: 3px 8px;
+  min-height: 1.6em;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--accent-bright);
+  letter-spacing: 3px;
+}
+
+.login-caret {
+  animation: blink 1s step-end infinite;
+}
+
+.login-welcome {
+  padding: 3px 0;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+
+.login-foot {
+  position: absolute;
+  bottom: 16px;
+  color: var(--text-faint);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-tile,
+  .login-caret {
+    animation: none;
+  }
 }
 
 /* about this computer */
@@ -1396,11 +1510,17 @@ button.card:hover {
 }
 
 .start-avatar {
-  width: 36px;
-  height: 36px;
-  object-fit: cover;
-  border: 1px solid var(--accent);
   flex-shrink: 0;
+  padding: 2px;
+  background: #000;
+  border: 1px solid var(--accent);
+}
+
+.start-avatar canvas {
+  display: block;
+  width: 45px;
+  height: 36px;
+  image-rendering: pixelated;
 }
 
 .start-role {

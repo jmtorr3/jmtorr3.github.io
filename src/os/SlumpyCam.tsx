@@ -20,11 +20,13 @@ export function SlumpyCam({
   follow,
   onClick,
   control,
+  away = false,
 }: {
   face: SlumpyFace
   follow?: () => Point | null
   onClick?: () => void
   control?: { current: SlumpyControl }
+  away?: boolean // hidden (it's somewhere else); keeps its place for when it's back
 }) {
   const host = useRef<HTMLDivElement>(null)
   const followRef = useRef(follow)
@@ -196,5 +198,5 @@ export function SlumpyCam({
     }
   }, [face, control])
 
-  return <div className="slumpy-cam" ref={host} aria-hidden />
+  return <div className={`slumpy-cam ${away ? 'away' : ''}`} ref={host} aria-hidden />
 }
