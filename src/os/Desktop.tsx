@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { fitScreen, isCompact } from '../scene/screenFit'
 import { useStore, TASKBAR_H, slumpyLocation } from '../store'
+import { profile } from '../data/profile'
 import { APPS, LAUNCHABLE, type AppId } from './apps/registry'
 import { Icon } from './Icon'
 import { Window } from './Window'
@@ -153,6 +154,20 @@ export function Desktop() {
   const [snow, setSnow] = useState(readSnow)
   const [refreshes, setRefreshes] = useState(0)
   const slumpyHere = useStore((s) => slumpyLocation(s) === 'wallpaper')
+
+  // the tab reads like the OS while you're on it: guest@slumpy, plus the
+  // focused app; back to the page's own title (index.html) on log off
+  const focusedApp = useStore((s) => s.windows.find((w) => w.id === s.focused && !w.minimized)?.app)
+  useEffect(() => {
+    const base = document.title
+    return () => {
+      document.title = base
+    }
+  }, [])
+  useEffect(() => {
+    const who = `${profile.user}@${profile.host}`
+    document.title = focusedApp ? `${who}: ${APPS[focusedApp].label}` : who
+  }, [focusedApp])
   // the welcome screen plays every time the PC turns on
   const [signedIn, setSignedIn] = useState(false)
   const finishLogin = useCallback(() => setSignedIn(true), [])
