@@ -144,6 +144,10 @@ export function Desktop() {
   const windows = useStore((s) => s.windows)
   const poweringOff = useStore((s) => s.poweringOff)
   const { open, closeAll, setMode } = useStore.getState()
+  // straight from the power button's boot log: the sign-in fades in over the log
+  // instead of the CRT switching on again (it's already on)
+  // (the log stays on the 3D screen underneath until the fade is done)
+  const [fromBoot] = useState(() => useStore.getState().booting)
   const { rect, scale, w, h, compact } = useScreenRect()
   const { selected, setSelected, marquee, iconRefs, startMarquee } = useMarquee()
   const icons = useDesktopIcons({ w, h, scale, selected, setSelected })
@@ -228,7 +232,7 @@ export function Desktop() {
   // ref guard: StrictMode runs mount effects twice in dev
   const booted = useRef(false)
   useEffect(() => {
-    if (!booted.current) playPowerOn()
+    if (!booted.current && !fromBoot) playPowerOn()
     booted.current = true
   }, [])
   // typing anywhere on the desktop clacks away on Chiba (the room's keyboard)
@@ -258,11 +262,12 @@ export function Desktop() {
 
   return (
     <div
-      className={`desktop ${poweringOff ? 'crt-off' : 'crt-on'} ${compact ? 'compact' : ''}`}
+      className={`desktop ${poweringOff ? 'crt-off' : fromBoot ? 'boot-in' : 'crt-on'} ${compact ? 'compact' : ''}`}
       style={rect}
       onPointerDownCapture={() => playClick()}
       onPointerUpCapture={() => playClick(true)}
       onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget && fromBoot && !poweringOff) useStore.setState({ booting: false })
         if (e.target === e.currentTarget && poweringOff) {
           closeAll()
           setMode('exiting')

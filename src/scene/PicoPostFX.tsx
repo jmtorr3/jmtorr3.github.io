@@ -1,12 +1,19 @@
 import { useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useStore } from '../store'
 
 // Renders the scene into a tiny target and blows it up with nearest filtering,
 // then applies picoCAD2's export extras: 1px outline (project_main.lua
 // outline_shader) and horizontal chromatic aberration (chromatic_shader).
 
 const LOW_RES_HEIGHT = 200
+// The boot log on Slumpy's screen is a 3×5 font: at 200px it drops pixels, and a
+// tall phone gets only ~90px across. While it's on (it's all monitor by then
+// anyway), the resolution goes up: at least BOOT_SCALE×, and on a tall screen
+// until the width is at least BOOT_MIN_WIDTH times the height.
+const BOOT_SCALE = 1.6
+const BOOT_MIN_WIDTH = 1.6
 
 const fragmentShader = /* glsl */ `
   uniform sampler2D tDiffuse;
@@ -108,12 +115,13 @@ export function PicoPostFX({ hovered }: { hovered: boolean }) {
     return { scene: s, material, camera: new THREE.Camera() }
   }, [target])
 
+  const booting = useStore((s) => s.booting)
   useEffect(() => {
-    const h = LOW_RES_HEIGHT
+    const h = Math.round(LOW_RES_HEIGHT * (booting ? Math.max(BOOT_SCALE, (BOOT_MIN_WIDTH * size.height) / size.width) : 1))
     const w = Math.max(1, Math.round((h * size.width) / size.height))
     target.setSize(w, h)
     post.material.uniforms.texSize.value.set(w, h)
-  }, [size, target, post])
+  }, [size, target, post, booting])
 
   useEffect(() => {
     post.material.uniforms.rainbow.value = hovered ? 1 : 0

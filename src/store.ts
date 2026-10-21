@@ -96,7 +96,8 @@ export const useStore = create<State>((set, get) => ({
   focused: null,
   topZ: 10,
 
-  setMode: (mode) => set({ mode, poweringOff: false }),
+  // (leaving the desktop always ends a boot, in case its fade-in never finished)
+  setMode: (mode) => set((s) => ({ mode, poweringOff: false, booting: mode === 'exiting' ? false : s.booting })),
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
   logOff: () => set({ poweringOff: true }),
   shutDown: (reboot = false) => set({ poweringOff: true, poweredOff: true, rebooting: reboot }),

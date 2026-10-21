@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
-import { fitScreen } from './screenFit'
+import { containDistance, fitScreen, isCompact } from './screenFit'
 import { restoreCursor } from './cursor'
 import { grabState } from './deskProps'
 
@@ -33,8 +33,10 @@ const MIN_ROOM_DISTANCE = 2.2
 const MIN_POLAR = 0.35
 const MAX_POLAR = 1.45 // just above the desk
 // while he boots from the power button, the camera leans in toward the screen
-// so the boot log is big enough to read: this many times the desktop zoom's distance
+// so the boot log is big enough to read: this many times the distance at which the
+// whole screen just fits (a phone is narrow already: it only needs a little room)
 const LEAN_DISTANCE = 1.5
+const LEAN_DISTANCE_COMPACT = 1.1
 const LEAN_SPEED = 3 // how quickly it eases in and back out
 
 // Travel between two camera spots along an arc around the PC rather than a straight
@@ -99,7 +101,7 @@ export function CameraRig() {
 
   const t = useRef(0)
   const lastMode = useRef(mode)
-  const from = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3(), spin: 0 })
+  const from = useRef({ pos: new THREE.Vector3(), target: new THREE.Vector3(), spin: 0, lean: 0 })
   const circling = useRef({ theta: 0, speed: 0 })
   const lookAt = useRef(ROOM_TARGET.clone())
   const sway = useRef(new THREE.Vector2())
@@ -233,14 +235,21 @@ export function CameraRig() {
     return { pos: ROOM_TARGET.clone().add(new THREE.Vector3().setFromSpherical(sph)), target: ROOM_TARGET }
   }
 
-  const screenPose = (farther = 1) => {
+  const screenPose = () => {
     const screen = useStore.getState().screen
     if (!screen) return { pos: ROOM_POS, target: ROOM_TARGET }
     const { distance } = fitScreen(screen, size.width, size.height)
     return {
-      pos: screen.center.clone().addScaledVector(screen.normal, distance * farther),
+      pos: screen.center.clone().addScaledVector(screen.normal, distance),
       target: screen.center,
     }
+  }
+
+  const leanPose = () => {
+    const screen = useStore.getState().screen
+    if (!screen) return { pos: ROOM_POS, target: ROOM_TARGET }
+    const far = isCompact(size.width, size.height) ? LEAN_DISTANCE_COMPACT : LEAN_DISTANCE
+    return { pos: screen.center.clone().addScaledVector(screen.normal, containDistance(screen, size.width, size.height) * far), target: screen.center }
   }
 
   useFrame((state, delta) => {
@@ -257,6 +266,8 @@ export function CameraRig() {
       from.current.target.copy(lookAt.current)
       // zooming in while it's still spinning: carry that motion into the move
       from.current.spin = circling.current.speed
+      // leaning in already (straight from booting): the centering stays off
+      from.current.lean = mode === 'zooming' ? ease(lean.current) : 0
     }
 
     // how much of the centering shift applies: none on the desktop, where the
@@ -271,7 +282,7 @@ export function CameraRig() {
     const booting = mode === 'room' && useStore.getState().booting
     lean.current += ((booting ? 1 : 0) - lean.current) * (1 - Math.exp(-delta * LEAN_SPEED))
     if (mode === 'room' && lean.current > 0.001) {
-      const peek = screenPose(LEAN_DISTANCE)
+      const peek = leanPose()
       const k = ease(lean.current)
       goal = { pos: goal.pos.clone().lerp(peek.pos, k), target: goal.target.clone().lerp(peek.target, k) }
       centering = 1 - k
@@ -282,7 +293,7 @@ export function CameraRig() {
       const k = ease(t.current)
       camera.position.copy(zoomArc(from.current.pos, goal.pos, t.current, from.current.spin))
       lookAt.current.lerpVectors(from.current.target, goal.target, k)
-      centering = mode === 'zooming' ? 1 - k : k
+      centering = mode === 'zooming' ? (1 - k) * (1 - from.current.lean) : k
       if (t.current >= 1) setMode(mode === 'zooming' ? 'desktop' : 'room')
     } else {
       if (mode === 'room') {

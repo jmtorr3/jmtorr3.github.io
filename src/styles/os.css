@@ -155,6 +155,7 @@ a:hover {
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%);
+  white-space: nowrap;
   color: #fff1e8;
   font-size: 16px;
   text-shadow: 2px 2px 0 #000;
@@ -224,6 +225,17 @@ a:hover {
 
 .crt-off {
   animation: crt-off 0.45s ease-in both;
+}
+
+/* after the boot log (the screen's already on): the sign-in fades in over it */
+.boot-in {
+  animation: boot-in 0.7s ease-out both;
+}
+
+@keyframes boot-in {
+  from {
+    opacity: 0;
+  }
 }
 
 /* crt-off played backwards: a dot, then a bright line, then the picture opens up */
@@ -1931,7 +1943,7 @@ button.card:hover {
 .start-foot {
   display: flex;
   justify-content: flex-end;
-  gap: 2px;
+  gap: 4px;
   padding: 4px;
   border-top: 1px solid var(--border);
   background: var(--bg-card);
@@ -1992,8 +2004,34 @@ button.card:hover {
 
 /* narrow desktop (in desktop px, so it follows the UI scale, not the browser width) */
 @container desk (max-width: 640px) {
-  .task span {
-    display: none;
+  /* a tighter taskbar so the window buttons keep their names */
+  .start {
+    padding: 0 14px 0 8px;
+  }
+
+  .tasks {
+    padding: 5px 4px;
+  }
+
+  .task {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 4px;
+    padding: 0 5px;
+    font-size: 13px;
+  }
+
+  .tray {
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  /* Log Off and Shut Down share the bottom of the Start menu equally */
+  .start-foot button {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    gap: 6px;
   }
 
   /* sidebars become a swipeable tab strip across the top of the window */
@@ -2070,9 +2108,12 @@ button.card:hover {
     height: 26px;
   }
 
-  .start-list button,
-  .start-foot button {
+  .start-list button {
     padding: 10px 10px;
+  }
+
+  .start-foot button {
+    padding: 12px 6px;
   }
 
   .start-search {
@@ -2081,6 +2122,16 @@ button.card:hover {
 
   .task {
     min-width: 48px;
+  }
+
+  /* the arrow beside the power button: a big target for a thumb */
+  .power-hint {
+    font-size: 18px;
+  }
+
+  .power-hint span {
+    margin-left: 4px;
+    padding: 14px 12px;
   }
 
   .tray-btn {

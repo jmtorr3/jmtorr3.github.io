@@ -14,13 +14,22 @@ export const isCompact = (w: number, h: number) => w < 720 || h > w || Math.min(
 // screen center, so the projection is a centered rect.
 // On compact viewports the camera instead pushes in until the black glass covers
 // the whole viewport ("cover"), since the desktop will fill it edge to edge.
+// Camera distance at which the whole screen opening fits the viewport, with a
+// little bezel around it, on any viewport (phones included)
+export function containDistance(screen: ScreenInfo, vw: number, vh: number) {
+  const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2))
+  const dh = screen.height / 2 / tanHalf
+  const dw = screen.width / 2 / (tanHalf * (vw / vh))
+  return Math.max(dh, dw) / FILL
+}
+
 export function fitScreen(screen: ScreenInfo, vw: number, vh: number) {
   const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2))
   const aspect = vw / vh
   const dh = screen.height / 2 / tanHalf
   const dw = screen.width / 2 / (tanHalf * aspect)
   // 1.04: a hair past the edges so no bezel peeks in at the sides
-  const d = isCompact(vw, vh) ? Math.min(dh, dw) / 1.04 : Math.max(dh, dw) / FILL
+  const d = isCompact(vw, vh) ? Math.min(dh, dw) / 1.04 : containDistance(screen, vw, vh)
 
   const viewH = 2 * d * tanHalf // world units visible vertically at the screen plane
   const h = (screen.height / viewH) * vh

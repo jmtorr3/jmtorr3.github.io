@@ -35,6 +35,10 @@ const TOUCH_SLOP = 10 // px the finger can drift before it's a drag, not a hold
 // at: the middle of where it meets the panel
 const POWER_BUTTON = { at: new THREE.Vector3(0, 0.19, 0.4375), size: 0.09, depth: 0.025, travel: 0.015 }
 const BUTTON_COLOR = [0x8c, 0x86, 0x79] // a shade darker than the beige case
+// on a touch screen the button is a few px across: while he's off, an invisible
+// box this many times its size around it takes the tap (when he's on, a tap
+// there is just a tap on the PC, so it doesn't shut him down by accident)
+const BUTTON_TOUCH_AREA = 3.5
 
 // what scrolls by on the screen as he boots from the power button (up to 24
 // characters a line fit), and when each line shows up, in seconds
@@ -144,7 +148,13 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const button = new THREE.Mesh(new THREE.BoxGeometry(size, size, depth), makePicoMaterial(tex))
     button.position.set(at.x, at.y, at.z - depth / 2) // sticking out of the panel
     root.add(button)
-    return { root, meshes, face, material, mouse, props, screenBox, button }
+    const s = size * BUTTON_TOUCH_AREA
+    const buttonArea = new THREE.Mesh(new THREE.BoxGeometry(s, s, depth * 3), new THREE.MeshBasicMaterial({ visible: false }))
+    buttonArea.position.copy(button.position)
+    // the raycaster hits invisible meshes too: it only gets the layer while active
+    buttonArea.layers.disableAll()
+    root.add(buttonArea)
+    return { root, meshes, face, material, mouse, props, screenBox, button, buttonArea }
   }, [scene])
 
   // the happy face is for pointing at the PC itself, not for messing with the
@@ -158,12 +168,16 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const poweredOff = useStore((s) => s.poweredOff)
   const rebooting = useStore((s) => s.rebooting)
   const booting = useStore((s) => s.booting)
+  useEffect(() => {
+    if (poweredOff && !CAN_GRAB) model.buttonArea.layers.enable(0)
+    else model.buttonArea.layers.disableAll()
+  }, [poweredOff, model])
   const setBooting = (booting: boolean) => useStore.setState({ booting })
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
     // off: the power button is the only thing on him that can be clicked
-    const dead = !prop && obj !== model.button && useStore.getState().poweredOff
+    const dead = !prop && obj !== model.button && obj !== model.buttonArea && useStore.getState().poweredOff
     onHover(prop ? 'prop' : dead ? null : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
@@ -200,9 +214,11 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
 
   useEffect(() => {
     let expr: Expression | null = null // idle: cycles moods by itself
-    if (mode === 'desktop' || mode === 'exiting' || poweredOff) expr = 'off'
-    else if (mode === 'zooming') expr = 'surprised'
+    // (the boot log stays up through the zoom into the sign-in, and under it
+    // while it fades in)
+    if (mode === 'exiting' || poweredOff || (mode === 'desktop' && !booting)) expr = 'off'
     else if (booting) expr = 'boot'
+    else if (mode === 'zooming') expr = 'surprised'
     else if (asleep) expr = 'asleep'
     else if (hovered) expr = 'happy'
     // hovering on and off shouldn't cut a reaction short (getting hit, a fart, …)
@@ -397,7 +413,20 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     later(2300, () => inRoom() && model.face.blink(2))
     later(3000, () => inRoom() && model.face.react('happy', 1.4))
   }
-  // turned on: the boot log scrolls by while the drive light goes, then he wakes up
+  // clicking the PC: the camera zooms into the screen and the desktop's sign-in
+  // comes up. Straight from booting (or tapped mid-boot), the boot log stays on the
+  // screen all the way in and the sign-in fades in over it (see Desktop), which
+  // clears `booting`.
+  const signIn = () => {
+    clearTimers()
+    if (!useStore.getState().booting) playSpinUp() // the 'oooo' while the face looks surprised and the camera zooms in
+    speakSoon('hellooo!') // and says hi on the way in
+    model.props.poofHome() // the keyboard and mouse go back where they belong
+    setAsleep(false) // clicked before he finished waking up: he's up now
+    setMode('zooming')
+  }
+  // turned on: the boot log scrolls by while the drive light goes, then straight
+  // on to signing in (he's awake by then: the log ends with him waking up)
   const powerOn = () => {
     clearTimers()
     useStore.getState().setPoweredOff(false)
@@ -405,8 +434,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     setAsleep(true)
     setBooting(true)
     later(BOOT_MS, () => {
+      if (inRoom()) return signIn() // (the log stays up: see signIn)
       setBooting(false)
-      wake()
+      setAsleep(false)
     })
   }
   // turned off from the room: a sleepy goodnight, then the screen goes dark
@@ -507,7 +537,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           return
         }
         unlockAudio()
-        if (e.object === model.button) return pressPower()
+        if (e.object === model.button || e.object === model.buttonArea) return pressPower()
         if (useStore.getState().poweredOff) return // off: only the power button does anything
         if (hitFan(e)) {
           // the fan blows out along the face it's on
@@ -519,11 +549,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           model.face.react('blush', 2.6)
           return
         }
-        playSpinUp() // the 'oooo' while the face looks surprised and the camera zooms in
-        speakSoon('hellooo!') // and says hi on the way in
-        model.props.poofHome() // the keyboard and mouse go back where they belong
-        setAsleep(false) // clicked before he finished waking up: he's up now
-        setMode('zooming')
+        signIn()
       }}
     />
   )
