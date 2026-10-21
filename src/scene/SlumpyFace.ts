@@ -161,6 +161,11 @@ const FONT: Record<string, string> = {
   '_': '............###',
 }
 const CHAR_W = 4 // 3px glyph + 1px gap
+// the CRT switching on before the boot log starts (seconds): a dot, a line, the
+// whole screen lit up, then it fades out through a dither
+const CRT_ON = 0.55
+// ordered-dither thresholds (4×4 Bayer), for fading in 1-bit
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
 const LINE_H = 6
 
 const MOUTH_O = ['.###.', '#...#', '#...#', '#...#', '.###.']
@@ -684,11 +689,30 @@ export class SlumpyFace {
   // the lines printed so far, scrolling up once the screen's full, and a
   // blinking cursor under the last one
   private drawBootLog() {
+    if (this.since < CRT_ON) return this.crtOn(this.since / CRT_ON)
     const shown = this.bootLog.filter((l) => l.at <= this.since).map((l) => l.text)
     const fits = Math.floor((FACE_H - 4) / LINE_H) - 1 // room for the cursor
     const lines = shown.slice(-fits)
     lines.forEach((l, i) => this.text(l, 2, 2 + i * LINE_H))
     if (Math.floor(this.t * 3) % 2 === 0) this.text('_', 2, 2 + lines.length * LINE_H)
+  }
+
+  // k: 0..1 through the switch-on
+  private crtOn(k: number) {
+    const cx = FACE_W / 2
+    const cy = FACE_H / 2
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * Math.min(1, Math.max(0, t))
+    if (k < 0.15) this.rect(cx - 1, cy - 1, 2, 2)
+    else if (k < 0.4) {
+      const w = lerp(4, FACE_W, (k - 0.15) / 0.25)
+      this.rect(cx - w / 2, cy - 1, w, 2)
+    } else if (k < 0.7) {
+      const h = lerp(2, FACE_H, (k - 0.4) / 0.3)
+      this.rect(0, cy - h / 2, FACE_W, h)
+    } else {
+      const level = 16 * (1 - (k - 0.7) / 0.3)
+      for (let y = 0; y < FACE_H; y++) for (let x = 0; x < FACE_W; x++) if (BAYER[(y % 4) * 4 + (x % 4)] < level) this.dot(x, y)
+    }
   }
 
   // CRT-style tearing: shift bands of rows sideways and sprinkle static

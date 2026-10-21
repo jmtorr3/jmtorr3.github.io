@@ -6,7 +6,7 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
 import { useStore } from '../store'
-import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, speak, speakSoon } from '../os/sound'
+import { unlockAudio, playPowerOn, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
 import { restoreCursor, type HoverKind } from './cursor'
@@ -430,6 +430,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const powerOn = () => {
     clearTimers()
     useStore.getState().setPoweredOff(false)
+    playPowerOn() // the tube thunking on (its flash opens the boot log)
     playSpinUp(1.6)
     setAsleep(true)
     setBooting(true)
