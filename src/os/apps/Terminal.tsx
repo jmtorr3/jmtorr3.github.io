@@ -85,6 +85,14 @@ function lookup(path: string): Node | null {
 	return node
 }
 
+// greetings, questions and chatty sentences: people try talking to the terminal
+const GREETING = /^(hi+|hello+|hey+|yo+|sup|hiya|howdy|hola|greetings|good (morning|afternoon|evening|night)|what'?s up|wassup)\b/i
+const QUESTION = /^(who|what|when|where|why|how|which|can|could|would|will|should|is|are|am|do|does|did|tell me|explain|please)\b/i
+const isChat = (line: string) => {
+	const t = line.trim()
+	return GREETING.test(t) || QUESTION.test(t) || t.endsWith('?') || t.split(/\s+/).length >= 4
+}
+
 const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'ls', 'mochi', 'neofetch', 'open', 'poweroff', 'pwd', 'shutdown', 'sudo', 'whoami']
 
 // longest start shared by every candidate
@@ -193,6 +201,8 @@ export function Terminal({ winId }: { winId: string }) {
 	// dozes off when you stop for a while and startles awake when you start again
 	const [face] = useState(() => new MochiFace({ idle: false, transparent: true }))
 	const lastTyped = useRef(performance.now())
+	// last actual keystroke or command (not when the window opened), for following
+	const typedAt = useRef(-Infinity)
 	const dozing = useRef(false)
 	useEffect(() => {
 		const id = setInterval(() => {
@@ -205,6 +215,7 @@ export function Terminal({ winId }: { winId: string }) {
 	}, [face])
 	const onType = (value: string) => {
 		lastTyped.current = performance.now()
+		typedAt.current = lastTyped.current
 		if (dozing.current) {
 			dozing.current = false
 			face.react('surprised', 0.9)
@@ -218,7 +229,7 @@ export function Terminal({ winId }: { winId: string }) {
 	const follow = () => {
 		const k = konsoleRef.current
 		const inp = inputRef.current
-		if (!k || !inp || performance.now() - lastTyped.current > 2500) return null
+		if (!k || !inp || performance.now() - typedAt.current > 2500) return null
 		// rects are in screen px; the desktop is CSS-scaled, so convert back to layout px
 		const kr = k.getBoundingClientRect()
 		const ir = inp.getBoundingClientRect()
@@ -233,6 +244,7 @@ export function Terminal({ winId }: { winId: string }) {
 	}
 	const react = (cmdline: string, out: string | null) => {
 		lastTyped.current = performance.now()
+		typedAt.current = lastTyped.current
 		dozing.current = false
 		const expr = reactionFor(cmdline, out)
 		if (!expr) return
@@ -332,6 +344,7 @@ export function Terminal({ winId }: { winId: string }) {
 			case 'mochi':
 				return '(\u25d5\u203f\u25d5) hi! i live in this computer.'
 			default:
+				if (isChat(cmdline)) return `${cmd}: command not found: I'm not an LLM`
 				return `${cmd}: command not found`
 		}
 	}

@@ -1129,7 +1129,13 @@ button.card:hover {
   top: 0;
   left: 0;
   z-index: 1;
-  cursor: var(--cursor-pointer);
+  cursor: var(--cursor-grab);
+  /* finger drags move Mochi instead of scrolling the terminal */
+  touch-action: none;
+}
+
+.mochi-cam.dragging {
+  cursor: var(--cursor-grabbing);
 }
 
 .mochi-cam canvas {
