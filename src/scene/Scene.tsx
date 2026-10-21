@@ -14,6 +14,7 @@ const TOUCH = matchMedia('(pointer: coarse)').matches
 export function Scene() {
   const [hovered, setHovered] = useState<HoverKind>(null)
   const mode = useStore((s) => s.mode)
+  const off = useStore((s) => s.poweredOff)
 
   // the PC is clickable and the keyboard and mouse can be picked up (pointing
   // hand); anywhere else in the room can be dragged to orbit (open hand)
@@ -36,7 +37,8 @@ export function Scene() {
         <DustPuff />
       </Suspense>
       <CameraRig />
-      <PicoPostFX hovered={(TOUCH || hovered !== null) && mode === 'room'} />
+      {/* off: only the power button lights him up (not the keyboard or mouse) */}
+      <PicoPostFX hovered={(TOUCH || hovered !== null) && mode === 'room' && !(off && hovered === 'prop')} />
     </Canvas>
   )
 }
