@@ -92,6 +92,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     )
     props.onGrab = () => playPickup()
     props.onLand = (p, speed) => playLand(p.kind, speed)
+    props.onClack = (p, speed) => playLand(p.kind, Math.min(speed, 2) * 0.6)
     const mouse = props.find(meshes[MOUSE_MESH_INDEX])
     return { root, meshes, face, material, mouse, props, screenBox }
   }, [scene])
