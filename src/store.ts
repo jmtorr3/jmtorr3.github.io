@@ -51,6 +51,7 @@ interface State {
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
   openOnSignIn: AppId | null // an app to open once the sign-in's done (the floppy opens About My Creator)
+  unplugged: { keyboard: boolean; mouse: boolean } // easter egg: Chiba or Hanzo's USB plug pulled out of the back of the case
   brainOut: boolean // easter egg: his brain's been pulled out (he's off, and won't power on until it's back)
   brain: number // easter egg: bumped when the back of the monitor is clicked (his brain pops out)
   hoverDevice: DeviceKind | null // the keyboard or mouse under the pointer in the room (the hint names it)
@@ -98,6 +99,7 @@ export const useStore = create<State>((set, get) => ({
   fart: null,
   brain: 0,
   brainOut: false,
+  unplugged: { keyboard: false, mouse: false },
   openOnSignIn: null,
   hoverDevice: null,
   menu: null,

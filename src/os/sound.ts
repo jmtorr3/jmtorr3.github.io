@@ -131,6 +131,108 @@ export function playCrtOff() {
   noise(c, t + 0.36, 0.12, 'bandpass', 5000, env(c, t + 0.36, 0.05, 0.01, 0.1))
 }
 
+// the brain buddy's little footsteps (soft, a bit different each time)
+export function playStep() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  noise(c, t, 0.03, 'lowpass', 700 + Math.random() * 500, env(c, t, 0.05, 0.002, 0.025))
+  tone(c, t, 0.03, 'sine', 160 + Math.random() * 40, 110, env(c, t, 0.025, 0.002, 0.025))
+}
+
+// a USB device plugged in (a rising two-note chime) or pulled out (falling)
+export function playUsb(plugged: boolean) {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  const [a, b] = plugged ? [660, 990] : [990, 660]
+  tone(c, t, 0.12, 'triangle', a, a, env(c, t, 0.12, 0.005, 0.11))
+  tone(c, t + 0.12, 0.18, 'triangle', b, b, env(c, t + 0.12, 0.12, 0.005, 0.17))
+  noise(c, t, 0.03, 'highpass', 3000, env(c, t, 0.15, 0.001, 0.025)) // the click of the plug
+}
+
+// The brain's cable carrying its data into the PC: a low electric hum with a
+// crackle running through it, louder and higher as the cable's strained (strain
+// 0..1, a tug on the brain). Call it every frame; level 0 (or muted) fades it out.
+let hum: { gain: GainNode; buzz: OscillatorNode; whine: OscillatorNode; crackle: GainNode; src: AudioBufferSourceNode } | null = null
+export function setBrainHum(level: number, strain = 0) {
+  const c = audio()
+  if (!c || level <= 0) {
+    if (hum && ctx) {
+      const h = hum
+      hum = null
+      h.gain.gain.setTargetAtTime(0, ctx.currentTime, 0.06)
+      setTimeout(() => [h.buzz, h.whine, h.src].forEach((n) => n.stop()), 400)
+    }
+    return
+  }
+  if (!hum) {
+    const gain = c.createGain()
+    gain.gain.value = 0
+    gain.connect(c.destination)
+    // the mains buzz, mellowed
+    const buzz = c.createOscillator()
+    buzz.type = 'sawtooth'
+    buzz.frequency.value = 60
+    const low = c.createBiquadFilter()
+    low.type = 'lowpass'
+    low.frequency.value = 380
+    buzz.connect(low).connect(gain)
+    // a thin whine on top
+    const whine = c.createOscillator()
+    whine.type = 'sine'
+    whine.frequency.value = 2400
+    const whineGain = c.createGain()
+    whineGain.gain.value = 0.06
+    whine.connect(whineGain).connect(gain)
+    // and crackle, flickering
+    const src = c.createBufferSource()
+    src.buffer = noiseBuffer(c, 2)
+    src.loop = true
+    const band = c.createBiquadFilter()
+    band.type = 'bandpass'
+    band.frequency.value = 3200
+    const crackle = c.createGain()
+    crackle.gain.value = 0
+    src.connect(band).connect(crackle).connect(gain)
+    buzz.start()
+    whine.start()
+    src.start()
+    hum = { gain, buzz, whine, crackle, src }
+  }
+  const t = c.currentTime
+  hum.gain.gain.setTargetAtTime(0.03 * level * (1 + strain * 1.5), t, 0.08)
+  hum.buzz.frequency.setTargetAtTime(60 * (1 + strain * 0.8), t, 0.05)
+  hum.whine.frequency.setTargetAtTime(2400 * (1 + strain * 0.5), t, 0.05)
+  hum.crackle.gain.setTargetAtTime(Math.random() < 0.08 + strain * 0.3 ? 0.9 : 0.12, t, 0.01)
+}
+
+// a little zap: data arriving in the PC, or the cable's loose end sparking (strength 0..1)
+export function playZap(strength = 0.4) {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  const f = 2000 + Math.random() * 3000
+  noise(c, t, 0.035, 'highpass', f, env(c, t, 0.12 * strength, 0.001, 0.03))
+  tone(c, t, 0.05, 'square', f * 0.4, f * 0.1, env(c, t, 0.025 * strength, 0.001, 0.045))
+}
+
+// the brain's magnetic plugs: snapping together (a rising zip and a clack), or
+// pulled apart (a spark and a falling zap)
+export function playMagnet(connect: boolean) {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  if (connect) {
+    tone(c, t, 0.08, 'sawtooth', 400, 1400, env(c, t, 0.04, 0.01, 0.07))
+    noise(c, t + 0.07, 0.04, 'bandpass', 2600, env(c, t + 0.07, 0.35, 0.001, 0.035))
+    tone(c, t + 0.07, 0.08, 'square', 220, 160, env(c, t + 0.07, 0.08, 0.002, 0.07))
+  } else {
+    noise(c, t, 0.12, 'highpass', 4000, env(c, t, 0.3, 0.001, 0.11))
+    tone(c, t, 0.22, 'sawtooth', 1800, 120, env(c, t, 0.08, 0.003, 0.2))
+  }
+}
+
 // one short noise burst reused for every mouse click
 let clickBuf: AudioBuffer | null = null
 

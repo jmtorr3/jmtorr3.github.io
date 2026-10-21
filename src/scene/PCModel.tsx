@@ -7,15 +7,17 @@ import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, CRT_OFF, type Expression } from './SlumpyFace'
 import { DURATION as ZOOM_SECONDS } from './CameraRig'
 import { useStore } from '../store'
-import { unlockAudio, playKeyClack, playCrtOn, playCrtOff, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, speak, speakSoon } from '../os/sound'
-import { DeskProps } from './deskProps'
+import { unlockAudio, playKeyClack, playCrtOn, playCrtOff, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, playUsb, speak, speakSoon } from '../os/sound'
+import { DeskProps, grabState } from './deskProps'
 import { poofAt } from './DustPuff'
-import { brainBusy, brainHatch, hatchOpenByHand, makeHatch, toggleHatch } from './Brain'
+import { brainBusy, brainHanging, brainHatch, closeHatch, hatchOpenByHand, makeHatch, toggleHatch } from './Brain'
 import { makeFloppy } from './Floppy'
 import { makeKeyCaps } from './KeyCaps'
+import { makeUsb } from './UsbCables'
 import { makeSantaHat } from './SantaHat'
 import { isDecember } from '../os/occasion'
 import { chatReply, SIGN_IN_COMMANDS } from '../os/chat'
+import { openRoomKeyboard } from './RoomKeyboard'
 import { restoreCursor, type HoverKind } from './cursor'
 import { devices } from '../data/devices'
 import { profile } from '../data/profile'
@@ -35,7 +37,7 @@ const FAN_TEXELS = { x0: 60, x1: 67, y0: 51, y1: 58 }
 const MONITOR_BACK_MESH_INDEX = 8
 // Typing in the room (before going into the desktop) turns his screen into a
 // command line; Enter and his face comes back to answer it (see os/chat)
-const TYPED_LENGTH = 72 // letters on the line, at most
+export const TYPED_LENGTH = 72 // letters on the line, at most
 const TYPING_IDLE_MS = 10_000 // left alone this long, the line clears and his face comes back
 // easter eggs: the screensaver comes on after the room's been left alone this long
 const SAVER_AFTER_MS = 90_000
@@ -82,6 +84,10 @@ const BOOT_MS = 4900 // the log, plus a moment on the last line
 // while Slumpy is off (see PowerHint)
 export const powerButtonOnScreen = { x: 0, y: 0, visible: false }
 
+// typing at him in the room from a phone's on-screen keyboard (see RoomKeyboard):
+// the whole line so far each time it changes, and Enter
+export const roomChat: { current: { setLine: (text: string) => void; enter: () => void } | null } = { current: null }
+
 type ClickEvent = {
   stopPropagation: () => void
   delta: number
@@ -93,6 +99,7 @@ type ClickEvent = {
 
 type PressEvent = {
   stopPropagation: () => void
+  point: THREE.Vector3
   button: number
   pointerId: number
   pointerType: string
@@ -192,7 +199,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const keyboard = props.find(meshes[KEYBOARD_MESH_INDEX])
     const keys = makeKeyCaps(meshes[KEYBOARD_MESH_INDEX], () => keyboard?.state === 'rest')
     if (isDecember()) root.add(makeSantaHat())
-    return { root, meshes, face, material, mouse, props, screenBox, button, hatch, floppy, keys }
+    // the keyboard and mouse's USB cables, into the back of the case
+    const usb = makeUsb({ keyboard: meshes[KEYBOARD_MESH_INDEX], mouse: meshes[MOUSE_MESH_INDEX] })
+    root.add(usb.group)
+    return { root, meshes, face, material, mouse, props, screenBox, button, hatch, floppy, keys, usb }
   }, [scene])
 
   // the happy face is for pointing at the PC itself, not for messing with the
@@ -214,6 +224,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const bootStart = useRef(0) // when the boot log started (performance.now())
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
+    if (CAN_GRAB && model.usb.find(obj)) return onHover('prop') // a plug: grab it
     const prop = CAN_GRAB && model.props.find(obj)
     // off: the power button (and the hatch on his back) are the only things on him that can be clicked
     const { poweredOff } = useStore.getState()
@@ -346,6 +357,18 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     return () => clearTimeout(id)
   }, [mode, model])
 
+  // a USB plug pulled out or put back: the chime, his reaction, and the device's gone (or back)
+  useEffect(() => {
+    model.usb.onChange = (kind, plugged) => {
+      playUsb(plugged)
+      useStore.setState((s) => ({ unplugged: { ...s.unplugged, [kind]: !plugged } }))
+      if (!useStore.getState().poweredOff) model.face.react(plugged ? 'happy' : 'surprised', 1.6)
+    }
+    return () => {
+      model.usb.onChange = undefined
+    }
+  }, [model])
+
   // spun around too fast: dizzy for a few seconds (its sound plays via onChange)
   const spins = useStore((s) => s.spins)
   useEffect(() => {
@@ -364,6 +387,11 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       // let go of whatever's held, wherever the pointer is
       if (model.props.holding) {
         model.props.release()
+        restoreCursor()
+      }
+      if (model.usb.holding()) {
+        model.usb.release()
+        grabState.active = false
         restoreCursor()
       }
     }
@@ -464,9 +492,11 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
 
     raycaster.current.setFromCamera(pointer, camera)
     model.props.update(Math.min(dt, 0.05), raycaster.current.ray)
+    model.usb.update(Math.min(dt, 0.05), raycaster.current.ray)
 
     // (only while it's sitting still on the desk, around wherever it was dropped)
-    if (model.mouse?.state === 'rest') {
+    // (unplugged, Hanzo doesn't know where the pointer is)
+    if (model.mouse?.state === 'rest' && !useStore.getState().unplugged.mouse) {
       const m = mouseMove.current
       // camera's right and forward, flattened onto the desk
       camera.getWorldDirection(m.away).setY(0).normalize()
@@ -675,6 +705,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const onKey = (e: KeyboardEvent) => {
       const s = useStore.getState()
       if (s.mode !== 'room' || s.poweredOff || s.booting) return
+      if (s.unplugged.keyboard) return noKeyboard()
       if ((e.target as HTMLElement | null)?.closest?.('input, textarea')) return
       // Ctrl+C: like a shell, ^C and the line's dropped
       if (e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'c' && typingRef.current) {
@@ -689,22 +720,49 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       if (e.key === 'Escape') return done()
       if (e.key !== 'Enter' && e.key !== 'Backspace' && e.key.length !== 1) return
       e.preventDefault() // (the space bar doesn't scroll the page, quote keys don't open quick find)
+      press(e.key)
+    }
+    // Chiba's unplugged: keys do nothing (now and then he squints at it)
+    let shrugged = 0
+    const noKeyboard = () => {
+      if (performance.now() - shrugged < 2500) return
+      shrugged = performance.now()
+      model.face.react('confused', 1.5)
+      model.face.glance(0, 6, 1.5)
+    }
+    // one key: Chiba's key goes down with a clack, then the line changes (or Enter answers it)
+    const press = (key: string, next?: string) => {
       unlockAudio()
-      model.keys.press(e.key)
+      model.keys.press(key)
       lights.current.hddUntil = clockRef.current + 0.15
-      if (e.key === 'Enter') {
+      if (key === 'Enter') {
         playKeyClack('enter')
         const text = line
         done()
         return answer(text)
       }
-      playKeyClack(e.key === ' ' ? 'space' : e.key === 'Backspace' ? 'back' : 'key')
-      show(e.key === 'Backspace' ? line.slice(0, -1) : (line + e.key).slice(0, TYPED_LENGTH))
+      playKeyClack(key === ' ' ? 'space' : key === 'Backspace' ? 'back' : 'key')
+      show(next ?? (key === 'Backspace' ? line.slice(0, -1) : (line + key).slice(0, TYPED_LENGTH)))
     }
     window.addEventListener('keydown', onKey)
+    // the phone's keyboard hands over the whole line: the key is whatever changed at its end
+    roomChat.current = {
+      setLine: (text) => {
+        const s = useStore.getState()
+        if (s.mode !== 'room' || s.poweredOff || s.booting || text === line) return
+        if (s.unplugged.keyboard) return noKeyboard()
+        text = text.slice(0, TYPED_LENGTH)
+        press(text.length < line.length ? 'Backspace' : text.slice(-1), text)
+      },
+      enter: () => {
+        const s = useStore.getState()
+        if (s.mode === 'room' && !s.poweredOff && !s.booting) press('Enter')
+      },
+    }
     return () => {
       clearTimeout(idle)
       window.removeEventListener('keydown', onKey)
+      roomChat.current = null
     }
   }, [model])
 
@@ -770,6 +828,16 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       }}
       onPointerDown={(e: PressEvent) => {
         holdStart(e)
+        // a USB plug at the back: tugged (and maybe pulled out)
+        const plug = model.usb.find(e.object)
+        if (plug && CAN_GRAB && mode === 'room' && e.button === 0) {
+          e.stopPropagation()
+          model.usb.grab(plug, e.point, e.camera.getWorldDirection(new THREE.Vector3()))
+          grabState.active = true
+          ;(e.target as Element | null)?.setPointerCapture?.(e.pointerId)
+          document.body.style.cursor = 'var(--cursor-grabbing)'
+          return
+        }
         const prop = model.props.find(e.object)
         if (!CAN_GRAB || mode !== 'room' || e.button !== 0 || !prop) return
         // pick up the keyboard or mouse
@@ -780,10 +848,17 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       }}
       onClick={(e: ClickEvent) => {
         e.stopPropagation()
-        // a drag that ends over the PC is an orbit, not a click; the keyboard and
-        // mouse are for picking up, not for turning it on
-        // (and while the camera's zooming in after the boot log, which a click cancels)
+        // at the desktop: clicking the PC around the screen (its beige frame) goes back to the room
+        if (mode === 'desktop') return useStore.getState().logOff()
         const bootZoom = mode === 'zooming' && useStore.getState().booting
+        // a phone: tapping Chiba (the keyboard) is for talking to him (its own keyboard comes up)
+        if (!CAN_GRAB && mode === 'room' && e.delta <= 6 && model.props.find(e.object)?.kind === 'keyboard') {
+          const s = useStore.getState()
+          if (!s.poweredOff && !s.booting && !touchHold.current.held) return openRoomKeyboard()
+        }
+        // a drag that ends over the PC is an orbit, not a click; the keyboard and
+        // mouse are for picking up, not for turning it on (and while the camera's
+        // zooming in after the boot log, a click cancels that)
         if ((mode !== 'room' && !bootZoom) || e.delta > 6 || (CAN_GRAB && model.props.find(e.object))) return
         // lifting the finger after a hold isn't a tap: don't turn it on
         if (touchHold.current.held) {
@@ -793,15 +868,19 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         unlockAudio()
         const hitMonitorBack = (e: ClickEvent) =>
           (e.object === model.meshes[MONITOR_BACK_MESH_INDEX] && facing(e) > 0.5) || e.object === model.hatch.door || e.object === model.hatch.hole
+        if (model.usb.find(e.object)) return // (plugs are pulled, not clicked)
         if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
         // booting (or zooming in after it): a click backs out to the room, awake
         if (useStore.getState().booting) return cancelBoot()
         if (hitMonitorBack(e)) {
           const s = useStore.getState()
           // his brain's been pulled out (or the hatch is open by hand): the hatch
-          // opens and shuts by hand, to put it back
-          if (s.brainOut || hatchOpenByHand()) return toggleHatch()
-          if (brainBusy.current) return // it's out already: let it finish
+          // opens and shuts by hand, to put it back; plugged back in and hanging
+          // out on its cable, a click puts it away
+          if (s.brainOut || hatchOpenByHand() || brainHanging()) return toggleHatch()
+          // it's out already: the open hatch (or the opening) shuts it away; the rest of
+          // the back lets it finish (it doesn't start over)
+          if (brainBusy.current) return e.object === model.hatch.door || e.object === model.hatch.hole ? closeHatch() : undefined
           s.showBrain() // (its sounds play from Brain; it pops out whether he's on or off)
           if (!s.poweredOff) model.face.react('thinking', 4.2) // (the brain's up for about that long)
           return

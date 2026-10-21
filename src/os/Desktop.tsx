@@ -10,6 +10,7 @@ import {
 import { fitScreen, isCompact } from '../scene/screenFit'
 import { useStore, TASKBAR_H, slumpyLocation } from '../store'
 import { profile } from '../data/profile'
+import { devices, DEVICE_KINDS, type DeviceKind } from '../data/devices'
 import { APPS } from './apps/registry'
 import { Icon } from './Icon'
 import { Window } from './Window'
@@ -19,7 +20,7 @@ import { FaceScreen } from './FaceScreen'
 import { HOME, TRASH, lookup, openNotepad, removePath } from './vfs'
 import { useSlumpy } from './slumpy'
 import { useDesktopIcons, deskIcons, type DeskId } from './useDesktopIcons'
-import { playPowerOn, playPowerOff, playClick, playKeyClack, useSound, speak } from './sound'
+import { playPowerOn, playPowerOff, playClick, playKeyClack, playFaceSound, useSound, speak } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { LoginScreen } from './LoginScreen'
 
@@ -138,6 +139,43 @@ const readSnow = () => {
   } catch {
     return true
   }
+}
+
+// come in with Chiba or Hanzo unplugged (their USB plugs pulled out at the back of
+// the case, in the room): an error, Slumpy panics, and it's back to the room to
+// plug them in again (with a button, if there's a mouse to click it with)
+const MISSING_SECONDS = 5
+const and = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0])
+
+function DevicesMissing({ missing }: { missing: DeviceKind[] }) {
+  const [left, setLeft] = useState(MISSING_SECONDS)
+  useEffect(() => {
+    const id = setInterval(() => setLeft((n) => Math.max(0, n - 1)), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const names = missing.map((k) => devices[k].name)
+  return (
+    <div className="devices-missing" role="alertdialog" aria-label="Devices missing">
+      <FaceScreen className="missing-face" />
+      <div className="missing-box">
+        <div className="missing-title">⚠ Device error</div>
+        {missing.map((k) => (
+          <p key={k}>
+            <strong>{devices[k].name}</strong> ({devices[k].type.toLowerCase()}) is missing.
+          </p>
+        ))}
+        <p className="muted">
+          Plug {missing.length > 1 ? 'them' : and(names)} back in at the back of the case: their USB ports are by the fan.
+        </p>
+        <p className="muted">Back to the room in {left}...</p>
+        {!missing.includes('mouse') && (
+          <button className="btn" onClick={() => useStore.getState().logOff()}>
+            Back to the room
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // what's left on screen after `rm -rf /*` (see the panic effect in Desktop)
@@ -301,6 +339,36 @@ export function Desktop() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  // Chiba or Hanzo unplugged at the back of the case (in the room): no typing, or
+  // no pointer, on the desktop. (Clicking the PC's beige frame still goes back to
+  // the room: that's the 3D scene, see PCModel.)
+  const unplugged = useStore((s) => s.unplugged)
+  useEffect(() => {
+    if (!unplugged.keyboard) return
+    let shrugged = 0
+    const block = (e: Event) => {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      if (e.type !== 'keydown' || performance.now() - shrugged < 2500) return
+      shrugged = performance.now()
+      slumpy.react('confused', 1.5) // (he can't hear a thing)
+    }
+    const types = ['keydown', 'keypress', 'keyup', 'beforeinput'] as const
+    types.forEach((t) => window.addEventListener(t, block, true))
+    return () => types.forEach((t) => window.removeEventListener(t, block, true))
+  }, [unplugged.keyboard, slumpy])
+
+  // in without Chiba or Hanzo: the error, his panic, and back out to plug them in
+  const [missing] = useState(() => DEVICE_KINDS.filter((k) => useStore.getState().unplugged[k]))
+  useEffect(() => {
+    if (!missing.length) return
+    slumpy.react('panic', MISSING_SECONDS + 1)
+    playFaceSound('panic')
+    speak(missing.length > 1 ? 'where are they?!' : `where's ${devices[missing[0]].name.toLowerCase()}?!`)
+    const id = setTimeout(() => useStore.getState().logOff(), MISSING_SECONDS * 1000)
+    return () => clearTimeout(id)
+  }, [missing, slumpy])
+
   // `rm -rf /*` in the Konsole: the kernel panics, then he reboots (through the
   // boot log, back to the sign-in; nothing was really deleted)
   const panic = useStore((s) => s.panic)
@@ -324,7 +392,7 @@ export function Desktop() {
 
   return (
     <div
-      className={`desktop ${poweringOff ? 'crt-off' : fromBoot ? 'boot-in' : 'crt-on'} ${compact ? 'compact' : ''}`}
+      className={`desktop ${poweringOff ? 'crt-off' : fromBoot ? 'boot-in' : 'crt-on'} ${compact ? 'compact' : ''} ${unplugged.mouse ? 'no-mouse' : ''}`}
       style={rect}
       onPointerDownCapture={() => playClick()}
       onPointerUpCapture={() => playClick(true)}
@@ -427,6 +495,7 @@ export function Desktop() {
         <Taskbar />
         {!signedIn && <LoginScreen onDone={finishLogin} />}
         {panic && <KernelPanic />}
+        {missing.length > 0 && <DevicesMissing missing={missing} />}
       </div>
       <div className="crt-overlay" />
     </div>

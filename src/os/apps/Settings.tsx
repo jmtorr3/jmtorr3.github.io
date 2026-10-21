@@ -3,6 +3,7 @@ import { devices, DEVICE_KINDS } from '../../data/devices'
 import { THEMES, useTheme } from '../theme'
 import { Icon, type IconName } from '../Icon'
 import { addMenuItems } from '../appMenu'
+import { useStore } from '../../store'
 
 const SECTIONS = [
   { id: 'appearance', label: 'Appearance', icon: 'image' },
@@ -15,6 +16,7 @@ type Section = (typeof SECTIONS)[number]['id']
 // Slumpy (Chiba and Hanzo, the ones on the desk in the room)
 export function Settings({ props }: { props?: Record<string, unknown> }) {
   const [section, setSection] = useState<Section>((props?.section as Section) ?? 'appearance')
+  const unplugged = useStore((s) => s.unplugged) // (their USB plugs pulled out at the back of the case, in the room)
   useEffect(() => {
     if (props?.section) setSection(props.section as Section)
   }, [props?.section])
@@ -72,7 +74,7 @@ export function Settings({ props }: { props?: Record<string, unknown> }) {
                       <div className="muted">USB {d.usbId}</div>
                       <div className="device-note">{d.note}</div>
                     </div>
-                    <span className="device-status">● Connected</span>
+                    <span className={`device-status ${unplugged[k] ? 'off' : ''}`}>{unplugged[k] ? '○ Disconnected' : '● Connected'}</span>
                   </div>
                 )
               })}

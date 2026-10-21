@@ -163,6 +163,22 @@ a:hover {
   animation: blink 1.2s steps(2) infinite;
 }
 
+/* phones: the hidden text box that takes typing for Slumpy in the room (see
+   RoomKeyboard). Kept on screen (an off-screen focus scrolls the page), 16px (a
+   smaller focused box makes the phone zoom in), and invisible */
+.room-keyboard input {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  font-size: 16px;
+  pointer-events: none;
+}
+
 /* the arrow beside the power button while Slumpy is off (see PowerHint);
    positioned by its transform, at the button */
 .power-hint {
@@ -225,6 +241,51 @@ a:hover {
 
 .crt-off {
   animation: crt-off 0.45s ease-in both;
+}
+
+/* Hanzo (the mouse) unplugged in the room: no pointer on the desktop at all */
+.desktop.no-mouse,
+.desktop.no-mouse * {
+  cursor: none !important;
+  pointer-events: none !important;
+}
+
+/* in without Chiba or Hanzo: the device error, over everything (sign-in included) */
+.devices-missing {
+  position: absolute;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  text-align: center;
+}
+
+.devices-missing .missing-face {
+  width: 160px;
+  height: 128px;
+}
+
+.missing-box {
+  max-width: 380px;
+  padding: 14px 18px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--bg-card);
+}
+
+.missing-box p {
+  margin: 6px 0;
+}
+
+.missing-title {
+  margin-bottom: 8px;
+  color: #ff6b6b;
+  font-weight: bold;
 }
 
 /* `rm -rf /*`: the kernel panic, over everything */
@@ -1299,6 +1360,10 @@ button.card:hover {
 .device-status {
   color: var(--ok);
   white-space: nowrap;
+}
+
+.device-status.off {
+  color: var(--text-muted);
 }
 
 /* explorer */

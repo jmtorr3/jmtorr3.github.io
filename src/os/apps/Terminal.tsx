@@ -595,10 +595,12 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				return `open: ${arg}: not found. try "ls"`
 			}
 			case 'lsusb':
-				// Chiba and Hanzo, plugged into the root hub
+				// Chiba and Hanzo, plugged into the root hub (unless they've been unplugged at the back)
 				return [
 					'Bus 001 Device 001: ID 1d6b:0001 Linux Foundation 1.1 root hub',
-					...DEVICE_KINDS.map((k, i) => `Bus 001 Device 00${i + 2}: ID ${devices[k].usbId} ${devices[k].name} ${devices[k].type}`),
+					...DEVICE_KINDS.filter((k) => !useStore.getState().unplugged[k]).map(
+						(k) => `Bus 001 Device 00${DEVICE_KINDS.indexOf(k) + 2}: ID ${devices[k].usbId} ${devices[k].name} ${devices[k].type}`,
+					),
 				].join('\n')
 			case 'neofetch': {
 				const art = ['   ▄▄▄▄▄▄▄', '   █ ▀▀▀ █', '   █▄▄▄▄▄█', '    ▄▄█▄▄', '  ▄▀▀▀▀▀▀▀▄', '  ▀▀▀▀▀▀▀▀▀']
