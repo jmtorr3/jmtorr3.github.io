@@ -21,7 +21,7 @@ const CORNERS = [0, 1, 2, 3, 4, 5, 6, 7].map(
       i & 4 ? MODEL_BOX.max.z : MODEL_BOX.min.z,
     ),
 )
-const DURATION = 1.4
+export const DURATION = 1.4 // seconds the zoom in or out takes
 // left behind or beside the monitor with nothing happening for this long, the
 // camera drifts back around to the front so the face is in view again
 const IDLE_RETURN_MS = 10_000

@@ -668,7 +668,7 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				// talking to him (the same words he answers in the room)
 				const reply = chatReply(cmdline)
 				if (reply) {
-					if (reply.says) speak(reply.says)
+					if (reply.says) speak(reply.says, reply.expr === 'yes' ? 1.15 : 1)
 					return `${profile.host}: ${reply.says ?? reply.does}`
 				}
 				if (isChat(cmdline)) return `${cmd}: command not found: I'm not an LLM`

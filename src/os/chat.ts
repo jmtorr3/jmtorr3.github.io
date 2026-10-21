@@ -20,7 +20,13 @@ export const SIGN_IN_COMMANDS = /^(login|startx|start|boot|desktop)$/
 
 export type ChatReply = { expr: Expression; says?: string; does?: string }
 
+// whole questions he has a very clear answer to
+const QUESTIONS: [RegExp, ChatReply][] = [
+  [/\b(are|r)\s+(you|u)\s+(alive|real|sentient|conscious)\b|^(you|u)\s+alive\b/i, { expr: 'yes', says: 'YES!!!' }],
+]
+
 export function chatReply(text: string): ChatReply | null {
+  for (const [re, reply] of QUESTIONS) if (re.test(text)) return reply
   const words = text.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
   for (const w of words) {
     const hit = WORDS.find(([re]) => re.test(w))

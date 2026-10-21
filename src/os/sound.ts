@@ -102,6 +102,35 @@ export function playPowerOff() {
   noise(c, t + 0.05, 0.3, 'bandpass', 5000, env(c, t + 0.05, 0.05, 0.01, 0.28))
 }
 
+// Slumpy's screen switching on, timed to its flash (SlumpyFace's crtOn, 0.55s):
+// a relay thunk on the dot, a rising zip as the line stretches out, a whump as
+// the picture opens up, static fizzing away with the dither, the flyback settling
+export function playCrtOn() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  tone(c, t, 0.2, 'sine', 95, 40, env(c, t, 0.45, 0.004, 0.18))
+  noise(c, t, 0.04, 'lowpass', 1800, env(c, t, 0.22, 0.002, 0.035))
+  tone(c, t + 0.08, 0.14, 'sawtooth', 260, 2400, env(c, t + 0.08, 0.025, 0.02, 0.12))
+  noise(c, t + 0.08, 0.14, 'highpass', 3000, env(c, t + 0.08, 0.05, 0.1, 0.04))
+  tone(c, t + 0.22, 0.3, 'sine', 120, 55, env(c, t + 0.22, 0.3, 0.008, 0.28))
+  noise(c, t + 0.22, 0.12, 'lowpass', 700, env(c, t + 0.22, 0.25, 0.005, 0.11))
+  noise(c, t + 0.3, 0.3, 'bandpass', 4200, env(c, t + 0.3, 0.07, 0.01, 0.29))
+  tone(c, t + 0.3, 1.2, 'sine', 9000, 8600, env(c, t + 0.3, 0.01, 0.1, 1.1))
+}
+
+// and off (crtOff, 0.5s): the picture squeezing down with a falling zap, the line
+// pulling in, a last tick as the dot goes
+export function playCrtOff() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  tone(c, t, 0.18, 'square', 1500, 300, env(c, t, 0.06, 0.005, 0.17))
+  noise(c, t, 0.05, 'highpass', 2200, env(c, t, 0.2, 0.001, 0.045))
+  tone(c, t + 0.17, 0.18, 'sine', 900, 60, env(c, t + 0.17, 0.2, 0.005, 0.17))
+  noise(c, t + 0.36, 0.12, 'bandpass', 5000, env(c, t + 0.36, 0.05, 0.01, 0.1))
+}
+
 // one short noise burst reused for every mouse click
 let clickBuf: AudioBuffer | null = null
 
@@ -318,6 +347,13 @@ const FACE_SOUNDS: Record<string, Note[]> = {
     [0, 0.3, 400, 600, 'sine', 0.06],
     [0.3, 0.3, 600, 400, 'sine', 0.06],
     [0.6, 0.3, 400, 600, 'sine', 0.06],
+  ],
+  // a triumphant little fanfare
+  yes: [
+    [0, 0.08, 523, 523, 'square', 0.04],
+    [0.09, 0.08, 659, 659, 'square', 0.04],
+    [0.18, 0.08, 784, 784, 'square', 0.04],
+    [0.27, 0.22, 1047, 1047, 'square', 0.05],
   ],
   // a frantic little alarm
   panic: [

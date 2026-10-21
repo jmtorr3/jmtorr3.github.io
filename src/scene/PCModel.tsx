@@ -4,9 +4,10 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
-import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
+import { SlumpyFace, FACE_W, FACE_H, CRT_OFF, type Expression } from './SlumpyFace'
+import { DURATION as ZOOM_SECONDS } from './CameraRig'
 import { useStore } from '../store'
-import { unlockAudio, playKeyClack, playPowerOn, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, speak, speakSoon } from '../os/sound'
+import { unlockAudio, playKeyClack, playCrtOn, playCrtOff, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
 import { brainBusy, brainHatch, makeHatch } from './Brain'
@@ -262,8 +263,11 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     else if (typing) expr = 'prompt'
     else if (asleep) expr = 'asleep'
     else if (hovered) expr = 'happy'
+    // turned off with the power button: the tube switches off (it just goes black
+    // when the desktop takes over)
+    if (expr === 'off' && poweredOff && mode === 'room') model.face.powerDown()
     // hovering on and off shouldn't cut a reaction short (getting hit, a fart, …)
-    model.face.set(expr, expr === null || expr === 'happy')
+    else model.face.set(expr, expr === null || expr === 'happy')
     // the canvas only renders on demand while the desktop is up
     invalidate()
     // leaving the desktop puts the keyboard and mouse back where they belong
@@ -331,6 +335,15 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   // stacking: the mouse put down on top of the keyboard (or the other way round)
   // gets a puzzled look
   const stacked = useRef<string | null>(null)
+
+  // going into the OS: as the camera arrives, his face switches off like the tube
+  // does, down to a dot just as the desktop appears (which switches on from a dot).
+  // Straight from the boot log, the sign-in fades in over the log instead.
+  useEffect(() => {
+    if (mode !== 'zooming' || useStore.getState().booting) return
+    const id = setTimeout(() => model.face.powerDown(), (ZOOM_SECONDS - CRT_OFF) * 1000 - 60)
+    return () => clearTimeout(id)
+  }, [mode, model])
 
   // spun around too fast: dizzy for a few seconds (its sound plays via onChange)
   const spins = useStore((s) => s.spins)
@@ -553,7 +566,6 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const powerOn = () => {
     clearTimers()
     useStore.getState().setPoweredOff(false)
-    playPowerOn() // the tube thunking on (its flash opens the boot log)
     model.props.poofHome() // a keyboard or mouse left lying around goes back where it belongs
     playSpinUp(1.6)
     setAsleep(true)
@@ -654,8 +666,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       if (!words.length) return
       if (words.length === 1 && SIGN_IN_COMMANDS.test(words[0])) return signInRef.current()
       const { expr, says } = chatReply(text) ?? { expr: 'confused' as const, says: 'huh?' }
-      model.face.react(expr, 2.2)
-      if (says && speak(says)) talkingUntil.current = performance.now() + 900
+      model.face.react(expr, expr === 'yes' ? 3 : 2.2)
+      if (expr === 'yes') playFaceSound('yes') // (a fanfare under the shout)
+      if (says && speak(says, expr === 'yes' ? 1.15 : 1)) talkingUntil.current = performance.now() + 900
     }
     const onKey = (e: KeyboardEvent) => {
       const s = useStore.getState()
@@ -697,7 +710,15 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     // the face bleeps as it changes expression (the spin-up covers the zoom)
     model.face.onChange = (expr) => {
       lights.current.faceLeft = 0.5
-      if (useStore.getState().mode === 'room' && performance.now() > talkingUntil.current) playFaceSound(expr)
+      // (waking up, the tube's own sound covers it: see onCrt)
+      if (expr !== 'wake' && useStore.getState().mode === 'room' && performance.now() > talkingUntil.current) playFaceSound(expr)
+    }
+    // the screen's tube switching on or off, in time with its flash (not while the
+    // loading screen's still up: he's already there underneath it)
+    model.face.onCrt = (kind) => {
+      if (!(window as { __booted?: boolean }).__booted) return
+      if (kind === 'on') playCrtOn()
+      else playCrtOff()
     }
     const booted = window as { __booted?: boolean }
     if (booted.__booted) wake()
@@ -708,6 +729,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     window.addEventListener('keydown', unlock, { once: true })
     return () => {
       model.face.onChange = undefined
+      model.face.onCrt = undefined
       window.removeEventListener('booted', wake)
       window.removeEventListener('pointerdown', unlock)
       window.removeEventListener('keydown', unlock)

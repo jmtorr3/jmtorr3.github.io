@@ -32,6 +32,7 @@ export type Expression =
   | 'music'
   | 'yawn'
   | 'loading'
+  | 'yes' // the whole screen a big bouncing YES!!! ("are you alive?")
   | 'starfield' // the screensaver: stars flying out of the middle (left alone in the room)
   | 'prompt' // a command line showing what's being typed (see typed), when you type at him in the room
   | 'boot' // a Linux boot log scrolling by (see bootLog), when he's turned on
@@ -182,6 +183,8 @@ const CHAR_W = 4 // 3px glyph + 1px gap
 // the CRT switching on before the boot log starts (seconds): a dot, a line, the
 // whole screen lit up, then it fades out through a dither
 const CRT_ON = 0.55
+// and switching off: the picture squeezes to a line, the line to a dot, the dot fades
+export const CRT_OFF = 0.5
 // ordered-dither thresholds (4×4 Bayer), for fading in 1-bit
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
 const LINE_H = 6
@@ -217,6 +220,8 @@ export class SlumpyFace {
   readonly canvas: HTMLCanvasElement
   // called when a new expression appears ('wake' when the eyes first open), for sounds
   onChange?: (expr: Expression | 'wake') => void
+  // the tube starting to switch on (its flash, or the boot log's) or off, for its sound
+  onCrt?: (kind: 'on' | 'off') => void
   private ctx: CanvasRenderingContext2D
   private img: ImageData
   private px = new Uint8Array(FACE_W * FACE_H)
@@ -246,6 +251,8 @@ export class SlumpyFace {
   private view = { scale: 1, x: FACE_W / 2, y: FACE_H / 2 }
   private copy = new Uint8Array(FACE_W * FACE_H)
   private idle: boolean
+  // the tube switching on (before the face appears) or off (before the screen goes black)
+  private crt: { kind: 'on' | 'off'; at: number } | null = null
   private halloween = isHalloween()
   // what 'boot' prints: each line shows up `at` seconds in
   bootLog: { at: number; text: string }[] = []
@@ -281,20 +288,39 @@ export class SlumpyFace {
     this.override = expr
     if (gentle && this.reactUntil) return
     this.reactUntil = 0
+    // a switch-off that didn't get to finish (the canvas stopped drawing): it's off now
+    if (this.crt?.kind === 'off') {
+      this.crt = null
+      this.shown = this.next = 'off'
+    }
     if (expr === 'off') {
       this.shown = this.next = 'off'
       this.open = 0
       this.render()
     } else if (this.shown === 'off') {
-      // waking up: eyes open from closed
+      // waking up: the tube flashes on, then the eyes open from closed (the boot
+      // log does its own flash; copies over other things have no tube to flash)
       this.shown = this.next = expr ?? 'neutral'
       this.shownAt = this.t
       this.onChange?.('wake')
       this.open = 0
       this.closing = false
+      if (!this.transparent) {
+        if (expr !== 'boot') this.crt = { kind: 'on', at: this.t }
+        this.onCrt?.('on')
+      }
     } else {
       this.change(expr ?? 'neutral')
     }
+  }
+
+  // Switch off like an old tube (the power button): the picture collapses, then black.
+  powerDown() {
+    if (this.shown === 'off' || this.crt?.kind === 'off') return
+    this.override = 'off'
+    this.reactUntil = 0
+    this.crt = { kind: 'off', at: this.t }
+    this.onCrt?.('off')
   }
 
   // Show an expression for a while, then go back to resting.
@@ -352,6 +378,19 @@ export class SlumpyFace {
   update(dt: number) {
     if (this.shown === 'off' && this.next === 'off') return
     this.t += dt
+
+    // the tube switching on or off: nothing else happens until it's done
+    if (this.crt) {
+      const k = (this.t - this.crt.at) / (this.crt.kind === 'on' ? CRT_ON : CRT_OFF)
+      if (k < 1) return this.render()
+      const off = this.crt.kind === 'off'
+      this.crt = null
+      this.open = 0 // (the eyes open once the picture's up)
+      if (off) {
+        this.shown = this.next = 'off'
+        return this.render() // black
+      }
+    }
 
     if (this.reactUntil && this.t > this.reactUntil) {
       this.reactUntil = 0
@@ -741,6 +780,15 @@ export class SlumpyFace {
     }
   }
 
+  // YES!!! as big as it goes, bouncing and shaking with excitement
+  private drawYes() {
+    const scale = 4
+    const w = (6 * CHAR_W - 1) * scale
+    const bounce = Math.round(Math.abs(Math.sin(this.t * 9)) * 4)
+    const shake = (Math.floor(this.t * 24) % 2) * 2 - 1
+    this.text('YES!!!', Math.round((FACE_W - w) / 2) + shake, Math.round((FACE_H - 5 * scale) / 2) - bounce, scale)
+  }
+
   // the screensaver: stars streaming out from the middle, faster and bigger as
   // they get closer (each star starts over at a new angle once it's off screen)
   private drawStarfield() {
@@ -801,6 +849,21 @@ export class SlumpyFace {
     const lines = shown.slice(-fits)
     lines.forEach((l, i) => this.text(l, 2, 2 + i * LINE_H))
     if (Math.floor(this.t * 3) % 2 === 0) this.text('_', 2, 2 + lines.length * LINE_H)
+  }
+
+  // k: 0..1 through the switch-off: a bright picture squeezing down to a line,
+  // the line pulling in to a dot, and the dot fading away
+  private crtOff(k: number) {
+    const cx = FACE_W / 2
+    const cy = FACE_H / 2
+    const lerp = (a: number, b: number, t: number) => a + (b - a) * Math.min(1, Math.max(0, t))
+    if (k < 0.35) {
+      const h = lerp(FACE_H, 2, k / 0.35)
+      this.rect(0, cy - h / 2, FACE_W, h)
+    } else if (k < 0.7) {
+      const w = lerp(FACE_W, 2, (k - 0.35) / 0.35)
+      this.rect(cx - w / 2, cy - 1, w, 2)
+    } else if (Math.floor(k * 40) % 2 === 0) this.rect(cx - 1, cy - 1, 2, 2)
   }
 
   // k: 0..1 through the switch-on
@@ -867,9 +930,15 @@ export class SlumpyFace {
   private render() {
     this.px.fill(0)
     const expr = this.shown
-    if (expr === 'boot') this.drawBootLog()
+    const crt = this.crt
+    if (crt) {
+      const k = Math.min(1, (this.t - crt.at) / (crt.kind === 'on' ? CRT_ON : CRT_OFF))
+      if (crt.kind === 'on') this.crtOn(k)
+      else this.crtOff(k)
+    } else if (expr === 'boot') this.drawBootLog()
     else if (expr === 'prompt') this.drawPrompt()
     else if (expr === 'starfield') this.drawStarfield()
+    else if (expr === 'yes') this.drawYes()
     else if (expr !== 'off') {
       // look only moves plain eyes; the expressive ones stay put
       const moves = ['neutral', 'sad', 'angry', 'glitch'].includes(expr)
