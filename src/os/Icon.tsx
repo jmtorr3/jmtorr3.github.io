@@ -269,6 +269,25 @@ const ICONS = {
     '......kkkk......',
     '................',
   ],
+  // a spiral notepad page: .txt files and Notepad
+  notepad: [
+    '................',
+    '..kkkkkkkkkkkk..',
+    '..kgdgdgdgdgdk..',
+    '..kkkkkkkkkkkk..',
+    '..kwrwwwwwwwwk..',
+    '..kwrbbbbbbbwk..',
+    '..kwrwwwwwwwwk..',
+    '..kwrbbbbbbwwk..',
+    '..kwrwwwwwwwwk..',
+    '..kwrbbbbbbbwk..',
+    '..kwrwwwwwwwwk..',
+    '..kwrbbbbwwwwk..',
+    '..kwrwwwwwwwwk..',
+    '..kwrwwwwwwwwk..',
+    '..kkkkkkkkkkkk..',
+    '................',
+  ],
 } as const
 
 export type IconName = keyof typeof ICONS

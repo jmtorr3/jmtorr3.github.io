@@ -73,7 +73,12 @@
             if (!doneAt) doneAt = now
             if (now - doneAt > 400) {
               boot.classList.add('done')
-              setTimeout(() => boot.remove(), 500)
+              setTimeout(() => {
+                boot.remove()
+                // the room is showing now (PCModel wakes Slumpy up on this)
+                window.__booted = true
+                window.dispatchEvent(new Event('booted'))
+              }, 500)
               return
             }
           }

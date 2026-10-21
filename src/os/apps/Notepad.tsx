@@ -89,9 +89,9 @@ export function Notepad({ winId, props }: { winId: string; props?: Record<string
       onKeyDown={onKey}
       onContextMenu={(e) =>
         addMenuItems(e, [
-          { label: 'New', icon: 'text', onClick: newDoc },
-          { label: 'Save', icon: 'text', onClick: save },
-          { label: 'Save As…', icon: 'text', onClick: () => setSaveAs(nameOf(path)) },
+          { label: 'New', icon: 'notepad', onClick: newDoc },
+          { label: 'Save', icon: 'notepad', onClick: save },
+          { label: 'Save As…', icon: 'notepad', onClick: () => setSaveAs(nameOf(path)) },
           { separator: true },
           { label: 'Word Wrap', checked: wrap, onClick: () => setWrap(!wrap) },
         ])

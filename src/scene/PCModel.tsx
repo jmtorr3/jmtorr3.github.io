@@ -319,28 +319,37 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       lights.current.faceLeft = 0.5
       if (useStore.getState().mode === 'room' && performance.now() > talkingUntil) playFaceSound(expr)
     }
-    // "hellooo!" once the loading screen is gone, if the browser already allows
-    // sound here (usually it waits for a tap; then he just says it when the PC
-    // is clicked on)
-    let greeted = false
-    const greet = () => {
-      if (greeted || useStore.getState().mode !== 'room') return
-      if (!speak('hellooo!')) return
-      greeted = true
-      talkingUntil = performance.now() + 900
-      model.face.react('happy', 1.6)
-    }
-    let tryNow = window.setTimeout(() => {
+    // once the loading screen is gone, he wakes up: sleepy for a moment, a little
+    // yawn ("mmhmm?", if the browser already allows sound; usually it waits for
+    // a tap), then blinks awake and smiles. ("hellooo" is for when the PC is clicked.)
+    const wakeTimers: number[] = []
+    const later = (ms: number, f: () => void) => wakeTimers.push(window.setTimeout(f, ms))
+    const inRoom = () => useStore.getState().mode === 'room'
+    const wake = () => later(250, () => {
       unlockAudio() // only starts if the browser already allows sound here
-      tryNow = window.setTimeout(greet, 150)
-    }, 600)
+      if (!inRoom()) return
+      model.face.react('sleepy', 1.5)
+      later(500, () => {
+        if (!inRoom()) return
+        if (speak('mmhmm?', 0.8)) talkingUntil = performance.now() + 700
+      })
+      later(1550, () => {
+        if (!inRoom()) return
+        model.face.blink(2)
+        model.face.react('happy', 1.4)
+      })
+    })
+    const booted = window as { __booted?: boolean }
+    if (booted.__booted) wake()
+    else window.addEventListener('booted', wake, { once: true })
     // browsers only allow sound after an interaction: any first tap or drag in the room counts
     const unlock = () => unlockAudio()
     window.addEventListener('pointerdown', unlock, { once: true })
     window.addEventListener('keydown', unlock, { once: true })
     return () => {
       model.face.onChange = undefined
-      clearTimeout(tryNow)
+      wakeTimers.forEach(clearTimeout)
+      window.removeEventListener('booted', wake)
       window.removeEventListener('pointerdown', unlock)
       window.removeEventListener('keydown', unlock)
     }

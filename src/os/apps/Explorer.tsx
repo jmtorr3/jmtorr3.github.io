@@ -107,10 +107,10 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
         ...projectLinks(n.project),
       ]
     if (n.type === 'dir') return [{ label: 'Open', icon: 'folder', onClick: () => go(full) }]
-    const items: MenuItem[] = [{ label: 'Open', icon: isText(full) ? 'text' : n.icon, onClick: () => openPath(full) }]
+    const items: MenuItem[] = [{ label: 'Open', icon: isText(full) ? 'notepad' : n.icon, onClick: () => openPath(full) }]
     // .txt opens in Notepad; the app it belongs to is the other choice (and the reverse for launchers)
     if (n.open && isText(full)) items.push({ label: `Open in ${n.app ?? 'App'}`, icon: n.icon, onClick: n.open })
-    if (!isText(full)) items.push({ label: 'Open in Notepad', icon: 'text', onClick: () => openNotepad(full) })
+    if (!isText(full)) items.push({ label: 'Open in Notepad', icon: 'notepad', onClick: () => openNotepad(full) })
     return items
   }
 
@@ -124,7 +124,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
           { label: 'Back', disabled: !back.length, onClick: goBack },
           { label: 'Up', disabled: path === '/', onClick: () => go(parent(path)) },
           { separator: true },
-          { label: 'New Text File', icon: 'text', disabled: !canWrite(path + '/x'), onClick: newTextFile },
+          { label: 'New Text File', icon: 'notepad', disabled: !canWrite(path + '/x'), onClick: newTextFile },
           { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal', { props: { cwd: path } }) },
         ])
       }
@@ -168,7 +168,8 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
                 addMenuItems(e, itemMenu(name, n))
               }}
             >
-              {n.type === 'dir' ? <FolderIcon p={n.project} /> : <Icon name={n.icon} size={40} />}
+              {/* .txt files all look like notepad pages (they open in Notepad) */}
+              {n.type === 'dir' ? <FolderIcon p={n.project} /> : <Icon name={isText(name) ? 'notepad' : n.icon} size={40} />}
               <span title={name}>{breakable(name)}</span>
             </button>
           ))}
