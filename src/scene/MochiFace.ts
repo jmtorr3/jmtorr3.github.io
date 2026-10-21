@@ -177,9 +177,12 @@ export class MochiFace {
 
   // Force an expression (hover, zooming), or null to go back to idling.
   // 'off' blanks the screen at once, for when the desktop takes over.
-  set(expr: Expression | null) {
+  // gentle: don't cut a reaction short; the new expression shows once it's over
+  set(expr: Expression | null, gentle = false) {
     if (expr === this.override) return
     this.override = expr
+    if (gentle && this.reactUntil) return
+    this.reactUntil = 0
     if (expr === 'off') {
       this.shown = this.next = 'off'
       this.open = 0

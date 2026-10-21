@@ -92,7 +92,6 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     )
     props.onGrab = () => playPickup()
     props.onLand = (p, speed) => playLand(p.kind, speed)
-    props.onBump = (_, speed) => playBump(speed)
     const mouse = props.find(meshes[MOUSE_MESH_INDEX])
     return { root, meshes, face, material, mouse, props, screenBox }
   }, [scene])
@@ -105,7 +104,8 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     if (mode === 'desktop' || mode === 'exiting') expr = 'off'
     else if (mode === 'zooming') expr = 'surprised'
     else if (hovered) expr = 'happy'
-    model.face.set(expr)
+    // hovering on and off shouldn't cut a reaction short (getting hit, a fart, …)
+    model.face.set(expr, expr === null || expr === 'happy')
     // the canvas only renders on demand while the desktop is up
     invalidate()
     // leaving the desktop puts the keyboard and mouse back where they belong
@@ -218,6 +218,32 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const blue = busy ? blink(10) : l.faceLeft > 0 ? blink(12) : 0.08
     model.material.uniforms.leds.value.set(red, green, blue)
   })
+
+  // getting hit with the keyboard or mouse: reacts by how hard (the keyboard hits
+  // harder) and how often; keep at it and he gets angry, then glitches out
+  const hits = useRef({ count: 0, last: -Infinity })
+  useEffect(() => {
+    model.props.onBump = (p, speed) => {
+      playBump(speed)
+      const now = clockRef.current
+      const h = hits.current
+      h.count = now - h.last < 4 ? h.count + 1 : 1
+      h.last = now
+      const force = speed * (p.kind === 'keyboard' ? 1.5 : 1)
+      const pick = <T,>(xs: T[]) => xs[Math.floor(Math.random() * xs.length)]
+      let expr: Expression
+      if (h.count >= 5) expr = 'glitch'
+      else if (h.count >= 3) expr = 'angry'
+      else if (force > 12) expr = 'dizzy'
+      else if (force > 3) expr = pick<Expression>(['sad', 'cry'])
+      else expr = pick<Expression>(['surprised', 'confused', 'suspicious'])
+      model.face.react(expr, expr === 'surprised' ? 1.2 : 2.4)
+      if (force > 12) jolt.current = 0.25 // a hard hit rattles the whole PC
+    }
+    return () => {
+      model.props.onBump = undefined
+    }
+  }, [model])
 
   useEffect(() => {
     // the face bleeps as it changes expression (the spin-up covers the zoom)

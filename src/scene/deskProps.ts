@@ -40,6 +40,12 @@ export class DeskProps {
   private last = new THREE.Vector3()
   private n = new THREE.Vector3()
   private time = 0
+  // how fast the pointer is moving the held prop (its target), smoothed: a held
+  // prop chases a target that may be deep inside the PC, so its own speed says
+  // little about how hard it was swung
+  private aimVel = new THREE.Vector3()
+  private lastAim = new THREE.Vector3()
+  private aimReady = false
 
   // for sounds: picked up, hit the desk, knocked into the PC (speed in units/s)
   onGrab?: (p: Prop) => void
@@ -93,6 +99,8 @@ export class DeskProps {
     this.grabOffset.copy(this.target).sub(this.hit)
     prop.state = 'held'
     this.held = prop
+    this.aimReady = false
+    this.aimVel.set(0, 0, 0)
     grabState.active = true
     this.onGrab?.(prop)
   }
@@ -118,6 +126,9 @@ export class DeskProps {
         if (!ray.intersectPlane(this.plane, this.hit)) continue
         this.target.copy(this.hit).add(this.grabOffset)
         this.target.y = THREE.MathUtils.clamp(this.target.y, p.rest.y + 0.1, p.rest.y + MAX_LIFT)
+        if (this.aimReady) this.aimVel.lerp(this.n.copy(this.target).sub(this.lastAim).divideScalar(Math.max(dt, 1e-3)), 0.3)
+        this.lastAim.copy(this.target)
+        this.aimReady = true
         this.last.copy(pos)
         pos.lerp(this.target, 1 - Math.exp(-dt * 20))
         p.vel.copy(pos).sub(this.last).divideScalar(Math.max(dt, 1e-3))
@@ -183,13 +194,14 @@ export class DeskProps {
     const pz = Math.min(cz + p.half.z - o.min.z, o.max.z - (cz - p.half.z))
     if (px > 0 && pz > 0) {
       const mid = o.getCenter(this.hit)
+      const held = p.state === 'held'
       let speed: number
       if (px < pz) {
-        speed = Math.abs(p.vel.x)
+        speed = held ? Math.min(Math.abs(p.vel.x), Math.abs(this.aimVel.x)) : Math.abs(p.vel.x)
         pos.x += cx < mid.x ? -px : px
         p.vel.x = 0
       } else {
-        speed = Math.abs(p.vel.z)
+        speed = held ? Math.min(Math.abs(p.vel.z), Math.abs(this.aimVel.z)) : Math.abs(p.vel.z)
         pos.z += cz < mid.z ? -pz : pz
         p.vel.z = 0
       }
