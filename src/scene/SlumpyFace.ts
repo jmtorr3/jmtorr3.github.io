@@ -11,6 +11,7 @@ export type Expression =
   | 'neutral'
   | 'happy'
   | 'sleepy'
+  | 'asleep' // eyes shut, z's: before he wakes up after the loading screen
   | 'surprised'
   | 'love'
   | 'angry'
@@ -411,6 +412,8 @@ export class SlumpyFace {
       }
       case 'laugh':
         return closed ? this.shut(cx, cy) : this.bitmap(side === -1 ? CHEVRON : mirror(CHEVRON), cx, cy, 2)
+      case 'asleep':
+        return this.shut(cx, cy + 4)
       case 'sleepy':
         // heavy lids: only the bottom of the eye shows
         return this.pill(cx, cy + 6, EYE_W, Math.max(2, Math.round(9 * this.open)), 3)
@@ -585,6 +588,7 @@ export class SlumpyFace {
         return
       }
       case 'sleepy':
+      case 'asleep':
         // z's drifting up and to the right
         for (let i = 0; i < 3; i++) {
           const p = (this.t * 0.5 + i / 3) % 1

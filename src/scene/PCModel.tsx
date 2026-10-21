@@ -114,6 +114,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   // the happy face is for pointing at the PC itself, not for messing with the
   // keyboard and mouse (or carrying one over the PC)
   const [hovered, setHovered] = useState(false)
+  // asleep from the start, so the loading screen fades onto a sleepy face; he
+  // wakes up just after (the wake-up effect below)
+  const [asleep, setAsleep] = useState(true)
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
@@ -155,6 +158,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     let expr: Expression | null = null // idle: cycles moods by itself
     if (mode === 'desktop' || mode === 'exiting') expr = 'off'
     else if (mode === 'zooming') expr = 'surprised'
+    else if (asleep) expr = 'asleep'
     else if (hovered) expr = 'happy'
     // hovering on and off shouldn't cut a reaction short (getting hit, a fart, …)
     model.face.set(expr, expr === null || expr === 'happy')
@@ -162,7 +166,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     invalidate()
     // leaving the desktop puts the keyboard and mouse back where they belong
     if (mode === 'exiting') model.props.reset()
-  }, [mode, hovered, model, invalidate])
+  }, [mode, hovered, asleep, model, invalidate])
 
   // spun around too fast: dizzy for a few seconds (its sound plays via onChange)
   const spins = useStore((s) => s.spins)
@@ -319,26 +323,23 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       lights.current.faceLeft = 0.5
       if (useStore.getState().mode === 'room' && performance.now() > talkingUntil) playFaceSound(expr)
     }
-    // once the loading screen is gone, he wakes up: sleepy for a moment, a little
-    // yawn ("mmhmm?", if the browser already allows sound; usually it waits for
-    // a tap), then blinks awake and smiles. ("hellooo" is for when the PC is clicked.)
+    // once the loading screen is gone, he wakes up: still sleepy for a moment, a
+    // little yawn ("mmhmm?", if the browser already allows sound; usually it
+    // waits for a tap), then blinks awake and smiles. ("hellooo" is for when the
+    // PC is clicked; clicking it before he's awake wakes him right away.)
     const wakeTimers: number[] = []
     const later = (ms: number, f: () => void) => wakeTimers.push(window.setTimeout(f, ms))
     const inRoom = () => useStore.getState().mode === 'room'
-    const wake = () => later(250, () => {
+    const wake = () => {
       unlockAudio() // only starts if the browser already allows sound here
-      if (!inRoom()) return
-      model.face.react('sleepy', 1.5)
-      later(500, () => {
-        if (!inRoom()) return
-        if (speak('mmhmm?', 0.8)) talkingUntil = performance.now() + 700
+      later(700, () => {
+        if (inRoom() && speak('mmhmm?', 0.8)) talkingUntil = performance.now() + 700
       })
-      later(1550, () => {
-        if (!inRoom()) return
-        model.face.blink(2)
-        model.face.react('happy', 1.4)
-      })
-    })
+      // eyes open, a couple of blinks to get going, then a smile
+      later(1700, () => setAsleep(false))
+      later(2300, () => inRoom() && model.face.blink(2))
+      later(3000, () => inRoom() && model.face.react('happy', 1.4))
+    }
     const booted = window as { __booted?: boolean }
     if (booted.__booted) wake()
     else window.addEventListener('booted', wake, { once: true })
@@ -416,6 +417,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         playSpinUp() // the 'oooo' while the face looks surprised and the camera zooms in
         speakSoon('hellooo!') // and says hi on the way in
         model.props.poofHome() // the keyboard and mouse go back where they belong
+        setAsleep(false) // clicked before he finished waking up: he's up now
         setMode('zooming')
       }}
     />
