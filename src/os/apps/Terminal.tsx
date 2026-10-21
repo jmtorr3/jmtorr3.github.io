@@ -5,7 +5,7 @@ import { useStore, slumpyLocation } from '../../store'
 import { LAUNCHABLE, START_EXTRAS, type AppId } from './registry'
 import { devices, DEVICE_KINDS } from '../../data/devices'
 import { THEMES, useTheme } from '../theme'
-import { CREATOR_HOME, lookup, openPath, openProject, pretty, resolve } from '../vfs'
+import { CREATOR_HOME, lookup, openNotepad, openPath, openProject, pretty, resolve } from '../vfs'
 import type { Expression } from '../../scene/SlumpyFace'
 import { useSlumpy } from '../slumpy'
 import { SlumpyCam, type SlumpyControl } from '../SlumpyCam'
@@ -22,7 +22,7 @@ const isChat = (line: string) => {
 	return GREETING.test(t) || QUESTION.test(t) || t.endsWith('?') || t.split(/\s+/).length >= 4
 }
 
-const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'logout', 'ls', 'lsusb', profile.host, 'neofetch', 'open', 'pwd', 'sudo', 'whoami']
+const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'logout', 'ls', 'lsusb', profile.host, 'neofetch', 'notepad', 'open', 'pwd', 'sudo', 'whoami']
 
 // longest start shared by every candidate
 const commonPrefix = (xs: string[]) =>
@@ -112,6 +112,7 @@ const help = () => `available commands:
   open <app>        open a window: ${LAUNCHABLE.join(', ')}
   open <project>    open a project by folder name
   open <path>       open a file or folder, like double-clicking it
+  notepad [file]    edit a text file (you can save in ~)
   lsusb             list connected devices
   neofetch          system info
   ${profile.host.padEnd(18)}say hi to ${profile.host}
@@ -272,6 +273,19 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				// any file or folder, same as double-clicking it in Dolphin
 				if (openPath(resolve(cwd, arg))) return `opening ${arg}...`
 				return `open: ${arg}: not found. try "ls"`
+			}
+			case 'notepad': {
+				if (!arg) {
+					openNotepad()
+					return 'opening notepad...'
+				}
+				const target = resolve(cwd, arg)
+				const node = lookup(target)
+				if (node?.type === 'dir') return `notepad: ${arg}: Is a directory`
+				// a new file opens empty; it's created when it's saved
+				if (node) openNotepad(target)
+				else useStore.getState().open('notepad', { key: target, title: `${arg} - Notepad`, props: { path: target } })
+				return `opening ${pretty(target)}...`
 			}
 			case 'lsusb':
 				// Chiba and Hanzo, plugged into the root hub

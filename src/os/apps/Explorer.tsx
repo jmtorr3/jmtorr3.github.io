@@ -5,7 +5,7 @@ import { useStore } from '../../store'
 import { Icon, type IconName } from '../Icon'
 import { addMenuItems, copyText, openUrl } from '../appMenu'
 import type { MenuItem } from '../ContextMenu'
-import { CREATOR_HOME, HOME, PROJECTS_DIR, findProject, lookup, openPath, openProject, pretty, type VNode } from '../vfs'
+import { CREATOR_HOME, HOME, PROJECTS_DIR, canWrite, findProject, freshName, isText, lookup, openNotepad, openPath, openProject, pretty, useVfs, writeFile, type VNode } from '../vfs'
 
 export { findProject, openProject }
 
@@ -83,7 +83,16 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
     setSelected(null)
   }
 
+  useVfs((s) => s.version) // re-list when a file is saved or created
   const node = lookup(path)
+
+  // only in the guest's own home: the rest of the machine is read-only
+  const newTextFile = () => {
+    const full = join(path, freshName(path))
+    if (writeFile(full, '')) return
+    setSelected(full.slice(full.lastIndexOf('/') + 1))
+    openNotepad(full)
+  }
   // folders first, then files, alphabetical
   const entries = node?.type === 'dir' ? Object.entries(node.children).sort(([a, x], [b, y]) => (x.type === y.type ? a.localeCompare(b) : x.type === 'dir' ? -1 : 1)) : []
   const activate = (name: string, n: VNode) => (n.type === 'dir' && !n.project ? go(join(path, name)) : openPath(join(path, name)))
@@ -98,8 +107,10 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
         ...projectLinks(n.project),
       ]
     if (n.type === 'dir') return [{ label: 'Open', icon: 'folder', onClick: () => go(full) }]
-    const items: MenuItem[] = [{ label: 'Open', icon: n.icon, onClick: () => openPath(full) }]
-    if (n.open) items.push({ label: 'Open in KWrite', icon: 'text', onClick: () => open('textview', { key: full, title: `${name} - KWrite`, props: { path: full } }) })
+    const items: MenuItem[] = [{ label: 'Open', icon: isText(full) ? 'text' : n.icon, onClick: () => openPath(full) }]
+    // .txt opens in Notepad; the app it belongs to is the other choice (and the reverse for launchers)
+    if (n.open && isText(full)) items.push({ label: `Open in ${n.app ?? 'App'}`, icon: n.icon, onClick: n.open })
+    if (!isText(full)) items.push({ label: 'Open in Notepad', icon: 'text', onClick: () => openNotepad(full) })
     return items
   }
 
@@ -113,6 +124,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
           { label: 'Back', disabled: !back.length, onClick: goBack },
           { label: 'Up', disabled: path === '/', onClick: () => go(parent(path)) },
           { separator: true },
+          { label: 'New Text File', icon: 'text', disabled: !canWrite(path + '/x'), onClick: newTextFile },
           { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal', { props: { cwd: path } }) },
         ])
       }

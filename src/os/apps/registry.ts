@@ -8,7 +8,7 @@ import { Blog } from './Blog'
 import { Terminal } from './Terminal'
 import { Contact } from './Contact'
 import { SystemInfo } from './SystemInfo'
-import { TextView } from './TextView'
+import { Notepad } from './Notepad'
 import { Settings } from './Settings'
 
 export interface AppDef {
@@ -30,7 +30,7 @@ export const APPS = {
   terminal: { title: 'Konsole', label: 'Konsole', icon: 'terminal', size: [620, 400], component: Terminal },
   project: { title: 'Project', label: 'Project', icon: 'folder', size: [580, 540], component: ProjectViewer },
   image: { title: 'Image Viewer', label: 'Image Viewer', icon: 'image', size: [640, 480], component: ImageViewer },
-  textview: { title: 'KWrite', label: 'KWrite', icon: 'text', size: [520, 380], component: TextView },
+  notepad: { title: 'Notepad', label: 'Notepad', icon: 'text', size: [560, 400], component: Notepad },
   settings: { title: 'System Settings', label: 'Settings', icon: 'settings', size: [560, 400], component: Settings },
   system: { title: 'About This Computer', label: 'About This Computer', icon: 'computer', size: [480, 580], component: SystemInfo },
 } satisfies Record<string, AppDef>
@@ -41,4 +41,4 @@ export type AppId = keyof typeof APPS
 export const LAUNCHABLE: AppId[] = ['about', 'projects', 'skills', 'resume', 'blog', 'contact', 'terminal']
 
 // extra Start menu entries, below the apps (not on the desktop)
-export const START_EXTRAS: AppId[] = ['settings', 'system']
+export const START_EXTRAS: AppId[] = ['notepad', 'settings', 'system']

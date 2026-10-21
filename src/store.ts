@@ -60,6 +60,7 @@ interface State {
   setDesk: (w: number, h: number, scale: number) => void
   open: (app: AppId, opts?: { title?: string; props?: Record<string, unknown>; key?: string }) => void
   close: (id: string) => void
+  retitle: (id: string, title: string) => void
   focus: (id: string) => void
   minimize: (id: string) => void
   toggleMax: (id: string) => void
@@ -133,6 +134,7 @@ export const useStore = create<State>((set, get) => ({
     set((s) => ({ windows: [...s.windows, win], focused: id, topZ: z }))
   },
 
+  retitle: (id, title) => set((s) => ({ windows: s.windows.map((w) => (w.id === id && w.title !== title ? { ...w, title } : w)) })),
   close: (id) =>
     set((s) => ({
       windows: s.windows.filter((w) => w.id !== id),

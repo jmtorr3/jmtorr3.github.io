@@ -995,19 +995,89 @@ button.card:hover {
   }
 }
 
-.textview {
+.notepad {
   display: flex;
   flex-direction: column;
 }
 
-.textview-body {
+.notepad-menu {
+  display: flex;
+  gap: 2px;
+  padding: 2px 4px;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+}
+
+.notepad-menu button {
+  padding: 2px 8px;
+  background: none;
+  border: 1px solid transparent;
+  cursor: var(--cursor-pointer);
+}
+
+.notepad-menu button:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border);
+}
+
+.notepad-menu button.on {
+  color: var(--accent-bright);
+}
+
+.notepad-saveas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-card);
+}
+
+.notepad-saveas input {
   flex: 1;
-  margin: 0;
-  padding: 10px 12px;
-  overflow: auto;
-  background: var(--bg-deep);
-  white-space: pre-wrap;
+  min-width: 0;
+  padding: 3px 6px;
   font: inherit;
+  color: var(--text);
+  background: var(--bg-deep);
+  border: 1px solid var(--accent-dim);
+}
+
+.notepad-text {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 10px;
+  resize: none;
+  font: inherit;
+  line-height: 1.4;
+  color: var(--text);
+  background: var(--bg-deep);
+  border: 0;
+  outline: none;
+  cursor: var(--cursor-text);
+}
+
+.notepad-text.nowrap {
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.notepad-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* a long message shortens with … rather than pushing the line/column off */
+.notepad-status span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notepad-status span:last-child {
+  flex: none;
 }
 
 /* about this computer */
