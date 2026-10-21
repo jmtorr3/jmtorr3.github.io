@@ -5,7 +5,8 @@ import * as THREE from 'three'
 import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, CRT_OFF, type Expression } from './SlumpyFace'
-import { paintDesktop } from './screenDesktop'
+import { paintDesktop, deskTyping } from './screenDesktop'
+import { getFace } from '../os/slumpy'
 import { DURATION as ZOOM_SECONDS } from './CameraRig'
 import { useStore, isOff } from '../store'
 import { unlockAudio, playKeyClack, playCrtOn, playCrtOff, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, playUsb, speak, speakSoon } from '../os/sound'
@@ -158,6 +159,12 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     // the screen glows with the Slumpy face (black while the desktop is up)
     const face = new SlumpyFace()
     face.paintDesktop = paintDesktop // (still signed in, back in the room)
+    // and while he's signed in, the desktop stays on his screen: his reactions show
+    // on its wallpaper's Slumpy instead of his big face taking over
+    face.standIn = () => {
+      const s = useStore.getState()
+      return s.session && !isOff(s) ? getFace() : null
+    }
     face.bootLog = BOOT_LOG
     const screen = meshes[SCREEN_MESH_INDEX]
     let screenBox: THREE.Box3 | null = null
@@ -275,8 +282,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     // (the boot log stays up through the zoom into the sign-in, and under it
     // while it fades in)
     // still signed in: the desktop stays on his screen (typing at him in the room
-    // still brings up his command line)
-    if (session && !poweredOff) expr = typing && mode === 'room' ? 'prompt' : 'desktop'
+    // shows in a little Konsole on it)
+    deskTyping.on = typing && mode === 'room'
+    if (session && !poweredOff) expr = 'desktop'
     else if (mode === 'exiting' || poweredOff || (mode === 'desktop' && !booting)) expr = 'off'
     else if (booting) expr = 'boot'
     else if (mode === 'zooming') expr = 'surprised'

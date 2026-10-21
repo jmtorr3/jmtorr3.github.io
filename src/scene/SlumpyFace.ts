@@ -120,7 +120,7 @@ const UWU = ['#...#...#', '#..#.#..#', '.##...##.']
 const WAVY = ['.##...##..', '#..#.#..#.', '....#....#']
 
 // a 3×5 pixel font for the boot log (rows of 3, top to bottom; lowercase draws as uppercase)
-const FONT: Record<string, string> = {
+export const FONT: Record<string, string> = {
   A: '.#.#.#####.##.#',
   B: '##.#.###.#.###.',
   C: '.###..#..#...##',
@@ -181,7 +181,7 @@ const FONT: Record<string, string> = {
   '#': '#.#####.#####.#',
   '^': '.#.#.#.........',
 }
-const CHAR_W = 4 // 3px glyph + 1px gap
+export const CHAR_W = 4 // 3px glyph + 1px gap
 // the CRT switching on before the boot log starts (seconds): a dot, a line, the
 // whole screen lit up, then it fades out through a dither
 const CRT_ON = 0.55
@@ -264,7 +264,11 @@ export class SlumpyFace {
   // what 'prompt' shows after its "> "
   typed = ''
   // draws 'desktop' straight onto the canvas (FACE_W×FACE_H, in color)
-  paintDesktop?: (ctx: CanvasRenderingContext2D, t: number) => void
+  paintDesktop?: (ctx: CanvasRenderingContext2D, t: number, face: SlumpyFace) => void
+  // another face that's showing him right now (the desktop's, on the little desktop
+  // on this screen, still signed in): his reactions, blinks and looks go to it, and
+  // this screen stays as it is
+  standIn?: () => SlumpyFace | null
   private transparent: boolean
 
   // idle: cycle through random moods by itself (off when something else drives it)
@@ -332,14 +336,18 @@ export class SlumpyFace {
   }
 
   // Show an expression for a while, then go back to resting.
-  react(expr: Expression, seconds = 1.8) {
+  react(expr: Expression, seconds = 1.8): void {
+    const other = this.standIn?.()
+    if (other) return other.react(expr, seconds)
     if (this.shown === 'off') return
     this.reactUntil = this.t + seconds
     this.change(expr)
   }
 
   // Look toward an offset (eye px) and hold it before glancing around again.
-  glance(x: number, y: number, hold = 1.2) {
+  glance(x: number, y: number, hold = 1.2): void {
+    const other = this.standIn?.()
+    if (other) return other.glance(x, y, hold)
     this.lookTarget = { x, y }
     this.nextLookAt = this.t + hold
   }
@@ -347,7 +355,9 @@ export class SlumpyFace {
   // Keep an eye on something moving (call every frame while it moves): look
   // toward it, and drop the idle moods so the eyes are the plain ones that can
   // actually look around. Reactions and set() expressions still take priority.
-  watch(x: number, y: number) {
+  watch(x: number, y: number): void {
+    const other = this.standIn?.()
+    if (other) return other.watch(x, y)
     this.glance(x, y, 0.4)
     this.watchUntil = this.t + 0.6
     if (!this.override && !this.reactUntil && this.next !== 'neutral') this.change('neutral')
@@ -361,7 +371,9 @@ export class SlumpyFace {
   }
 
   // Blink now, `times` times in a row (arriving somewhere, waking up a bit).
-  blink(times = 1) {
+  blink(times = 1): void {
+    const other = this.standIn?.()
+    if (other) return other.blink(times)
     if (this.shown === 'off') return
     this.blinksLeft = times
     this.doubleBlink = false
@@ -1027,7 +1039,7 @@ export class SlumpyFace {
       d[i * 4 + 3] = on || !this.transparent || this.touchesOn(i) ? 255 : 0
     }
     this.ctx.putImageData(this.img, 0, 0)
-    if (expr === 'desktop' && !crt) this.paintDesktop?.(this.ctx, this.t)
+    if (expr === 'desktop' && !crt) this.paintDesktop?.(this.ctx, this.t, this)
     this.texture.needsUpdate = true
   }
 }
