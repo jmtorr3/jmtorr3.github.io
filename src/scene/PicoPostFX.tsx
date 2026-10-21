@@ -13,6 +13,8 @@ const fragmentShader = /* glsl */ `
   uniform vec2 texSize;
   uniform float aberration;   // in low-res pixels
   uniform vec3 outlineColor;
+  uniform float rainbow;      // 1 while hovered: the outline cycles colors
+  uniform float time;
   uniform vec3 bgTop;
   uniform vec3 bgBottom;
   varying vec2 vUv;
@@ -38,7 +40,22 @@ const fragmentShader = /* glsl */ `
               + step(0.75, texture2D(tDiffuse, uv - vec2(t.x, 0.0)).a)
               + step(0.75, texture2D(tDiffuse, uv + vec2(0.0, t.y)).a)
               + step(0.75, texture2D(tDiffuse, uv - vec2(0.0, t.y)).a);
-    if (hit > 0.0) { gl_FragColor = vec4(outlineColor, 1.0); return; }
+    if (hit > 0.0) {
+      vec3 col = outlineColor;
+      if (rainbow > 0.5) {
+        // PICO-8 rainbow in diagonal bands that march along the outline
+        float i = mod(floor((px.x + px.y) / 4.0 - time * 12.0), 7.0);
+        col = i < 1.0 ? vec3(1.0, 0.0, 0.302)       // red
+            : i < 2.0 ? vec3(1.0, 0.639, 0.0)       // orange
+            : i < 3.0 ? vec3(1.0, 0.925, 0.153)     // yellow
+            : i < 4.0 ? vec3(0.0, 0.894, 0.212)     // green
+            : i < 5.0 ? vec3(0.161, 0.678, 1.0)     // blue
+            : i < 6.0 ? vec3(0.514, 0.463, 0.612)   // lavender
+            :           vec3(1.0, 0.467, 0.659);    // pink
+      }
+      gl_FragColor = vec4(col, 1.0);
+      return;
+    }
 
     // background: 4 bands with a checker dither between each, like the shading
     float g = uv.y * 4.0;
@@ -78,6 +95,8 @@ export function PicoPostFX({ hovered }: { hovered: boolean }) {
         texSize: { value: new THREE.Vector2(1, 1) },
         aberration: { value: 0.5 },
         outlineColor: { value: new THREE.Color('#000000') },
+        rainbow: { value: 0 },
+        time: { value: 0 },
         bgTop: { value: new THREE.Color('#1d2b53') },
         bgBottom: { value: new THREE.Color('#0b0f22') },
       },
@@ -97,12 +116,13 @@ export function PicoPostFX({ hovered }: { hovered: boolean }) {
   }, [size, target, post])
 
   useEffect(() => {
-    post.material.uniforms.outlineColor.value.set(hovered ? '#ffec27' : '#000000')
+    post.material.uniforms.rainbow.value = hovered ? 1 : 0
   }, [hovered, post])
 
   useEffect(() => () => target.dispose(), [target])
 
-  useFrame(() => {
+  useFrame((state) => {
+    post.material.uniforms.time.value = state.clock.elapsedTime
     gl.setRenderTarget(target)
     gl.setClearColor(0x000000, 0)
     gl.clear()

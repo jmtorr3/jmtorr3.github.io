@@ -5,9 +5,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Jorge Manuel Torre</title>
     <link rel="icon" href="/favicon.ico" />
-    
+    <style>
+      /* Boot screen: shown instantly, before the (large) app bundle loads.
+         Slumpy's "loading" face, drawn by the little script below. */
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 1000000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        background: #0b0f22;
+        transition: opacity 0.45s;
+      }
+      #boot.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #boot canvas {
+        width: min(60vw, 300px);
+        aspect-ratio: 5 / 4;
+        image-rendering: pixelated;
+        background: #04060a;
+        border: 6px solid #1c3050;
+        box-shadow: 0 0 24px rgb(74 175 212 / 0.15);
+      }
+      #boot p {
+        margin: 0;
+        color: #4aafd4;
+        font: 14px monospace;
+        letter-spacing: 2px;
+      }
+    </style>
   </head>
   <body>
+    <div id="boot" role="progressbar" aria-label="Loading">
+      <canvas width="100" height="80"></canvas>
+      <p>loading slumpy…</p>
+    </div>
+    <script>
+      // Same pixels as SlumpyFace's 'loading' expression: a progress bar with a
+      // spinner above it, and a smile when it's done. The app calls
+      // window.__bootDone() once the 3D scene is up.
+      ;(() => {
+        const boot = document.getElementById('boot')
+        const ctx = boot.querySelector('canvas').getContext('2d')
+        const SMILE = ['#........#', '##......##', '.########.', '..######..']
+        const W = 100, H = 80, cx = 50, cy = 38
+        const start = performance.now()
+        let progress = 0, ready = false, doneAt = 0
+        window.__bootDone = () => (ready = true)
+        setTimeout(() => (ready = true), 20000) // never stay up forever
+        const frame = (now) => {
+          const t = (now - start) / 1000
+          // creep toward 90% while waiting, then run to the end
+          const target = ready ? 1 : 0.9 * (1 - Math.exp(-t / 2.5))
+          progress += (target - progress) * (ready ? 0.15 : 0.08)
+          ctx.fillStyle = '#040406'
+          ctx.fillRect(0, 0, W, H)
+          ctx.fillStyle = '#ebebf0'
+          const r = (x, y, w, h) => ctx.fillRect(Math.round(x), Math.round(y), w, h)
+          r(cx - 30, cy - 5, 60, 2)
+          r(cx - 30, cy + 5, 60, 2)
+          r(cx - 30, cy - 5, 2, 12)
+          r(cx + 28, cy - 5, 2, 12)
+          r(cx - 27, cy - 2, Math.round(54 * Math.min(1, progress)), 6)
+          if (progress < 0.995) {
+            const step = Math.floor(t * 10) % 8
+            for (let i = 0; i < 8; i++) {
+              if (i === step) continue
+              const a = (i / 8) * Math.PI * 2
+              r(cx + Math.cos(a) * 6 - 1, cy - 20 + Math.sin(a) * 6 - 1, 2, 2)
+            }
+          } else {
+            SMILE.forEach((row, j) => [...row].forEach((c, i) => c === '#' && r(cx - 5 + i, cy + 15 + j, 1, 1)))
+            if (!doneAt) doneAt = now
+            if (now - doneAt > 400) {
+              boot.classList.add('done')
+              setTimeout(() => boot.remove(), 500)
+              return
+            }
+          }
+          requestAnimationFrame(frame)
+        }
+        requestAnimationFrame(frame)
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

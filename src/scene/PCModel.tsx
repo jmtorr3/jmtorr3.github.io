@@ -143,12 +143,16 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     }
   }, [model])
 
+  // the boot screen in index.html waits for the scene: a couple of frames in,
+  // the model is loaded and its shaders compiled, so it can go
+  const framesDrawn = useRef(0)
   const corner = useRef(new THREE.Vector3())
   const raycaster = useRef(new THREE.Raycaster())
   const jolt = useRef(0) // seconds of shake left (fan easter egg)
   const clockRef = useRef(0)
   useFrame(({ clock, camera, pointer }, dt) => {
     clockRef.current = clock.elapsedTime
+    if (++framesDrawn.current === 3) (window as { __bootDone?: () => void }).__bootDone?.()
     // a little shudder after the fan goes off
     if (jolt.current > 0) {
       jolt.current = Math.max(0, jolt.current - dt)
