@@ -81,6 +81,51 @@ a:hover {
   touch-action: none;
 }
 
+/* fullscreen toggle, bottom-right of the browser window (FullscreenButton) */
+.fs-corner {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 100001; /* over the desktop and its CRT overlay */
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  /* the whole corner catches the hover that brings a faded button back */
+  width: 96px;
+  height: 96px;
+  padding: 12px;
+}
+
+.fs-corner.above-taskbar {
+  bottom: var(--taskbar-h, 48px);
+}
+
+.fs-btn {
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  color: var(--accent-bright);
+  background: rgb(13 21 32 / 0.8);
+  border: 1px solid var(--accent-dim);
+  cursor: var(--cursor-pointer);
+  transition:
+    opacity 0.4s,
+    border-color 0.2s;
+}
+
+.fs-btn:hover {
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.fs-btn.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .hint {
   position: fixed;
   left: 50%;
@@ -607,6 +652,10 @@ button.card:hover {
   flex: 0 0 auto !important;
 }
 
+.btn.nav {
+  padding: 2px 8px;
+}
+
 .address {
   flex: 1;
   padding: 3px 8px;
@@ -911,6 +960,21 @@ button.card:hover {
   .login-caret {
     animation: none;
   }
+}
+
+.textview {
+  display: flex;
+  flex-direction: column;
+}
+
+.textview-body {
+  flex: 1;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  background: #0a1018;
+  white-space: pre-wrap;
+  font: inherit;
 }
 
 /* about this computer */

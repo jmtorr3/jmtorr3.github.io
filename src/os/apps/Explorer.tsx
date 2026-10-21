@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
-import { projects, slugOf, type Project } from '../../data/projects'
+import { slugOf, type Project } from '../../data/projects'
+import { profile } from '../../data/profile'
 import { useStore } from '../../store'
-import { Icon } from '../Icon'
+import { Icon, type IconName } from '../Icon'
 import { addMenuItems, copyText, openUrl } from '../appMenu'
 import type { MenuItem } from '../ContextMenu'
+import { CREATOR_HOME, HOME, PROJECTS_DIR, findProject, lookup, openPath, openProject, pretty, type VNode } from '../vfs'
+
+export { findProject, openProject }
 
 // a project's outside links, for right-click menus
 function projectLinks(p: Project): MenuItem[] {
@@ -16,122 +20,151 @@ function projectLinks(p: Project): MenuItem[] {
   return items
 }
 
-export function findProject(slug: string) {
-  return projects.find((p) => slugOf(p) === slug)
-}
-
-export function openProject(slug: string) {
-  const p = findProject(slug)
-  if (!p) return false
-  useStore.getState().open('project', { key: slug, title: p.title, props: { slug } })
-  return true
-}
-
 export function openImage(slug: string, index: number) {
   const p = findProject(slug)
   if (!p?.images?.[index]) return
   useStore.getState().open('image', { key: slug, title: `${p.title} - Images`, props: { slug, index } })
 }
 
-const FOLDERS = [
-  { id: 'projects', label: 'Projects' },
-  { id: 'other', label: 'Other' },
-] as const
+const PLACES: { label: string; icon: IconName; path: string }[] = [
+  { label: 'Home', icon: 'user', path: HOME },
+  { label: 'Desktop', icon: 'computer', path: `${HOME}/Desktop` },
+  { label: profile.creator, icon: 'folder', path: CREATOR_HOME },
+  { label: 'Projects', icon: 'folder', path: PROJECTS_DIR },
+  { label: 'Other', icon: 'folder', path: `${CREATOR_HOME}/other` },
+]
 
+const TOUCH = matchMedia('(pointer: coarse)').matches
+const join = (dir: string, name: string) => (dir === '/' ? `/${name}` : `${dir}/${name}`)
+const parent = (path: string) => path.slice(0, path.lastIndexOf('/')) || '/'
+
+// Dolphin: browses the machine's filesystem (the same one the Konsole sees).
+// Folders open in place, except a project's folder, which opens its page;
+// files open with whatever they belong to (see vfs.openPath).
 export function Explorer({ props }: { props?: Record<string, unknown> }) {
-  const [folder, setFolder] = useState<'projects' | 'other'>((props?.folder as 'other') ?? 'projects')
+  const [path, setPath] = useState((props?.path as string) ?? PROJECTS_DIR)
+  const [back, setBack] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const open = useStore((s) => s.open)
-  const items = projects.filter((p) => (p.folder ?? 'projects') === folder)
-  const sel = items.find((p) => slugOf(p) === selected)
+
+  const go = (to: string) => {
+    setPath((from) => {
+      if (from !== to) setBack((b) => [...b, from])
+      return to
+    })
+    setSelected(null)
+  }
+  // opening a folder from elsewhere (the Konsole, another window) navigates here
+  useEffect(() => {
+    if (props?.path) go(props.path as string)
+  }, [props?.path])
+
+  const goBack = () => {
+    const prev = back[back.length - 1]
+    if (!prev) return
+    setBack(back.slice(0, -1))
+    setPath(prev)
+    setSelected(null)
+  }
+
+  const node = lookup(path)
+  // folders first, then files, alphabetical
+  const entries = node?.type === 'dir' ? Object.entries(node.children).sort(([a, x], [b, y]) => (x.type === y.type ? a.localeCompare(b) : x.type === 'dir' ? -1 : 1)) : []
+  const activate = (name: string, n: VNode) => (n.type === 'dir' && !n.project ? go(join(path, name)) : openPath(join(path, name)))
+  const sel = entries.find(([name]) => name === selected)?.[1]
+
+  const itemMenu = (name: string, n: VNode): MenuItem[] => {
+    const full = join(path, name)
+    if (n.type === 'dir' && n.project)
+      return [
+        { label: 'Open', icon: 'folder', onClick: () => openProject(slugOf(n.project!)) },
+        { label: 'Open Folder', icon: 'folder', onClick: () => go(full) },
+        ...projectLinks(n.project),
+      ]
+    if (n.type === 'dir') return [{ label: 'Open', icon: 'folder', onClick: () => go(full) }]
+    const items: MenuItem[] = [{ label: 'Open', icon: n.icon, onClick: () => openPath(full) }]
+    if (n.open) items.push({ label: 'Open in KWrite', icon: 'text', onClick: () => open('textview', { key: full, title: `${name} - KWrite`, props: { path: full } }) })
+    return items
+  }
 
   return (
     <div
       className="explorer"
       onContextMenu={(e) =>
-        // a folder's own menu is enough when one was clicked
+        // an item's own menu is enough when one was clicked
         !(e.target as Element).closest('.file') &&
         addMenuItems(e, [
-          ...FOLDERS.map((f) => ({
-            label: f.label,
-            icon: 'folder' as const,
-            checked: folder === f.id,
-            onClick: () => {
-              setFolder(f.id)
-              setSelected(null)
-            },
-          })),
+          { label: 'Back', disabled: !back.length, onClick: goBack },
+          { label: 'Up', disabled: path === '/', onClick: () => go(parent(path)) },
           { separator: true },
-          { label: 'Open Konsole', icon: 'terminal', onClick: () => open('terminal') },
+          { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal', { props: { cwd: path } }) },
         ])
       }
     >
       <div className="toolbar">
+        <button className="btn nav" onClick={goBack} disabled={!back.length} aria-label="Back">
+          ◀
+        </button>
+        <button className="btn nav" onClick={() => go(parent(path))} disabled={path === '/'} aria-label="Up">
+          ▲
+        </button>
         <div className="address">
-          <span className="nf accent">{''}</span> ~/{folder}
+          <span className="nf accent">{'\uf07c'}</span> {pretty(path)}
         </div>
       </div>
       <div className="explorer-main">
         <aside className="places">
           <div className="places-title">Places</div>
-          <button onClick={() => open('about')}>
-            <Icon name="user" size={16} /> Home
-          </button>
-          {FOLDERS.map((f) => (
-            <button
-              key={f.id}
-              className={folder === f.id ? 'active' : ''}
-              onClick={() => {
-                setFolder(f.id)
-                setSelected(null)
-              }}
-            >
-              <Icon name="folder" size={16} /> {f.label}
+          {PLACES.map((pl) => (
+            <button key={pl.path} className={path === pl.path ? 'active' : ''} onClick={() => go(pl.path)}>
+              <Icon name={pl.icon} size={16} /> {pl.label}
             </button>
           ))}
-          <button onClick={() => open('terminal')}>
-            <Icon name="terminal" size={16} /> Terminal
+          <button onClick={() => open('terminal', { props: { cwd: path } })}>
+            <Icon name="terminal" size={16} /> Konsole
           </button>
         </aside>
         <div className="files" onClick={() => setSelected(null)}>
-          {items.map((p) => {
-            const slug = slugOf(p)
-            return (
-              <button
-                key={slug}
-                className={`file ${selected === slug ? 'selected' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelected(slug)
-                  if (matchMedia('(pointer: coarse)').matches) openProject(slug)
-                }}
-                onDoubleClick={() => openProject(slug)}
-                onContextMenu={(e) => {
-                  setSelected(slug)
-                  addMenuItems(e, [{ label: 'Open', icon: 'folder', onClick: () => openProject(slug) }, ...projectLinks(p)])
-                }}
-              >
-                <FolderIcon p={p} />
-                <span>{p.title}</span>
-              </button>
-            )
-          })}
+          {entries.map(([name, n]) => (
+            <button
+              key={name}
+              className={`file ${selected === name ? 'selected' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation()
+                setSelected(name)
+                if (TOUCH) activate(name, n)
+              }}
+              onDoubleClick={() => activate(name, n)}
+              onContextMenu={(e) => {
+                setSelected(name)
+                addMenuItems(e, itemMenu(name, n))
+              }}
+            >
+              {n.type === 'dir' ? <FolderIcon p={n.project} /> : <Icon name={n.icon} size={40} />}
+              <span>{name}</span>
+            </button>
+          ))}
+          {node?.type !== 'dir' && <p className="muted">{pretty(path)}: no such folder</p>}
         </div>
       </div>
       <div className="statusbar">
-        {sel ? `${sel.title} — ${sel.subtitle}` : `${items.length} items · ${matchMedia('(pointer: coarse)').matches ? 'tap' : 'double-click'} to open`}
+        {sel?.type === 'dir' && sel.project
+          ? `${sel.project.title} — ${sel.project.subtitle}`
+          : selected
+            ? selected
+            : `${entries.length} items · ${TOUCH ? 'tap' : 'double-click'} to open`}
       </div>
     </div>
   )
 }
 
-// a folder with the project's logo tucked into it
-function FolderIcon({ p }: { p: Project }) {
+// a folder, with the project's logo tucked into it if it's a project
+function FolderIcon({ p }: { p?: Project }) {
   const [failed, setFailed] = useState(false)
   return (
     <span className="folder-icon">
       <Icon name="folder" size={40} />
-      {p.logo && !failed && <img src={p.logo} alt="" onError={() => setFailed(true)} />}
+      {p?.logo && !failed && <img src={p.logo} alt="" onError={() => setFailed(true)} />}
     </span>
   )
 }

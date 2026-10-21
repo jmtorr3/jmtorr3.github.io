@@ -1,97 +1,16 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { profile } from '../../data/profile'
-import { education, coursework } from '../../data/about'
-import { resumes } from '../../data/resume'
-import { contactLinks } from '../../data/contact'
-import { projects, slugOf, type Project } from '../../data/projects'
-import { skillGroups } from '../../data/skills'
+import { projects, slugOf } from '../../data/projects'
 import { useStore, slumpyLocation } from '../../store'
-import { plain } from '../richText'
 import { LAUNCHABLE, type AppId } from './registry'
-import { openProject } from './Explorer'
+import { CREATOR_HOME, lookup, openPath, openProject, pretty, resolve } from '../vfs'
 import type { Expression } from '../../scene/SlumpyFace'
 import { useSlumpy } from '../slumpy'
 import { SlumpyCam, type SlumpyControl } from '../SlumpyCam'
 import { addMenuItems } from '../appMenu'
 import { playFaceSound } from '../sound'
 
-// tiny virtual filesystem built from src/data
-type Node = { type: 'file'; text: string } | { type: 'dir'; children: Record<string, Node> }
-
-const HOME = `/home/${profile.user}` // the visitor's (guest's) home: ~
-const CREATOR_HOME = `/home/${profile.creator}` // where the content lives, and where the Konsole starts
-const file = (text: string): Node => ({ type: 'file', text })
-const dir = (children: Record<string, Node>): Node => ({ type: 'dir', children })
-
-const readme = (p: Project) =>
-	[
-		`${p.title} — ${p.subtitle}`,
-		`${p.date}${p.stat ? ` · ${p.stat}` : ''}`,
-		`[${p.tech.join(', ')}]`,
-		'',
-		...p.bullets.map((b) => `* ${b}`),
-		'',
-		...[p.github && `github: ${p.github}`, p.demo && `${(p.demoLabel ?? 'demo').toLowerCase()}: ${p.demo}`]
-			.concat(p.links?.map((l) => `${l.label.toLowerCase()}: ${l.href}`) ?? [])
-			.filter(Boolean),
-	].join('\n')
-
-const projectDir = (folder: 'projects' | 'other') =>
-	dir(
-		Object.fromEntries(
-			projects
-				.filter((p) => (p.folder ?? 'projects') === folder)
-				.map((p) => [slugOf(p), dir({ 'README.txt': file(readme(p)) })]),
-		),
-	)
-
-const FS: Node = dir({
-	home: dir({
-		[profile.user]: dir({
-			'readme.txt': file(
-				`you're a guest on ${profile.host}. ${profile.creator}'s stuff is in ${CREATOR_HOME}:\n  cd ${CREATOR_HOME}`,
-			),
-		}),
-		[profile.creator]: dir({
-			'about.txt': file(
-				[
-					`${profile.name} — ${profile.role}`,
-					`based in ${profile.location}`,
-					'',
-					plain(profile.bio),
-					'',
-					`${education.degree}, ${education.school} (${education.date})`,
-					...coursework.map((c) => `  - ${c}`),
-				].join('\n'),
-			),
-			'skills.txt': file(skillGroups.map((g) => `${g.category}:\n  ${g.skills.map((s) => s.name).join(', ')}`).join('\n\n')),
-			'contact.txt': file(contactLinks.map((l) => `${l.label.padEnd(9)} ${l.value}`).join('\n')),
-			resume: dir(Object.fromEntries(resumes.map((r) => [r.file.split('/').pop()!, file(`${r.title}\n${r.blurb}\n\nopen ${r.file}`)]))),
-			projects: projectDir('projects'),
-			other: projectDir('other'),
-		}),
-	}),
-})
-
-function resolve(cwd: string, path = ''): string {
-	const raw = path.startsWith('~') ? HOME + path.slice(1) : path.startsWith('/') ? path : `${cwd}/${path}`
-	const parts: string[] = []
-	for (const seg of raw.split('/')) {
-		if (!seg || seg === '.') continue
-		if (seg === '..') parts.pop()
-		else parts.push(seg)
-	}
-	return '/' + parts.join('/')
-}
-
-function lookup(path: string): Node | null {
-	let node: Node = FS
-	for (const seg of path.split('/').filter(Boolean)) {
-		if (node.type !== 'dir' || !node.children[seg]) return null
-		node = node.children[seg]
-	}
-	return node
-}
+// the filesystem (shared with Dolphin) lives in ../vfs
 
 // greetings, questions and chatty sentences: people try talking to the terminal
 const GREETING = /^(hi+|hello+|hey+|yo+|sup|hiya|howdy|hola|greetings|good (morning|afternoon|evening|night)|what'?s up|wassup)\b/i
@@ -180,7 +99,6 @@ function reactionFor(cmdline: string, out: string | null): Expression | null {
 	return REACTIONS[line.split(/\s+/)[0]] ?? 'confused'
 }
 
-const pretty = (path: string) => (path.startsWith(HOME) ? '~' + path.slice(HOME.length) : path)
 
 // a function, not a const: LAUNCHABLE isn't initialized yet when this module loads (circular import)
 const help = () => `available commands:
@@ -191,6 +109,7 @@ const help = () => `available commands:
   pwd, whoami, date, echo, clear
   open <app>        open a window: ${LAUNCHABLE.join(', ')}
   open <project>    open a project by folder name
+  open <path>       open a file or folder, like double-clicking it
   neofetch          system info
   ${profile.host.padEnd(18)}say hi to ${profile.host}
   (Tab completes commands, files and app names)
@@ -202,8 +121,12 @@ interface Line {
 	cwd?: string
 }
 
-export function Terminal({ winId }: { winId: string }) {
-	const [cwd, setCwd] = useState(CREATOR_HOME)
+export function Terminal({ winId, props }: { winId: string; props?: Record<string, unknown> }) {
+	// "Open Konsole Here" passes a folder to start in
+	const [cwd, setCwd] = useState(() => (props?.cwd as string) ?? CREATOR_HOME)
+	useEffect(() => {
+		if (props?.cwd) setCwd(props.cwd as string)
+	}, [props?.cwd])
 	const [lines, setLines] = useState<Line[]>(() => [{ kind: 'out', text: greeting() }])
 	const [input, setInput] = useState('')
 	const [history, setHistory] = useState<string[]>([])
@@ -315,7 +238,9 @@ export function Terminal({ winId }: { winId: string }) {
 				const node = lookup(resolve(cwd, arg))
 				if (!node) return `ls: cannot access '${arg}': No such file or directory`
 				if (node.type === 'file') return arg ?? ''
+				// alphabetical, like real ls (and Dolphin)
 				return Object.entries(node.children)
+					.sort(([a], [b]) => a.localeCompare(b))
 					.map(([name, n]) => (n.type === 'dir' ? `${name}/` : name))
 					.join('  ')
 			}
@@ -341,7 +266,9 @@ export function Terminal({ winId }: { winId: string }) {
 					return `opening ${arg}...`
 				}
 				if (openProject(arg)) return `opening ${arg}...`
-				return `open: ${arg}: not found. try "ls ~/projects"`
+				// any file or folder, same as double-clicking it in Dolphin
+				if (openPath(resolve(cwd, arg))) return `opening ${arg}...`
+				return `open: ${arg}: not found. try "ls"`
 			}
 			case 'neofetch': {
 				const art = ['   ▄▄▄▄▄▄▄', '   █ ▀▀▀ █', '   █▄▄▄▄▄█', '    ▄▄█▄▄', '  ▄▀▀▀▀▀▀▀▄', '  ▀▀▀▀▀▀▀▀▀']

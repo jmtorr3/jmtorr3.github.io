@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { resumes, resumeIntro } from '../../data/resume'
 import { addMenuItems, download, openUrl } from '../appMenu'
 
-export function Resume() {
-  const [active, setActive] = useState(resumes[0].id)
+// props.resume picks a version (opening one of the PDFs in Dolphin or the Konsole)
+export function Resume({ props }: { props?: Record<string, unknown> }) {
+  const [active, setActive] = useState((props?.resume as string) ?? resumes[0].id)
+  useEffect(() => {
+    if (props?.resume) setActive(props.resume as string)
+  }, [props?.resume])
   const r = resumes.find((x) => x.id === active) ?? resumes[0]
 
   return (

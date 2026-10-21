@@ -16,6 +16,7 @@ import { Window } from './Window'
 import { Taskbar } from './Taskbar'
 import { Snow } from './Snow'
 import { FaceScreen } from './FaceScreen'
+import { HOME } from './vfs'
 import { useDesktopIcons } from './useDesktopIcons'
 import { playPowerOn, playPowerOff, playClick, useSound } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
@@ -194,7 +195,7 @@ export function Desktop() {
   const menuAt = menu && deskRect ? { x: (menu.clientX - deskRect.left) / scale, y: (menu.clientY - deskRect.top) / scale } : null
 
   const desktopMenu: MenuItem[] = [
-    { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal') },
+    { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal', { props: { cwd: `${HOME}/Desktop` } }) },
     { separator: true },
     { label: 'Arrange Icons', icon: 'folder', onClick: icons.arrange },
     { label: 'Refresh', icon: 'computer', onClick: () => setRefreshes((n) => n + 1) },
