@@ -18,6 +18,25 @@ body,
   touch-action: manipulation;
   /* long-press opens the site's own menu (os/longPress.ts), not iOS's callout */
   -webkit-touch-callout: none;
+  /* no grey/blue flash over whatever a finger presses (Android, older iOS) */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* phones: a long press means right-click here (os/longPress.ts), so it shouldn't
+   also start selecting text. Text fields still select, for editing; with a mouse
+   everything can still be selected and copied. */
+@media (pointer: coarse) {
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable='true'] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 /* the default pixel arrow. Only on html, so the cursor the room sets on body
