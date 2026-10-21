@@ -37,8 +37,9 @@ export function Scene() {
         <DustPuff />
       </Suspense>
       <CameraRig />
-      {/* off: only the power button lights him up (not the keyboard or mouse) */}
-      <PicoPostFX hovered={(TOUCH || hovered !== null) && mode === 'room' && !(off && hovered === 'prop')} />
+      {/* off: only the power button lights him up (not the keyboard or mouse), and
+          on touch, where the outline is always on, it goes away until he's back on */}
+      <PicoPostFX hovered={mode === 'room' && (TOUCH ? !off : hovered !== null && !(off && hovered === 'prop'))} />
     </Canvas>
   )
 }
