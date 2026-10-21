@@ -10,7 +10,7 @@ import { makeBrainWire } from './BrainWire'
 import { makeBrainBuddy } from './BrainBuddy'
 import { makeBrainRoom, type BrainRoom } from './BrainRoom'
 import { SOLIDS } from './pcSolids'
-import { grabState } from './deskProps'
+import { grabState, deskPropMeshes } from './deskProps'
 import { restoreCursor } from './cursor'
 import { poofAt } from './DustPuff'
 
@@ -208,6 +208,7 @@ const B = {
   looseSince: 0, // (clock seconds) let go of then (lying about, twitching)
   enter: { from: new THREE.Vector3(), t: 0 },
   target: null as THREE.Vector3 | null, // where it's walking to
+  via: null as THREE.Vector3 | null, // going round the keyboard or mouse on the way: this corner first
   pauseUntil: 0, // (clock seconds) standing still, looking about, until then
   walk: 0, // 0 standing .. 1 walking
   phase: 0, // its step cycle
@@ -256,6 +257,30 @@ const QZ = new THREE.Quaternion()
 const PC_CENTER = new THREE.Vector3(0.56, 0, 0.95)
 // (and it walks round the PC, not through it)
 const FOOTPRINT = { x0: -0.125 - 0.3, x1: 1.25 + 0.3, z0: 0.4375 - 0.3, z1: 1.5 + 0.3 }
+// and round the keyboard and mouse (wherever they've been put), this far clear of them
+const PROP_CLEAR = 0.2
+// their footprints on the desk, grown by that (updated each frame: see propBoxes)
+const propBoxes: THREE.Box3[] = []
+const updatePropBoxes = () => {
+  deskPropMeshes.forEach((m, i) => {
+    const box = (propBoxes[i] ??= new THREE.Box3())
+    if (!m.visible) return box.makeEmpty() // (mid-poof)
+    box.setFromObject(m)
+  })
+  propBoxes.length = deskPropMeshes.length
+}
+const inBox = (b: THREE.Box3, x: number, z: number, grow: number) =>
+  !b.isEmpty() && x > b.min.x - grow && x < b.max.x + grow && z > b.min.z - grow && z < b.max.z + grow
+const inProp = (x: number, z: number, grow = PROP_CLEAR) => propBoxes.some((b) => inBox(b, x, z, grow))
+// (one it's already too close to doesn't count: it's on its way away from it)
+const crossesProp = (a: THREE.Vector3, b: THREE.Vector3) => {
+  const grow = PROP_CLEAR - 0.01
+  for (const box of propBoxes) {
+    if (inBox(box, a.x, a.z, grow)) continue
+    for (let i = 1; i <= 20; i++) if (inBox(box, a.x + ((b.x - a.x) * i) / 20, a.z + ((b.z - a.z) * i) / 20, grow)) return true
+  }
+  return false
+}
 const crossesPC = (a: THREE.Vector3, b: THREE.Vector3) => {
   for (let i = 0; i <= 20; i++) {
     const x = a.x + ((b.x - a.x) * i) / 20
@@ -475,7 +500,8 @@ export function Brain() {
   // way (and, falling, losing most of its speed that way)
   const collide = (p: THREE.Vector3, vel: THREE.Vector3 | null) => {
     collideDoor(p, vel)
-    for (const box of SOLIDS) {
+    for (const box of [...SOLIDS, ...propBoxes]) {
+      if (box.isEmpty()) continue
       if (p.x < box.min.x - RADIUS || p.x > box.max.x + RADIUS || p.y < box.min.y - RADIUS || p.y > box.max.y + RADIUS || p.z < box.min.z - RADIUS || p.z > box.max.z + RADIUS) continue
       const pushes: [number, 'x' | 'y' | 'z', number][] = [
         [p.x - (box.min.x - RADIUS), 'x', -1],
@@ -491,6 +517,56 @@ export function Brain() {
         if (Math.abs(vel[axis]) > 1) playLand('mouse', Math.abs(vel[axis]) * 0.5)
         vel[axis] *= -0.3
       }
+    }
+  }
+  // walking somewhere with the keyboard or mouse in the way: round the corner of it
+  // that makes the shortest way there (kept while it's still clear, so it doesn't
+  // dither between two), then on
+  const corner = useMemo(() => new THREE.Vector3(), [])
+  const detour = (p: THREE.Vector3, target: THREE.Vector3) => {
+    if (!crossesProp(p, target)) {
+      B.via = null
+      return target
+    }
+    if (B.via && Math.hypot(B.via.x - p.x, B.via.z - p.z) > 0.04 && !crossesProp(p, B.via) && !inProp(B.via.x, B.via.z, PROP_CLEAR - 0.01)) return B.via
+    let best: THREE.Vector3 | null = null
+    let bestLen = Infinity
+    const grow = PROP_CLEAR + 0.03
+    for (const box of propBoxes) {
+      if (box.isEmpty()) continue
+      for (const [x, z] of [
+        [box.min.x - grow, box.min.z - grow],
+        [box.max.x + grow, box.min.z - grow],
+        [box.max.x + grow, box.max.z + grow],
+        [box.min.x - grow, box.max.z + grow],
+      ]) {
+        corner.set(x, 0, z)
+        // (not the one it's at: it's been there)
+        if (Math.hypot(x - p.x, z - p.z) < 0.06 || inProp(x, z, PROP_CLEAR - 0.01) || crossesProp(p, corner) || crossesPC(p, corner)) continue
+        const len = Math.hypot(x - p.x, z - p.z) + Math.hypot(target.x - x, target.z - z) + (crossesProp(corner, target) ? 0.5 : 0)
+        if (len < bestLen) {
+          bestLen = len
+          best = (best ?? new THREE.Vector3()).copy(corner)
+        }
+      }
+    }
+    B.via = best
+    return best ?? target // (boxed in: just goes)
+  }
+  // one put down right where it's standing: it steps out from under it
+  const stepOffProps = (p: THREE.Vector3, dt: number) => {
+    for (const box of propBoxes) {
+      if (box.isEmpty()) continue
+      const g = PROP_CLEAR * 0.6
+      if (p.x < box.min.x - g || p.x > box.max.x + g || p.z < box.min.z - g || p.z > box.max.z + g) continue
+      const outs: [number, 'x' | 'z', number][] = [
+        [p.x - (box.min.x - g), 'x', -1],
+        [box.max.x + g - p.x, 'x', 1],
+        [p.z - (box.min.z - g), 'z', -1],
+        [box.max.z + g - p.z, 'z', 1],
+      ]
+      const [depth, axis, dir] = outs.reduce((a, b) => (b[0] < a[0] ? b : a))
+      p[axis] += dir * Math.min(depth, dt * 0.8)
     }
   }
   // the door's a tilted thin box: work in its own space
@@ -544,6 +620,7 @@ export function Brain() {
     // again once everything's loaded, which would show it (and its cable), unplaced,
     // at the middle of the room
     if (B.mode === 'inside') g.visible = false
+    updatePropBoxes()
     inside.copy(hatch.center).setZ(hatch.center.z - 0.25)
     if (pending.current) {
       pending.current = false
@@ -704,13 +781,16 @@ export function Brain() {
               const a = Math.random() * Math.PI * 2
               const r = THREE.MathUtils.lerp(ROAM.near, ROAM.far, Math.random())
               const to = new THREE.Vector3(PC_CENTER.x + Math.cos(a) * r, 0, PC_CENTER.z + Math.sin(a) * r)
-              if (!crossesPC(p, to)) B.target = to
+              if (!crossesPC(p, to) && !inProp(to.x, to.z)) B.target = to
             }
         }
+        // the keyboard or mouse put down where it was going: somewhere else, then
+        if (B.goal === 'roam' && B.target && inProp(B.target.x, B.target.z, PROP_CLEAR - 0.01)) B.target = B.via = null
         if (B.target && now > B.pauseUntil) {
-          const dx = B.target.x - p.x
-          const dz = B.target.z - p.z
-          const d = Math.hypot(dx, dz)
+          const goal = detour(p, B.target)
+          const dx = goal.x - p.x
+          const dz = goal.z - p.z
+          const d = Math.max(1e-6, Math.hypot(dx, dz))
           // turns to face the way first (shuffling round), then sets off
           turning = turnTo(Math.atan2(dx, dz), 5)
           walking = turning < 0.5
@@ -721,6 +801,7 @@ export function Brain() {
           }
         } else turning = turnTo(atYou + Math.sin(now * 1.3) * 0.3, 3) // stopped: a look at you
         if (B.goal === 'roam') collide(p, null)
+        stepOffProps(p, dt)
       } else if (B.goal === 'climb') {
         // facing the monitor, hand over hand up its back to the hatch (rising with each
         // pull); opens it if it's shut

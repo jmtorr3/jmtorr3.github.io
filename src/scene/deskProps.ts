@@ -9,6 +9,10 @@ import type { DeviceKind } from '../data/devices'
 // while something is held, the camera doesn't orbit (CameraRig checks this)
 export const grabState = { active: false }
 
+// the keyboard and mouse themselves, wherever they are now (the brain gets out of
+// their way: see Brain)
+export const deskPropMeshes: THREE.Object3D[] = []
+
 const LIFT = 0.45 // how high a held prop floats above the desk
 const MAX_LIFT = 1.4 // how high it can be raised when moving it up and down
 // a knock only plays if the prop hasn't touched the PC for this long (seconds),
@@ -68,6 +72,7 @@ export class DeskProps {
   // obstacle: the PC's footprint. Props can't go into it, and they can't go further
   // back than its middle (the PC faces -z), so they never end up behind it.
   constructor(items: { mesh: THREE.Object3D; kind: PropKind }[], private obstacle: THREE.Box3, private center: THREE.Vector3) {
+    deskPropMeshes.splice(0, deskPropMeshes.length, ...items.map((i) => i.mesh))
     this.props = items.map(({ mesh, kind }) => {
       const box = new THREE.Box3().setFromObject(mesh)
       // Blockbench puts the pivot at a corner: move it to the middle, so tilting

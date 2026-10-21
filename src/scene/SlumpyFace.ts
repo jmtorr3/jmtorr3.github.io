@@ -312,7 +312,8 @@ export class SlumpyFace {
       this.onChange?.('wake')
       this.open = 0
       this.closing = false
-      if (!this.transparent) {
+      // (the desktop's on already: it doesn't flash on again in the room)
+      if (!this.transparent && expr !== 'desktop') {
         if (expr !== 'boot') this.crt = { kind: 'on', at: this.t }
         this.onCrt?.('on')
       }

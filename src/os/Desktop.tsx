@@ -26,6 +26,7 @@ import { ContextMenu, type MenuItem } from './ContextMenu'
 import { LoginScreen } from './LoginScreen'
 
 const COARSE = matchMedia('(pointer: coarse)').matches
+const PINCH_OUT = 0.6 // fingers pinched in to this much of how far apart they started: back to the room
 
 
 const readViewport = () => {
@@ -259,6 +260,42 @@ export function Desktop() {
     const who = `${profile.user}@${profile.host}`
     document.title = focusedApp ? `${who}: ${APPS[focusedApp].label}` : who
   }, [focusedApp])
+  // phones: pinching in (two fingers coming together, like zooming out) steps back
+  // out to the room, still signed in, like clicking round the screen does (see stepAway).
+  // (The page itself never zooms.)
+  useEffect(() => {
+    if (!COARSE) return
+    let start = 0
+    const spread = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY)
+    const down = (e: TouchEvent) => {
+      if (e.touches.length === 2) start = spread(e.touches)
+    }
+    const move = (e: TouchEvent) => {
+      if (e.touches.length !== 2 || !start) return
+      e.preventDefault()
+      if (spread(e.touches) < start * PINCH_OUT) {
+        start = 0
+        useStore.getState().stepAway()
+      }
+    }
+    const up = (e: TouchEvent) => {
+      if (e.touches.length < 2) start = 0
+    }
+    const noZoom = (e: Event) => e.preventDefault() // (Safari's own pinch-zoom)
+    window.addEventListener('touchstart', down, { passive: true })
+    window.addEventListener('touchmove', move, { passive: false })
+    window.addEventListener('touchend', up, { passive: true })
+    window.addEventListener('touchcancel', up, { passive: true })
+    window.addEventListener('gesturestart', noZoom, { passive: false })
+    return () => {
+      window.removeEventListener('touchstart', down)
+      window.removeEventListener('touchmove', move)
+      window.removeEventListener('touchend', up)
+      window.removeEventListener('touchcancel', up)
+      window.removeEventListener('gesturestart', noZoom)
+    }
+  }, [])
+
   // the welcome screen plays every time the PC turns on (but not coming back
   // from the room, still signed in)
   const [signedIn, setSignedIn] = useState(() => useStore.getState().session)
