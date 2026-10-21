@@ -170,7 +170,8 @@ export const useStore = create<State>((set, get) => ({
 
 // There's only one Slumpy. Everything that can show him asks where he is right
 // now, and only that place shows his face (the rest step aside).
-export type SlumpyPlace = 'login' | 'start' | 'konsole' | 'system' | 'wallpaper'
+// 'window': floating over whichever other app window is focused (see Window.tsx)
+export type SlumpyPlace = 'login' | 'start' | 'konsole' | 'system' | 'window' | 'wallpaper'
 
 export function slumpyLocation(s: State): SlumpyPlace {
   if (s.signingIn) return 'login'
@@ -178,6 +179,7 @@ export function slumpyLocation(s: State): SlumpyPlace {
   const focused = s.windows.find((w) => w.id === s.focused && !w.minimized)
   if (focused?.app === 'terminal') return 'konsole'
   if (focused?.app === 'system') return 'system'
+  if (focused) return 'window'
   // About This Computer still on screen behind other windows keeps him
   if (s.windows.some((w) => w.app === 'system' && !w.minimized)) return 'system'
   return 'wallpaper'

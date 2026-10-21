@@ -449,6 +449,22 @@ export function playKeyTick() {
   noise(c, t, 0.015, 'bandpass', 3500 + Math.random() * 1500, env(c, t, 0.06, 0.001, 0.012))
 }
 
+// typing on Chiba: a plasticky clack per key, a deeper thock for the big keys
+// (space, enter), with a little randomness so fast typing doesn't sound looped
+export function playKeyClack(key: 'key' | 'space' | 'enter' | 'back' = 'key') {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  const r = () => 0.85 + Math.random() * 0.3
+  const big = key === 'space' || key === 'enter'
+  // the click of the switch
+  noise(c, t, 0.018, 'bandpass', (big ? 2200 : 3200) * r(), env(c, t, (big ? 0.09 : 0.07) * r(), 0.001, 0.016))
+  // the keycap bottoming out
+  tone(c, t, big ? 0.06 : 0.035, 'sine', (big ? 150 : key === 'back' ? 260 : 210) * r(), big ? 70 : 110, env(c, t, big ? 0.12 : 0.07, 0.002, big ? 0.055 : 0.03))
+  // the spacebar's stabilizer rattles a bit
+  if (key === 'space') noise(c, t + 0.012, 0.025, 'bandpass', 1200, env(c, t + 0.012, 0.03, 0.002, 0.02))
+}
+
 export function playLoginChime() {
   const c = audio()
   if (!c) return

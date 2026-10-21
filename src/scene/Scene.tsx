@@ -1,7 +1,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { PCModel, type HoverKind } from './PCModel'
-import { grabState } from './deskProps'
+import { setHover, restoreCursor } from './cursor'
 import { DustPuff } from './DustPuff'
 import { PicoPostFX } from './PicoPostFX'
 import { CameraRig } from './CameraRig'
@@ -15,12 +15,10 @@ export function Scene() {
   const [hovered, setHovered] = useState<HoverKind>(null)
   const mode = useStore((s) => s.mode)
 
-  useEffect(() => {
-    // the PC is clickable, the keyboard and mouse can be picked up, and anywhere
-    // else in the room can be dragged to orbit (holding something keeps the fist)
-    if (grabState.active) return
-    document.body.style.cursor = mode === 'room' ? (hovered === 'pc' ? 'var(--cursor-pointer)' : 'var(--cursor-grab)') : ''
-  }, [hovered, mode])
+  // the PC is clickable and the keyboard and mouse can be picked up (pointing
+  // hand); anywhere else in the room can be dragged to orbit (open hand)
+  useEffect(() => setHover(hovered), [hovered])
+  useEffect(() => restoreCursor(), [mode])
 
   return (
     <Canvas

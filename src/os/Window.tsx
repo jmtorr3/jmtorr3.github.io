@@ -1,5 +1,7 @@
-import { useRef, type PointerEvent as RPointerEvent } from 'react'
-import { useStore, TASKBAR_H, type Win } from '../store'
+import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import { useStore, TASKBAR_H, slumpyLocation, type Win } from '../store'
+import { SlumpyCam } from './SlumpyCam'
+import { useSlumpy } from './slumpy'
 import { APPS } from './apps/registry'
 import { Icon } from './Icon'
 import { menuItemsFor } from './appMenu'
@@ -7,6 +9,22 @@ import type { MenuItem } from './ContextMenu'
 
 const MIN_W = 220
 const MIN_H = 140
+// apps that already show Slumpy their own way (the Konsole's sprite, About This Computer's screen)
+const OWN_SLUMPY = new Set(['terminal', 'system'])
+
+// Slumpy floating over the focused window, like in the Konsole. Mounted the
+// first time he visits, then kept (hidden while he's elsewhere), so he's still
+// where he was when the window gets focus again.
+function WindowSlumpy({ winId }: { winId: string }) {
+  const here = useStore((s) => s.focused === winId && slumpyLocation(s) === 'window')
+  const [visited, setVisited] = useState(here)
+  useEffect(() => {
+    if (here) setVisited(true)
+  }, [here])
+  const face = useSlumpy()
+  if (!visited) return null
+  return <SlumpyCam face={face} onClick={() => face.react('happy', 1.2)} away={!here} />
+}
 
 export function Window({ win }: { win: Win }) {
   const { focus, close, minimize, toggleMax, move, resize } = useStore.getState()
@@ -89,8 +107,11 @@ export function Window({ win }: { win: Win }) {
           </button>
         </div>
       </div>
-      <div className="window-body">
-        <App winId={win.id} props={win.props} />
+      <div className="window-main">
+        <div className="window-body">
+          <App winId={win.id} props={win.props} />
+        </div>
+        {!OWN_SLUMPY.has(win.app) && <WindowSlumpy winId={win.id} />}
       </div>
       {!win.maximized && (
         <div className="resize-handle" onPointerDown={start('resize')} onPointerMove={onMove} onPointerUp={end} />

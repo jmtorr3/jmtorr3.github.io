@@ -77,7 +77,9 @@ function build(): VDir {
       file(
         ['[Desktop Entry]', 'Type=Application', `Name=${APPS[id].label}`, `Exec=${EXEC[id] ?? id}`, `Icon=${APPS[id].icon}`].join('\n'),
         APPS[id].icon,
-        () => open(id),
+        // the Projects launcher goes to the projects folder, even in a file
+        // manager that's already open somewhere else (like double-clicking it from ~/Desktop)
+        id === 'projects' ? () => open('projects', { path: PROJECTS_DIR, at: Date.now() }) : () => open(id),
       ),
     ]),
   )

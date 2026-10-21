@@ -9,6 +9,7 @@ import { useStore } from '../store'
 import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
+import { restoreCursor, type HoverKind } from './cursor'
 
 const URL = '/models/pc.gltf'
 // Blockbench names every node "cube"; the monitor's screen panel is the 8th mesh
@@ -50,7 +51,7 @@ type PressEvent = {
   target: EventTarget | null
 }
 
-export type HoverKind = 'pc' | 'prop' | null
+export type { HoverKind }
 
 const hitFan = (e: ClickEvent) => {
   if (!e.uv) return false
@@ -181,7 +182,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       // let go of whatever's held, wherever the pointer is
       if (model.props.holding) {
         model.props.release()
-        document.body.style.cursor = 'var(--cursor-grab)'
+        restoreCursor()
       }
     }
     window.addEventListener('pointerdown', down)

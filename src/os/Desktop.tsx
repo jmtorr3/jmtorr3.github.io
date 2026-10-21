@@ -19,7 +19,7 @@ import { FaceScreen } from './FaceScreen'
 import { HOME } from './vfs'
 import { useSlumpy } from './slumpy'
 import { useDesktopIcons } from './useDesktopIcons'
-import { playPowerOn, playPowerOff, playClick, useSound, speak } from './sound'
+import { playPowerOn, playPowerOff, playClick, playKeyClack, useSound, speak } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { LoginScreen } from './LoginScreen'
 
@@ -229,6 +229,20 @@ export function Desktop() {
   useEffect(() => {
     if (!booted.current) playPowerOn()
     booted.current = true
+  }, [])
+  // typing anywhere on the desktop clacks away on Chiba (the room's keyboard)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return // shortcuts, not typing
+      const k = e.key
+      if (k === ' ') playKeyClack('space')
+      else if (k === 'Enter') playKeyClack('enter')
+      else if (k === 'Backspace' || k === 'Delete') playKeyClack('back')
+      // printable keys and Tab; phone keyboards often just say "Unidentified"
+      else if (k.length === 1 || k === 'Tab' || k === 'Unidentified') playKeyClack()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
   useEffect(() => {
     if (!poweringOff) return

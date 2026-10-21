@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useStore } from '../store'
 import { fitScreen } from './screenFit'
+import { restoreCursor } from './cursor'
 import { grabState } from './deskProps'
 
 // center of the PC model's bounding box: the camera orbits around (and looks at) this
@@ -156,7 +157,7 @@ export function CameraRig() {
       // held still before letting go: no glide
       if (e.timeStamp - o.at > 80) o.vYaw = o.vPitch = 0
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId)
-      document.body.style.cursor = 'var(--cursor-grab)'
+      restoreCursor()
     }
     el.addEventListener('pointerdown', down)
     el.addEventListener('pointermove', move)

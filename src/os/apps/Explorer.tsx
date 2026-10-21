@@ -35,6 +35,21 @@ const PLACES: { label: string; icon: IconName; path: string }[] = [
 ]
 
 const TOUCH = matchMedia('(pointer: coarse)').matches
+
+// file names wrap before the extension first ("konsole" / ".desktop"), then
+// wherever they have to (see .file span)
+const breakable = (name: string) => {
+  const dot = name.lastIndexOf('.')
+  return dot > 0 ? (
+    <>
+      {name.slice(0, dot)}
+      <wbr />
+      {name.slice(dot)}
+    </>
+  ) : (
+    name
+  )
+}
 const join = (dir: string, name: string) => (dir === '/' ? `/${name}` : `${dir}/${name}`)
 const parent = (path: string) => path.slice(0, path.lastIndexOf('/')) || '/'
 
@@ -54,10 +69,11 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
     })
     setSelected(null)
   }
-  // opening a folder from elsewhere (the Konsole, another window) navigates here
+  // opening a folder from elsewhere (the Konsole, another window, a launcher)
+  // navigates here; `at` makes the same folder count again when it's re-opened
   useEffect(() => {
     if (props?.path) go(props.path as string)
-  }, [props?.path])
+  }, [props?.path, props?.at])
 
   const goBack = () => {
     const prev = back[back.length - 1]
@@ -141,7 +157,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
               }}
             >
               {n.type === 'dir' ? <FolderIcon p={n.project} /> : <Icon name={n.icon} size={40} />}
-              <span>{name}</span>
+              <span title={name}>{breakable(name)}</span>
             </button>
           ))}
           {node?.type !== 'dir' && <p className="muted">{pretty(path)}: no such folder</p>}

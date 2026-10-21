@@ -18,6 +18,11 @@ body,
   touch-action: manipulation;
   /* long-press opens the site's own menu (os/longPress.ts), not iOS's callout */
   -webkit-touch-callout: none;
+}
+
+/* the default pixel arrow. Only on html, so the cursor the room sets on body
+   (scene/cursor.ts: pointing hand, open hand, fist) reaches the 3D canvas */
+html {
   cursor: var(--cursor);
 }
 
@@ -523,6 +528,15 @@ a:hover {
 
 .controls button:hover {
   filter: brightness(1.25);
+}
+
+/* the body plus anything floating over it (Slumpy), which shouldn't scroll with it */
+.window-main {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .window-body {
@@ -1185,6 +1199,23 @@ button.card:hover {
   border-color: var(--accent-dim);
 }
 
+/* names stay inside their own item: wrapped, at most two lines (with …) until
+   the item is selected, which shows the whole name like Dolphin does */
+.file span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.file.selected span {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
 .folder-icon {
   position: relative;
   width: 40px;
@@ -1262,7 +1293,7 @@ button.card:hover {
 
 .gallery button {
   flex: 0 0 auto;
-  height: 90px;
+  height: 110px;
   padding: 0;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -1273,10 +1304,13 @@ button.card:hover {
   border-color: var(--accent);
 }
 
+/* the whole image, never cropped: keeps its own shape, and very wide ones
+   (logos, wordmarks) shrink to fit the width with a little room above and below */
 .gallery img {
   height: 100%;
-  max-width: 200px;
-  object-fit: cover;
+  width: auto;
+  max-width: 320px;
+  object-fit: contain;
   display: block;
 }
 
