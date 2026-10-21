@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { isHalloween, isLateNight } from '../os/occasion'
 
 // A Dasai Mochi style face for the monitor while the PC is off: white pixels on
 // black, like the little OLED. Drawn on a 1-bit grid so every pixel stays crisp,
@@ -31,8 +32,11 @@ export type Expression =
   | 'music'
   | 'yawn'
   | 'loading'
+  | 'starfield' // the screensaver: stars flying out of the middle (left alone in the room)
+  | 'prompt' // a command line showing what's being typed (see typed), when you type at him in the room
   | 'boot' // a Linux boot log scrolling by (see bootLog), when he's turned on
   | 'glitch'
+  | 'panic' // wide eyes darting around, sweating, teeth chattering, shaking (`rm -rf /*`)
   | 'hypno'
   | 'off'
 
@@ -159,6 +163,20 @@ const FONT: Record<string, string> = {
   '(': '.#.#..#..#...#.',
   ')': '.#...#..#..#.#.',
   '_': '............###',
+  '!': '.#..#..#.....#.',
+  '?': '##...#.#.....#.',
+  ',': '.........#.#...',
+  "'": '.#..#..........',
+  '"': '#.##.#.........',
+  '>': '#...#...#.#.#..',
+  '<': '..#.#.#...#...#',
+  '$': '.####..#..####.',
+  '@': '####.#####...##',
+  '=': '...###...###...',
+  '+': '....#.###.#....',
+  '*': '#.#.#.#.#......',
+  '#': '#.#####.#####.#',
+  '^': '.#.#.#.........',
 }
 const CHAR_W = 4 // 3px glyph + 1px gap
 // the CRT switching on before the boot log starts (seconds): a dot, a line, the
@@ -173,11 +191,26 @@ const MOUTH_O = ['.###.', '#...#', '#...#', '#...#', '.###.']
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
 const mirror = (rows: string[]) => rows.map((r) => [...r].reverse().join(''))
 
+// late at night (the visitor's time) he's sleepy and yawns a lot more
+const NIGHT_MOODS = new Set<Expression>(['sleepy', 'yawn', 'bored'])
+
 function pickMood(): Expression {
-  let r = Math.random() * IDLE_MOODS.reduce((s, [, w]) => s + w, 0)
-  for (const [m, w] of IDLE_MOODS) if ((r -= w) < 0) return m
+  const night = isLateNight()
+  const moods = IDLE_MOODS.map(([m, w]): [Expression, number] => [m, night && NIGHT_MOODS.has(m) ? w * 5 : w])
+  let r = Math.random() * moods.reduce((s, [, w]) => s + w, 0)
+  for (const [m, w] of moods) if ((r -= w) < 0) return m
   return 'happy'
 }
+
+// Halloween: his plain face is a jack-o'-lantern
+const PUMPKIN_EYE = ['....#....', '...###...', '..#####..', '.#######.', '#########']
+const PUMPKIN_GRIN = [
+  '#.................#',
+  '##..#...#...#....##',
+  '.###.###.###.#####.',
+  '..####.###.###.##..',
+  '....###...###......',
+]
 
 export class SlumpyFace {
   readonly texture: THREE.CanvasTexture
@@ -213,8 +246,11 @@ export class SlumpyFace {
   private view = { scale: 1, x: FACE_W / 2, y: FACE_H / 2 }
   private copy = new Uint8Array(FACE_W * FACE_H)
   private idle: boolean
+  private halloween = isHalloween()
   // what 'boot' prints: each line shows up `at` seconds in
   bootLog: { at: number; text: string }[] = []
+  // what 'prompt' shows after its "> "
+  typed = ''
   private transparent: boolean
 
   // idle: cycle through random moods by itself (off when something else drives it)
@@ -485,6 +521,15 @@ export class SlumpyFace {
         return this.pill(cx, cy + 2, EYE_W + 2, Math.max(2, Math.round(7 * this.open)), 3)
       case 'surprised':
         return this.pill(cx, cy - 2, EYE_W + 4, Math.max(2, Math.round((EYE_H + 4) * this.open)), 9)
+      case 'panic': {
+        // wide open and hollow, with tiny pupils darting around (both the same way)
+        this.pill(cx, cy - 2, EYE_W + 6, EYE_H + 6, 10)
+        this.pill(cx, cy - 2, EYE_W + 1, EYE_H + 1, 8, 0)
+        const dart = Math.floor(this.t * 7)
+        const px = [-4, 3, -1, 4, -3, 1][dart % 6]
+        const py = [-2, 1, 2, -3, 0, -1][(dart * 5) % 6]
+        return this.rect(cx + px - 2, cy - 2 + py - 2, 4, 5)
+      }
       case 'confused':
         // one eye wide, the other squinting
         return side === -1
@@ -530,6 +575,7 @@ export class SlumpyFace {
         return this.cutAbove(inner, yi, outer, yo, Math.min(inner, outer) - 1, Math.max(inner, outer) + 1)
       }
       default: {
+        if (expr === 'neutral' && !closed && this.halloween) return this.bitmap(PUMPKIN_EYE, cx, cy, 2)
         // plain eyes, squashed wide and short during a squish
         const s = Math.sin(this.squish * Math.PI)
         return this.pill(cx, cy + s * 3, EYE_W * (1 + 0.35 * s), h * (1 - 0.35 * s), 6)
@@ -540,9 +586,25 @@ export class SlumpyFace {
   private extras(expr: Expression, cx: number, cy: number) {
     const since = this.since
     switch (expr) {
+      case 'neutral':
+        if (this.halloween) this.bitmap(PUMPKIN_GRIN, cx, cy + 20, 2)
+        return
       case 'surprised':
         if (this.open > 0.5) this.bitmap(MOUTH_O, cx, cy + 22, 1)
         return
+      case 'panic': {
+        // a jagged mouth, teeth chattering
+        const chatter = Math.floor(this.t * 14) % 2
+        for (let i = 0; i < 22; i++) this.rect(cx - 11 + i, cy + 20 + ((i + chatter * 2) % 4 < 2 ? 0 : 2), 1, 2)
+        // sweat drops running off both sides, over and over
+        for (const [dx, offset] of [[-38, 0], [38, 0.45]]) {
+          const fall = (this.t * 1.6 + offset) % 1
+          const y = cy - 16 + fall * 22
+          this.rect(cx + dx, y - 2, 1, 2)
+          this.rect(cx + dx - 1, y, 3, 3)
+        }
+        return
+      }
       case 'happy':
       case 'love':
       case 'wink':
@@ -679,11 +741,55 @@ export class SlumpyFace {
     }
   }
 
-  private text(s: string, x: number, y: number) {
+  // the screensaver: stars streaming out from the middle, faster and bigger as
+  // they get closer (each star starts over at a new angle once it's off screen)
+  private drawStarfield() {
+    for (let i = 0; i < 46; i++) {
+      const lap = this.t * 0.35 + i / 46
+      const n = Math.floor(lap)
+      const k = lap - n // 0 at the middle .. 1 at the edge
+      const a = (Math.sin((i + 1) * 12.9898 + n * 78.233) * 43758.5453) % (Math.PI * 2)
+      const d = k * k * 70
+      const size = k > 0.6 ? 2 : 1
+      this.rect(FACE_W / 2 + Math.cos(a) * d, FACE_H / 2 + Math.sin(a) * d * 0.8, size, size)
+    }
+  }
+
+  // scale 2 doubles every pixel (readable from across the room)
+  private text(s: string, x: number, y: number, scale = 1) {
     ;[...s.toUpperCase()].forEach((c, i) => {
       const g = FONT[c]
-      if (g) for (let j = 0; j < 15; j++) if (g[j] === '#') this.dot(x + i * CHAR_W + (j % 3), y + Math.floor(j / 3))
+      if (g)
+        for (let j = 0; j < 15; j++)
+          if (g[j] === '#') this.rect(x + (i * CHAR_W + (j % 3)) * scale, y + Math.floor(j / 3) * scale, scale, scale)
     })
+  }
+
+  // a command line: "> " and what's been typed in big letters, wrapping at
+  // spaces (or mid-word if a word won't fit a line), the last lines once it's
+  // full, and a blinking block cursor
+  private drawPrompt() {
+    const cols = Math.floor((FACE_W - 4) / (CHAR_W * 2))
+    const lines = ['']
+    for (const word of ('> ' + this.typed).split(/(?<= )/)) {
+      let w = word
+      while (w) {
+        const room = cols - lines[lines.length - 1].length
+        // a word that fits on a fresh line moves down; a longer one is cut
+        if (w.trimEnd().length > room && w.trimEnd().length <= cols && lines[lines.length - 1]) lines.push('')
+        const r = cols - lines[lines.length - 1].length
+        lines[lines.length - 1] += w.slice(0, r)
+        w = w.slice(r)
+        if (w) lines.push('')
+      }
+    }
+    // the cursor goes on the next line when this one's full
+    if (lines[lines.length - 1].length >= cols) lines.push('')
+    const fits = Math.floor((FACE_H - 4) / (LINE_H * 2))
+    const shown = lines.slice(-fits)
+    shown.forEach((l, i) => this.text(l, 2, 3 + i * LINE_H * 2, 2))
+    const last = shown[shown.length - 1]
+    if (Math.floor(this.t * 2.5) % 2 === 0) this.rect(2 + last.length * CHAR_W * 2, 3 + (shown.length - 1) * LINE_H * 2, 6, 10)
   }
 
   // the lines printed so far, scrolling up once the screen's full, and a
@@ -762,6 +868,8 @@ export class SlumpyFace {
     this.px.fill(0)
     const expr = this.shown
     if (expr === 'boot') this.drawBootLog()
+    else if (expr === 'prompt') this.drawPrompt()
+    else if (expr === 'starfield') this.drawStarfield()
     else if (expr !== 'off') {
       // look only moves plain eyes; the expressive ones stay put
       const moves = ['neutral', 'sad', 'angry', 'glitch'].includes(expr)
@@ -775,6 +883,12 @@ export class SlumpyFace {
       if (expr === 'excited') fy = -Math.round(Math.abs(Math.sin(this.t * 9)) * 4)
       if (expr === 'laugh') fy = (Math.floor(this.t * 12) % 2) * 2
       if (expr === 'music') fx = Math.round(Math.sin(this.t * 4) * 3)
+      if (expr === 'panic') {
+        // trembling
+        const shake = Math.floor(this.t * 30)
+        fx = (shake % 2) * 2 - 1
+        fy = shake % 3 === 0 ? 1 : 0
+      }
       const cx = FACE_W / 2 + fx
       const cy = FACE_H / 2 - 2 + fy
       this.eye(expr, -1, cx + lx - EYE_GAP, cy + ly)

@@ -5,7 +5,8 @@ import { Icon } from './Icon'
 import { profile } from '../data/profile'
 import { systemOS } from '../data/system'
 import { FaceScreen } from './FaceScreen'
-import { useSound, unlockAudio } from './sound'
+import { useSound, unlockAudio, speak } from './sound'
+import { useSlumpy } from './slumpy'
 
 // on touch screens, focusing the search box would pop up the on-screen keyboard
 const TOUCH = matchMedia('(pointer: coarse)').matches
@@ -27,13 +28,50 @@ function SoundToggle() {
   )
 }
 
+// easter egg: poke the clock this many times this quickly and it glitches out
+// (and Slumpy has had enough)
+const POKES = 10
+const POKE_MS = 4000
+const GLITCH_MS = 2000
+const SCRAMBLE = '0123456789:#%@$&?!'
+
 function Clock() {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 10_000)
     return () => clearInterval(id)
   }, [])
-  return <span className="clock">{now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+  const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  const slumpy = useSlumpy()
+  const pokes = useRef<number[]>([])
+  const [glitch, setGlitch] = useState(false)
+  const [scrambled, setScrambled] = useState(time)
+  useEffect(() => {
+    if (!glitch) return
+    const scramble = () => setScrambled([...time].map(() => SCRAMBLE[Math.floor(Math.random() * SCRAMBLE.length)]).join(''))
+    scramble()
+    const id = setInterval(scramble, 80)
+    const done = setTimeout(() => setGlitch(false), GLITCH_MS)
+    return () => {
+      clearInterval(id)
+      clearTimeout(done)
+    }
+  }, [glitch, time])
+  const poke = () => {
+    const t = performance.now()
+    pokes.current = [...pokes.current.filter((p) => t - p < POKE_MS), t]
+    if (pokes.current.length < POKES || glitch) return
+    pokes.current = []
+    setGlitch(true)
+    slumpy.react('blush', 2.5)
+    speak('stop poking me!')
+  }
+  return (
+    <span className={`clock ${glitch ? 'glitch' : ''}`} onClick={poke}>
+      {glitch ? scrambled : time}
+    </span>
+  )
 }
 
 export function Taskbar() {

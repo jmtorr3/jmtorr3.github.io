@@ -4,6 +4,8 @@ import { resumes } from '../data/resume'
 import { contactLinks } from '../data/contact'
 import { projects, slugOf, type Project } from '../data/projects'
 import { skillGroups } from '../data/skills'
+import { README } from '../data/readme'
+import { earlySketch } from './sketch'
 import { devices } from '../data/devices'
 import { create } from 'zustand'
 import { useStore } from '../store'
@@ -40,7 +42,8 @@ import type { IconName } from './Icon'
 
 // open: what opening it does when it belongs to an app (app: that app's name, for "Open in …")
 // bin: it's a program (in /usr/bin or /usr/sbin), run by its name
-export type VFile = { type: 'file'; text: string; icon: IconName; open?: () => void; app?: string; bin?: boolean }
+// src: an image file's picture (what the Image Viewer shows; text is its "bytes")
+export type VFile = { type: 'file'; text: string; icon: IconName; open?: () => void; app?: string; bin?: boolean; src?: string }
 // link: a symlink's target (/bin -> usr/bin); locked: the guest can't look inside
 export type VDir = { type: 'dir'; children: Record<string, VNode>; project?: Project; link?: string; locked?: boolean }
 export type VNode = VFile | VDir
@@ -48,6 +51,8 @@ export type VNode = VFile | VDir
 export const HOME = `/home/${profile.user}` // ~
 export const CREATOR_HOME = `/home/${profile.creator}`
 export const PROJECTS_DIR = `${CREATOR_HOME}/projects`
+// the Recycle Bin (where KDE keeps it: a hidden folder in your home)
+export const TRASH = `${HOME}/.local/share/Trash/files`
 
 const open = (app: AppId, props?: Record<string, unknown>) => useStore.getState().open(app, props && { props })
 
@@ -76,12 +81,31 @@ const readme = (p: Project) =>
       .filter(Boolean),
   ].join('\n')
 
+// an image file: what cat shows is the start of a PNG; opening it shows the picture
+const image = (name: string, src: string): VFile => ({
+  ...file(`\ufffdPNG\r\n\u001a\n\u0000\u0000\u0000\rIHDR\u0000\u0000\u0000\ufffd\u0000\u0000\u0000x\b\u0006\u0000\u0000\u0000${name}\ufffd\ufffd`, 'image'),
+  src,
+})
+
+// a project's screenshots, as files: named after the picture's own file (or numbered)
+const imageFiles = (p: Project) =>
+  Object.fromEntries(
+    (p.images ?? []).map((im, i) => {
+      const base = im.src.split(/[?#]/)[0].split('/').pop() || `${i + 1}`
+      const name = /\.(png|jpe?g|gif|webp|svg)$/i.test(base) ? base : `${base}.png`
+      return [`${String(i + 1).padStart(2, '0')}-${name}`, image(name, im.src)]
+    }),
+  )
+
 const projectDir = (folder: 'projects' | 'other') =>
   dir(
     Object.fromEntries(
       projects
         .filter((p) => (p.folder ?? 'projects') === folder)
-        .map((p) => [slugOf(p), dir({ 'README.txt': file(readme(p), 'text', () => openProject(slugOf(p)), p.title) }, p)]),
+        .map((p) => [
+          slugOf(p),
+          dir({ 'README.txt': file(readme(p), 'text', () => openProject(slugOf(p)), p.title), ...(p.images?.length ? { images: dir(imageFiles(p)) } : {}) }, p),
+        ]),
     ),
   )
 
@@ -109,7 +133,30 @@ const PROGRAMS: Record<string, Program> = {
       return ''
     },
   },
+  // the image viewer: a picture (it steps through the rest in its folder)
+  gwenview: {
+    app: 'image',
+    run: ([a], cwd) => {
+      if (!a) return 'gwenview: no image given'
+      const path = resolve(cwd, a)
+      const node = lookup(path)
+      if (node?.type !== 'file' || !node.src) return `gwenview: ${a}: not an image`
+      openImageFile(path)
+      return ''
+    },
+  },
   kinfocenter: { app: 'system' },
+  // the web browser: local pages (file://) only, this computer's offline
+  konqueror: {
+    app: 'browser',
+    run: ([a], cwd) => {
+      if (!a) return open('browser'), ''
+      const path = resolve(cwd, a.replace(/^file:\/\//, ''))
+      if (lookup(path)?.type !== 'file') return /^https?:/.test(a) ? `konqueror: ${a}: this computer's offline` : `konqueror: ${a}: No such file`
+      openPage(path)
+      return ''
+    },
+  },
   // a new window each time, starting where you are
   konsole: { app: 'terminal', run: (_, cwd) => (useStore.getState().open('terminal', { key: `k${++konsoles}`, props: { cwd } }), '') },
   notepad: {
@@ -142,7 +189,7 @@ const PROGRAMS: Record<string, Program> = {
 
 // the Konsole's own commands that are programs on a real system too (cd, help,
 // exit and the like are shell builtins, so they're not in /usr/bin)
-export const TOOLS = ['cat', 'clear', 'date', 'echo', 'ls', 'lsusb', 'neofetch', 'pwd', profile.host, 'sudo', 'whoami', 'which']
+export const TOOLS = ['cat', 'clear', 'cowsay', 'date', 'echo', 'fortune', 'login', 'ls', 'lsusb', 'man', 'neofetch', 'pwd', 'rm', 'sl', profile.host, 'startx', 'sudo', 'vi', 'vim', 'whoami', 'which']
 export const ADMIN_TOOLS = ['halt', 'poweroff', 'reboot', 'shutdown']
 
 export const PATH = ['/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin']
@@ -247,9 +294,52 @@ function build(): VDir {
     home: dir({
       [profile.user]: dir({
         'readme.txt': file(`you're a guest on ${profile.host}. ${profile.creator}'s stuff is in ${CREATOR_HOME}:\n  cd ${CREATOR_HOME}`),
-        Desktop: dir(desktop),
+        Desktop: dir({ ...desktop, 'README.md': file(README) }), // (the desktop's README icon)
+        // easter egg: only `ls -a` shows it
+        '.secret': file(
+          [
+            'a riddle, from me to you:',
+            '',
+            '  i have a face but no head,',
+            '  yet open me up from behind',
+            '  and you will find what i think with.',
+            '',
+            `(${profile.host}'s monitor has a back, you know)`,
+          ].join('\n'),
+        ),
+        // easter egg: what's in the Recycle Bin
+        '.local': dir({
+          share: dir({
+            Trash: dir({
+              files: dir({
+                'old_portfolio_final_FINAL2.html': file(
+                  [
+                    '<body bgcolor="#000080" text="#ffff00" link="#00ffff">',
+                    '<marquee><font size="6" face="Comic Sans MS">WELCOME 2 MY WEBSITE!!!</font></marquee>',
+                    '<center>',
+                    '<p><blink><font color="#ff0000">*** UNDER CONSTRUCTION ***</font></blink></p>',
+                    '<p>hi im jorge and this is my HOMEPAGE. it has a COMPUTER on it (soon)</p>',
+                    '<p><img src="under_construction.gif" alt="[under construction gif]"></p>',
+                    '<table border="3" cellpadding="6"><tr><td>you are visitor #</td><td><tt>000042</tt></td></tr></table>',
+                    '<p><a href="#">sign my guestbook</a> | <a href="#">webring &gt;&gt;</a></p>',
+                    '<hr><font size="1">best viewed in 800x600. made with notepad</font>',
+                    '</center>',
+                    '<!-- TODO: make it not look like this -->',
+                    '</body>',
+                  ].join('\n'),
+                  'globe',
+                ),
+                'bugs.txt': file('1. the computer has a face\n2. the computer has feelings about it\n\nstatus: wontfix (it\'s a feature)'),
+                'todo_2019.txt': file('[ ] learn rust\n[ ] finish the portfolio\n[x] procrastinate\n[ ] give the PC a brain'),
+                'slumpy_v0.png': image('slumpy_v0.png', earlySketch()), // (we don't talk about it)
+              }),
+            }),
+          }),
+        }),
       }),
       [profile.creator]: dir({
+        // Slumpy saying hi to whoever finds it (the Konsole starts here)
+        'README.md': file(README),
         'about.txt': file(
           [
             `${profile.name} — ${profile.role}`,
@@ -328,18 +418,41 @@ export function lookup(path: string): VNode | null {
 // ~ for the visitor's home, like the prompt shows it
 export const pretty = (path: string) => (path === HOME || path.startsWith(HOME + '/') ? '~' + path.slice(HOME.length) : path)
 
-export const isText = (path: string) => path.toLowerCase().endsWith('.txt')
+export const isText = (path: string) => /\.(txt|md)$/i.test(path)
 
 // Open a path the way double-clicking it would: folders in Dolphin (a project's
 // folder opens its page), .txt files in Notepad, other files with whatever they
 // belong to (else Notepad too).
+export const isImage = (path: string) => /\.(png|jpe?g|gif|webp|svg)$/i.test(path)
+export const isPage = (path: string) => /\.html?$/i.test(path)
+
+// a picture in the Image Viewer (one viewer per folder: it steps through the folder's pictures)
+export function openImageFile(path: string) {
+  const folder = path.slice(0, path.lastIndexOf('/'))
+  useStore.getState().open('image', { key: `file:${folder}`, title: `${path.split('/').pop()} - Image Viewer`, props: { path } })
+}
+
+// a web page in Konqueror
+export function openPage(path: string) {
+  useStore.getState().open('browser', { key: path, title: `${path.split('/').pop()} - Konqueror`, props: { path } })
+}
+
+// Open a path the way double-clicking it would: by what kind of file it is
+//   folders          Dolphin (a project's folder opens its page)
+//   .txt .md         Notepad
+//   pictures         the Image Viewer
+//   .html            Konqueror
+//   programs, .pdf, launchers, the rest: whatever they belong to (else Notepad)
 export function openPath(path: string): boolean {
   const node = lookup(path)
   if (!node) return false
   if (node.type === 'dir') {
     if (node.project) openProject(slugOf(node.project))
     else useStore.getState().open('projects', { key: path, props: { path } })
-  } else if (node.open && !isText(path)) node.open()
+  } else if (isText(path)) openNotepad(path)
+  else if (isImage(path) && node.src) openImageFile(path)
+  else if (isPage(path)) openPage(path)
+  else if (node.open) node.open()
   else openNotepad(path)
   return true
 }
@@ -373,6 +486,26 @@ export function writeFile(path: string, text: string): string | null {
   else dirNode.children[name] = file(text)
   useVfs.setState((s) => ({ version: s.version + 1 }))
   return null
+}
+
+// delete a file or folder (with everything in it); an error message, or null
+export function removePath(path: string): string | null {
+  if (!canWrite(path)) return 'Permission denied'
+  const dirNode = lookup(parent(path))
+  const name = path.slice(path.lastIndexOf('/') + 1)
+  if (dirNode?.type !== 'dir' || !dirNode.children[name]) return 'No such file or directory'
+  delete dirNode.children[name]
+  useVfs.setState((s) => ({ version: s.version + 1 }))
+  return null
+}
+
+// every file's path under a folder, depth first (for a pretend `rm -rf /`)
+export function walk(path = '/'): string[] {
+  const node = lookup(path)
+  if (node?.type !== 'dir' || node.link || node.locked) return node?.type === 'file' ? [path] : []
+  return Object.keys(node.children)
+    .sort()
+    .flatMap((name) => walk(path === '/' ? `/${name}` : `${path}/${name}`))
 }
 
 // "Untitled.txt", or "Untitled 2.txt" and so on if that's taken

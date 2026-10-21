@@ -10,6 +10,7 @@ import { Contact } from './Contact'
 import { SystemInfo } from './SystemInfo'
 import { Notepad } from './Notepad'
 import { Settings } from './Settings'
+import { Browser } from './Browser'
 
 export interface AppDef {
   title: string
@@ -32,6 +33,7 @@ export const APPS = {
   image: { title: 'Image Viewer', label: 'Image Viewer', icon: 'image', size: [640, 480], component: ImageViewer },
   notepad: { title: 'Notepad', label: 'Notepad', icon: 'notepad', size: [560, 400], component: Notepad },
   settings: { title: 'System Settings', label: 'Settings', icon: 'settings', size: [560, 400], component: Settings },
+  browser: { title: 'Konqueror', label: 'Konqueror', icon: 'globe', size: [620, 460], component: Browser },
   system: { title: 'About This Computer', label: 'About This Computer', icon: 'computer', size: [480, 580], component: SystemInfo },
 } satisfies Record<string, AppDef>
 

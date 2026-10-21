@@ -5,12 +5,14 @@ import { useStore } from '../store'
 import { containDistance, fitScreen, isCompact } from './screenFit'
 import { restoreCursor } from './cursor'
 import { grabState } from './deskProps'
+import { isDecember } from '../os/occasion'
 
 // center of the PC model's bounding box: the camera orbits around (and looks at) this
 const ROOM_TARGET = new THREE.Vector3(0.375, 0.84, 0.625)
 const ROOM_POS = new THREE.Vector3(-1.4, 2.0, -3.1)
 // the whole PC (monitor, case, keyboard, mouse); its on-screen outline gets centered
-const MODEL_BOX = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(1.25, 1.6875, 1.5))
+// (in December, the Santa hat on top too)
+const MODEL_BOX = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.25), new THREE.Vector3(1.25, isDecember() ? 2.15 : 1.6875, 1.5))
 const CORNERS = [0, 1, 2, 3, 4, 5, 6, 7].map(
   (i) =>
     new THREE.Vector3(
@@ -279,8 +281,8 @@ export function CameraRig() {
     else goal = screenPose()
 
     // booting: lean in toward the screen, then back out to wherever the orbit is
-    const booting = mode === 'room' && useStore.getState().booting
-    lean.current += ((booting ? 1 : 0) - lean.current) * (1 - Math.exp(-delta * LEAN_SPEED))
+    const leaning = mode === 'room' && useStore.getState().leaning
+    lean.current += ((leaning ? 1 : 0) - lean.current) * (1 - Math.exp(-delta * LEAN_SPEED))
     if (mode === 'room' && lean.current > 0.001) {
       const peek = leanPose()
       const k = ease(lean.current)

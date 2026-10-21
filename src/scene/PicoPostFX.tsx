@@ -115,7 +115,7 @@ export function PicoPostFX({ hovered }: { hovered: boolean }) {
     return { scene: s, material, camera: new THREE.Camera() }
   }, [target])
 
-  const booting = useStore((s) => s.booting)
+  const booting = useStore((s) => s.leaning) // (up close to the boot log)
   useEffect(() => {
     const h = Math.round(LOW_RES_HEIGHT * (booting ? Math.max(BOOT_SCALE, (BOOT_MIN_WIDTH * size.height) / size.width) : 1))
     const w = Math.max(1, Math.round((h * size.width) / size.height))

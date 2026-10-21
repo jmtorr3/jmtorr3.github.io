@@ -16,7 +16,6 @@ export function Scene() {
   const [hovered, setHovered] = useState<HoverKind>(null)
   const mode = useStore((s) => s.mode)
   const off = useStore((s) => s.poweredOff)
-  const booting = useStore((s) => s.booting)
 
   // the PC is clickable and the keyboard and mouse can be picked up (pointing
   // hand); anywhere else in the room can be dragged to orbit (open hand)
@@ -42,7 +41,7 @@ export function Scene() {
       <CameraRig />
       {/* off: only the power button lights him up (not the keyboard or mouse), and
           on touch, where the outline is always on, it goes away until he's back on */}
-      <PicoPostFX hovered={mode === 'room' && (TOUCH ? !off && !booting : hovered !== null && !(off && hovered === 'prop'))} />
+      <PicoPostFX hovered={mode === 'room' && (TOUCH ? !off : hovered !== null && !(off && hovered === 'prop'))} />
     </Canvas>
   )
 }

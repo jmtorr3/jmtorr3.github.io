@@ -10,15 +10,15 @@ import {
 import { fitScreen, isCompact } from '../scene/screenFit'
 import { useStore, TASKBAR_H, slumpyLocation } from '../store'
 import { profile } from '../data/profile'
-import { APPS, LAUNCHABLE, type AppId } from './apps/registry'
+import { APPS } from './apps/registry'
 import { Icon } from './Icon'
 import { Window } from './Window'
 import { Taskbar } from './Taskbar'
 import { Snow } from './Snow'
 import { FaceScreen } from './FaceScreen'
-import { HOME } from './vfs'
+import { HOME, TRASH, lookup, openNotepad, removePath } from './vfs'
 import { useSlumpy } from './slumpy'
-import { useDesktopIcons } from './useDesktopIcons'
+import { useDesktopIcons, deskIcons, type DeskId } from './useDesktopIcons'
 import { playPowerOn, playPowerOff, playClick, playKeyClack, useSound, speak } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { LoginScreen } from './LoginScreen'
@@ -80,9 +80,9 @@ type Box = { x0: number; y0: number; x1: number; y1: number }
 
 // rubber-band selection: drag on the wallpaper to select every icon the box touches
 function useMarquee() {
-  const [selected, setSelected] = useState<Set<AppId>>(new Set())
+  const [selected, setSelected] = useState<Set<DeskId>>(new Set())
   const [marquee, setMarquee] = useState<Box | null>(null)
-  const iconRefs = useRef(new Map<AppId, HTMLElement>())
+  const iconRefs = useRef(new Map<DeskId, HTMLElement>())
 
   const startMarquee = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return
@@ -95,7 +95,7 @@ function useMarquee() {
       y: (ev.clientY - origin.top) / scale,
     })
     const additive = e.ctrlKey || e.metaKey
-    const base = additive ? new Set(selected) : new Set<AppId>()
+    const base = additive ? new Set(selected) : new Set<DeskId>()
     const p = at(e)
     let box: Box = { x0: p.x, y0: p.y, x1: p.x, y1: p.y }
     setSelected(base)
@@ -139,6 +139,50 @@ const readSnow = () => {
     return true
   }
 }
+
+// what's left on screen after `rm -rf /*` (see the panic effect in Desktop)
+function KernelPanic() {
+  const t = (n: number) => `[${(4.2049 + n * 0.00001).toFixed(6).padStart(12)}]`
+  return (
+    <pre className="kernel-panic">
+      {[
+        `${t(0)} Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000009`,
+        `${t(1)} CPU: 0 PID: 1 Comm: ${profile.host} Not tainted 6.1.0-slumpy #1`,
+        `${t(2)} Hardware name: ${profile.host} picoCAD PC, BIOS 1.0`,
+        `${t(3)} Call Trace:`,
+        `${t(4)}  <TASK>`,
+        `${t(5)}  dump_stack_lvl+0x48/0x60`,
+        `${t(6)}  panic+0x118/0x2f0`,
+        `${t(7)}  do_exit.cold+0x15/0x15`,
+        `${t(8)}  face_service_stop+0x1c/0x40 [slumpy]`,
+        `${t(9)}  </TASK>`,
+        `${t(10)} Kernel Offset: disabled`,
+        `${t(11)} ---[ end Kernel panic - not syncing: Attempted to kill init! exitcode=0x00000009 ]---`,
+        '',
+        'rebooting...',
+      ].join('\n')}
+    </pre>
+  )
+}
+
+// the README and the Recycle Bin sit with the app icons, but they're a file
+// (Notepad opens it) and a folder (Dolphin opens it)
+const README_PATH = `${HOME}/Desktop/README.md`
+const deskIcon = (id: DeskId) =>
+  id === 'trash' ? { icon: 'trash' as const, label: 'Recycle Bin' } : id === 'readme' ? { icon: 'notepad' as const, label: 'README.md' } : APPS[id]
+const openIcon = (id: DeskId) =>
+  id === 'trash'
+    ? useStore.getState().open('projects', { key: TRASH, title: 'Trash - Dolphin', props: { path: TRASH, at: Date.now() } })
+    : id === 'readme'
+      ? openNotepad(README_PATH)
+      : useStore.getState().open(id)
+const trashNode = () => {
+  const n = lookup(TRASH)
+  return n?.type === 'dir' ? n : null
+}
+const trashCount = () => Object.keys(trashNode()?.children ?? {}).length
+// (for this visit: everything comes back on a reload)
+const emptyTrash = () => Object.keys(trashNode()?.children ?? {}).forEach((name) => removePath(`${TRASH}/${name}`))
 
 export function Desktop() {
   const windows = useStore((s) => s.windows)
@@ -186,8 +230,14 @@ export function Desktop() {
   useEffect(() => {
     if (!signedIn) return
     const id = setTimeout(() => slumpy.blink(3), 450)
+    // booted from the floppy: straight into what's on it
+    const app = useStore.getState().openOnSignIn
+    if (app) {
+      useStore.setState({ openOnSignIn: null })
+      open(app)
+    }
     return () => clearTimeout(id)
-  }, [signedIn, slumpy])
+  }, [signedIn, slumpy, open])
 
   const toggleSnow = () => {
     setSnow(!snow)
@@ -221,12 +271,14 @@ export function Desktop() {
     { label: 'Shut Down', icon: 'power', onClick: () => useStore.getState().shutDown() },
   ]
 
-  const iconMenu = (id: AppId): MenuItem[] => {
+  const iconMenu = (id: DeskId): MenuItem[] => {
     const many = selected.has(id) && selected.size > 1
-    const targets = many ? LAUNCHABLE.filter((x) => selected.has(x)) : [id]
-    return [
-      { label: many ? `Open ${targets.length} Items` : 'Open', icon: APPS[id].icon, onClick: () => targets.forEach((t) => open(t)) },
+    const targets = many ? deskIcons().filter((x) => selected.has(x)) : [id]
+    const items: MenuItem[] = [
+      { label: many ? `Open ${targets.length} Items` : 'Open', icon: deskIcon(id).icon, onClick: () => targets.forEach(openIcon) },
     ]
+    if (id === 'trash' && !many) items.push({ label: 'Empty Recycle Bin', icon: 'trash', disabled: !trashCount(), onClick: emptyTrash })
+    return items
   }
 
   // ref guard: StrictMode runs mount effects twice in dev
@@ -249,6 +301,16 @@ export function Desktop() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+  // `rm -rf /*` in the Konsole: the kernel panics, then he reboots (through the
+  // boot log, back to the sign-in; nothing was really deleted)
+  const panic = useStore((s) => s.panic)
+  useEffect(() => {
+    if (!panic) return
+    slumpy.react('glitch', 6)
+    const id = setTimeout(() => useStore.getState().shutDown(true), 4200)
+    return () => clearTimeout(id)
+  }, [panic, slumpy])
+
   useEffect(() => {
     if (!poweringOff) return
     playPowerOff()
@@ -267,7 +329,7 @@ export function Desktop() {
       onPointerDownCapture={() => playClick()}
       onPointerUpCapture={() => playClick(true)}
       onAnimationEnd={(e) => {
-        if (e.target === e.currentTarget && fromBoot && !poweringOff) useStore.setState({ booting: false })
+        if (e.target === e.currentTarget && fromBoot && !poweringOff) useStore.setState({ booting: false, leaning: false })
         if (e.target === e.currentTarget && poweringOff) {
           closeAll()
           setMode('exiting')
@@ -303,7 +365,7 @@ export function Desktop() {
 
         {/* keyed so Refresh re-mounts it, replaying its flicker-in */}
         <div className={`icons ${refreshes ? 'refresh' : ''}`} key={refreshes}>
-          {LAUNCHABLE.map((id) => (
+          {deskIcons().map((id) => (
             <button
               key={id}
               ref={(el) => {
@@ -322,9 +384,9 @@ export function Desktop() {
                   setSelected(next)
                 } else setSelected(new Set([id]))
                 // single tap opens on touch screens
-                if (matchMedia('(pointer: coarse)').matches) open(id)
+                if (matchMedia('(pointer: coarse)').matches) openIcon(id)
               }}
-              onDoubleClick={() => open(id)}
+              onDoubleClick={() => openIcon(id)}
               onContextMenu={(e) => {
                 e.stopPropagation()
                 if (!selected.has(id)) setSelected(new Set([id]))
@@ -332,12 +394,12 @@ export function Desktop() {
               }}
               onKeyDown={(e) => {
                 if (e.key !== 'Enter') return
-                if (selected.size > 1) selected.forEach((s) => open(s))
-                else open(id)
+                if (selected.size > 1) selected.forEach(openIcon)
+                else openIcon(id)
               }}
             >
-              <Icon name={APPS[id].icon} size={40} />
-              <span>{APPS[id].label}</span>
+              <Icon name={deskIcon(id).icon} size={40} />
+              <span>{deskIcon(id).label}</span>
             </button>
           ))}
         </div>
@@ -364,6 +426,7 @@ export function Desktop() {
 
         <Taskbar />
         {!signedIn && <LoginScreen onDone={finishLogin} />}
+        {panic && <KernelPanic />}
       </div>
       <div className="crt-overlay" />
     </div>

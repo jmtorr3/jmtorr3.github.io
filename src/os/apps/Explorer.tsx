@@ -5,7 +5,7 @@ import { useStore } from '../../store'
 import { Icon, type IconName } from '../Icon'
 import { addMenuItems, copyText, openUrl } from '../appMenu'
 import type { MenuItem } from '../ContextMenu'
-import { CREATOR_HOME, HOME, PROJECTS_DIR, canWrite, findProject, freshName, isText, lookup, openNotepad, openPath, openProject, pretty, useVfs, writeFile, type VNode } from '../vfs'
+import { CREATOR_HOME, HOME, PROJECTS_DIR, TRASH, canWrite, findProject, freshName, isImage, isText, lookup, openNotepad, openPath, openProject, pretty, useVfs, writeFile, type VNode } from '../vfs'
 
 export { findProject, openProject }
 
@@ -33,6 +33,7 @@ const PLACES: { label: string; icon: IconName; path: string }[] = [
   { label: 'Projects', icon: 'folder', path: PROJECTS_DIR },
   { label: 'Other', icon: 'folder', path: `${CREATOR_HOME}/other` },
   { label: 'Root', icon: 'computer', path: '/' },
+  { label: 'Trash', icon: 'trash', path: TRASH },
 ]
 
 const TOUCH = matchMedia('(pointer: coarse)').matches
@@ -51,14 +52,30 @@ const breakable = (name: string) => {
     name
   )
 }
+// a dotfile, or anywhere inside a dot folder (then what's in it shows, like ~/.local/share/Trash)
+const hidden = (name: string) => name.startsWith('.')
+const insideHidden = (path: string) => path.split('/').some(hidden)
 const join = (dir: string, name: string) => (dir === '/' ? `/${name}` : `${dir}/${name}`)
 const parent = (path: string) => path.slice(0, path.lastIndexOf('/')) || '/'
 
 // Dolphin: browses the machine's filesystem (the same one the Konsole sees).
 // Folders open in place, except a project's folder, which opens its page;
 // files open with whatever they belong to (see vfs.openPath).
-export function Explorer({ props }: { props?: Record<string, unknown> }) {
+export function Explorer({ winId, props }: { winId: string; props?: Record<string, unknown> }) {
   const [path, setPath] = useState((props?.path as string) ?? PROJECTS_DIR)
+  // dotfiles stay out of sight unless asked for (right-click, or Ctrl+H), like real Dolphin
+  const [showHidden, setShowHidden] = useState(false)
+  const focused = useStore((s) => s.focused === winId)
+  useEffect(() => {
+    if (!focused) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.key.toLowerCase() !== 'h') return
+      e.preventDefault()
+      setShowHidden((v) => !v)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [focused])
   const [back, setBack] = useState<string[]>([])
   const [selected, setSelected] = useState<string[]>([])
   const open = useStore((s) => s.open)
@@ -95,7 +112,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
     openNotepad(full)
   }
   // folders first, then files, alphabetical
-  const entries = node?.type === 'dir' && !node.locked ? Object.entries(node.children).sort(([a, x], [b, y]) => (x.type === y.type ? a.localeCompare(b) : x.type === 'dir' ? -1 : 1)) : []
+  const entries = node?.type === 'dir' && !node.locked ? Object.entries(node.children).filter(([name]) => showHidden || !hidden(name) || insideHidden(path)).sort(([a, x], [b, y]) => (x.type === y.type ? a.localeCompare(b) : x.type === 'dir' ? -1 : 1)) : []
   const activate = (name: string, n: VNode) => (n.type === 'dir' && !n.project ? go(join(path, name)) : openPath(join(path, name)))
   const sel = selected.length === 1 ? entries.find(([name]) => name === selected[0])?.[1] : undefined
 
@@ -162,6 +179,7 @@ export function Explorer({ props }: { props?: Record<string, unknown> }) {
           { label: 'Up', disabled: path === '/', onClick: () => go(parent(path)) },
           { separator: true },
           { label: 'New Text File', icon: 'notepad', disabled: !canWrite(path + '/x'), onClick: newTextFile },
+          { label: 'Show Hidden Files', checked: showHidden, onClick: () => setShowHidden(!showHidden) },
           { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal', { props: { cwd: path } }) },
         ])
       }
@@ -366,12 +384,31 @@ export function ProjectViewer({ props }: { props?: Record<string, unknown> }) {
   )
 }
 
-export function ImageViewer({ props }: { props?: Record<string, unknown> }) {
+// A project's screenshots (props: slug, index), or a picture file (props: path)
+// along with the other pictures in its folder
+export function ImageViewer({ props, winId }: { props?: Record<string, unknown>; winId: string }) {
+  const path = props?.path as string | undefined
   const p = findProject(props?.slug as string)
-  const [i, setI] = useState((props?.index as number) ?? 0)
+  useVfs((s) => s.version)
+  const folder = path ? path.slice(0, path.lastIndexOf('/')) : ''
+  const node = path ? lookup(folder) : null
+  const files =
+    node?.type === 'dir'
+      ? Object.entries(node.children)
+          .filter(([name, n]) => n.type === 'file' && n.src && isImage(name))
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([name, n]) => ({ src: (n as { src: string }).src, alt: name }))
+      : []
+  const start = path ? Math.max(0, files.findIndex((f) => f.alt === path.split('/').pop())) : ((props?.index as number) ?? 0)
+  const [i, setI] = useState(start)
   // reopening the window on a different image updates props
-  useEffect(() => setI((props?.index as number) ?? 0), [props?.index])
-  const images = p?.images ?? []
+  useEffect(() => setI(start), [props?.index, path])
+  const images = path ? files : (p?.images ?? [])
+  // a file's window is titled after the picture showing
+  const showing = path ? images[i]?.alt : undefined
+  useEffect(() => {
+    if (showing) useStore.getState().retitle(winId, `${showing} - Image Viewer`)
+  }, [showing, winId])
   const img = images[i]
   if (!img) return <div className="pad">No image.</div>
   const step = (d: number) => setI((n) => (n + d + images.length) % images.length)

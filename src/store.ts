@@ -38,7 +38,10 @@ interface State {
   // power button on the case is pressed (only for this visit: a reload turns him on)
   poweredOff: boolean
   rebooting: boolean // shut down to come straight back on
-  booting: boolean // turned on from the power button: the boot log is scrolling by (the camera leans in to read it)
+  disco: number // easter egg: the Konami code; disco mode until then (performance.now() ms)
+  panic: boolean // easter egg: `rm -rf /*` in the Konsole: a kernel panic, then a reboot
+  booting: boolean // turned on from the power button: the boot log is scrolling by
+  leaning: boolean // and the camera's leaning in to read it (until a click backs out; the log still finishes)
   // bumped when the user spins the PC around too fast (the face gets dizzy)
   spins: number
   // the right-click menu (any app can open one; the Desktop draws it), at a screen point
@@ -47,6 +50,7 @@ interface State {
   signingIn: boolean // the welcome screen after power-on (shows Slumpy)
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
+  openOnSignIn: AppId | null // an app to open once the sign-in's done (the floppy opens About My Creator)
   brain: number // easter egg: bumped when the back of the monitor is clicked (his brain pops out)
   hoverDevice: DeviceKind | null // the keyboard or mouse under the pointer in the room (the hint names it)
   screen: ScreenInfo | null
@@ -85,10 +89,14 @@ export const useStore = create<State>((set, get) => ({
   poweringOff: false,
   poweredOff: false,
   rebooting: false,
+  panic: false,
+  disco: 0,
   booting: false,
+  leaning: false,
   spins: 0,
   fart: null,
   brain: 0,
+  openOnSignIn: null,
   hoverDevice: null,
   menu: null,
   startOpen: false,
@@ -100,7 +108,7 @@ export const useStore = create<State>((set, get) => ({
   topZ: 10,
 
   // (leaving the desktop always ends a boot, in case its fade-in never finished)
-  setMode: (mode) => set((s) => ({ mode, poweringOff: false, booting: mode === 'exiting' ? false : s.booting })),
+  setMode: (mode) => set((s) => ({ mode, poweringOff: false, booting: mode === 'exiting' ? false : s.booting, leaning: mode === 'exiting' ? false : s.leaning, panic: mode === 'exiting' ? false : s.panic })),
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
   logOff: () => set({ poweringOff: true }),
   shutDown: (reboot = false) => set({ poweringOff: true, poweredOff: true, rebooting: reboot }),

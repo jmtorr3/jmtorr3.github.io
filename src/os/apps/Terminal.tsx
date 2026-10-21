@@ -5,12 +5,13 @@ import { useStore, slumpyLocation } from '../../store'
 import { LAUNCHABLE, START_EXTRAS, type AppId } from './registry'
 import { devices, DEVICE_KINDS } from '../../data/devices'
 import { THEMES, useTheme } from '../theme'
-import { CREATOR_HOME, HOME, PATH, exec, lookup, openPath, openProject, pretty, programAt, programs, resolve, which } from '../vfs'
+import { CREATOR_HOME, HOME, PATH, exec, lookup, openPath, openProject, pretty, programAt, programs, removePath, resolve, walk, which } from '../vfs'
 import type { Expression } from '../../scene/SlumpyFace'
 import { useSlumpy } from '../slumpy'
 import { SlumpyCam, type SlumpyControl } from '../SlumpyCam'
 import { addMenuItems } from '../appMenu'
-import { playFaceSound } from '../sound'
+import { playFaceSound, speak } from '../sound'
+import { chatReply } from '../chat'
 
 // the filesystem (shared with Dolphin) lives in ../vfs
 
@@ -56,6 +57,8 @@ function complete(line: string, cwd: string): { line: string; options: string[] 
 		if (!node || node.type !== 'dir') return { line, options: [] }
 		candidates = Object.entries(node.children)
 			.filter(([, n]) => words[0] !== 'cd' || n.type === 'dir')
+			// dotfiles stay hidden unless you start typing one
+			.filter(([name]) => !name.startsWith('.') || base.startsWith('.'))
 			.map(([name, n]) => name + (n.type === 'dir' ? '/' : ' '))
 	}
 	const matches = candidates.filter((c) => c.startsWith(base))
@@ -88,6 +91,12 @@ const REACTIONS: Record<string, Expression> = {
 	echo: 'uwu',
 	sudo: 'angry',
 	rm: 'dizzy',
+	sl: 'laugh',
+	vim: 'suspicious',
+	vi: 'suspicious',
+	fortune: 'thinking',
+	cowsay: 'uwu',
+	man: 'thinking',
 	exit: 'sad',
 	logout: 'sad',
 	shutdown: 'sleepy',
@@ -101,6 +110,12 @@ const REACTIONS: Record<string, Expression> = {
 function reactionFor(cmdline: string, out: string | null): Expression | null {
 	const line = cmdline.trim().toLowerCase()
 	if (!line) return null
+	// `rm -rf /*`: he's already panicking (see destroyEverything)
+	if (/^rm\s/.test(line) && /\/\*|--no-preserve-root/.test(line)) return null
+	// not a command but talking to him (hi, bye, his name...): he answers like he does in the room
+	const first = line.split(/\s+/)[0]
+	const reply = !which(first) && !BUILTINS.includes(first) ? chatReply(line) : null
+	if (reply) return reply.expr
 	if ((line.includes(profile.host) || /love|<3/.test(line)) && !line.startsWith('sudo')) return 'love'
 	if (out && /not found|No such|missing|Not a directory|Is a directory/.test(out)) return 'confused'
 	const cmd = line.split(/\s+/)[0]
@@ -120,12 +135,16 @@ const help = () => `available commands:
   open <project>    open a project by folder name
   open <path>       open a file or folder, like double-clicking it
   notepad [file]    edit a text file (you can save in ~ and /tmp)
+  rm [-r] <path>    delete your own files
   dolphin [dir]     browse files; also konsole, okular, systemsettings...
   which <command>   where a program lives (ls /usr/bin for all of them)
   lsusb             list connected devices
   neofetch          system info
+  fortune           words of wisdom
+  man <command>     read the manual
   ${profile.host.padEnd(18)}say hi to ${profile.host}
   (Tab completes commands, files and app names)
+  (Ctrl+C cancels the line, Ctrl+L clears the screen)
   logout            log off and step away from the desk
   poweroff, reboot  turn ${profile.host} off (or off and on again)
   shutdown [+min]   turn off later (-c cancels, -r restarts, "now" for now)`
@@ -174,10 +193,117 @@ function shutdown(args: string[]): string {
 	return `${reboot ? 'Reboot' : 'Shutdown'} scheduled for ${at.toString().slice(0, 24)}, use 'shutdown -c' to cancel.`
 }
 
+// ---- easter eggs ----
+
+// `fortune`: one of these, at random
+const FORTUNES = [
+	`My creator built me a face before giving me a single useful feature. Priorities.`,
+	`Jorge writes low-level code for fun. I am, technically, the result.`,
+	`There is a brain in the back of my monitor. Don't ask how it got there.`,
+	`You are a guest on ${profile.host}. Please wipe your feet on the welcome mat (it's ~/readme.txt).`,
+	`Never rm -rf / on the first date.`,
+	`Chiba and Hanzo have been arguing about who's more useful since 2019.`,
+	`My creator would rather be skateboarding. I would rather be napping. We understand each other.`,
+	`A watched build never finishes.`,
+	`Today's lucky command: neofetch.`,
+	`The best way to exit vim is to never open it.`,
+	`I run on picoCAD dithering and good vibes.`,
+]
+
+// `cowsay`: a speech bubble, but it's Slumpy (a little monitor) saying it
+function cowsay(text: string) {
+	const words = text.replace(/\s+/g, ' ').trim().split(' ')
+	const lines: string[] = []
+	for (const w of words.length && words[0] ? words : ['...']) {
+		const last = lines[lines.length - 1]
+		if (last !== undefined && (last + ' ' + w).length <= 30) lines[lines.length - 1] = last + ' ' + w
+		else lines.push(w)
+	}
+	const width = Math.max(...lines.map((l) => l.length))
+	const edge = (i: number) => (lines.length === 1 ? ['<', '>'] : i === 0 ? ['/', '\\'] : i === lines.length - 1 ? ['\\', '/'] : ['|', '|'])
+	return [
+		' ' + '_'.repeat(width + 2),
+		...lines.map((l, i) => `${edge(i)[0]} ${l.padEnd(width)} ${edge(i)[1]}`),
+		' ' + '-'.repeat(width + 2),
+		'        \\   _________',
+		'         \\ |  _____  |',
+		'           | | o o | |',
+		'           | |  ‿  | |',
+		'           | |_____| |',
+		'           |_________|',
+		'              _|_|_',
+	].join('\n')
+}
+
+// `man`: the only two pages on this machine
+const MAN_PAGES: Record<string, string> = {
+	[profile.host]: [
+		`${profile.host.toUpperCase()}(1)                 slumpyOS Manual                 ${profile.host.toUpperCase()}(1)`,
+		'',
+		'NAME',
+		`       ${profile.host} - a computer with a face`,
+		'',
+		'SYNOPSIS',
+		`       ${profile.host} [--pet] [--feed-brain] [--do-not-unplug]`,
+		'',
+		'DESCRIPTION',
+		`       ${profile.host} lives on a desk, watches you type, and shows`,
+		`       visitors around ${profile.creator}'s work. Click him to sign in.`,
+		'       Typing at him in the room is fine. He types back.',
+		'',
+		'BUGS',
+		'       Has feelings. Gets dizzy if spun. Panics at rm -rf /*.',
+		'       Will not exit vim for you.',
+		'',
+		'AUTHOR',
+		`       Written by ${profile.creator} (${profile.name}).`,
+		'',
+		'SEE ALSO',
+		'       fortune(6), cowsay(1), sl(6), neofetch(1)',
+	].join('\n'),
+	man: [
+		'MAN(1)                    Manual pager utils                    MAN(1)',
+		'',
+		'NAME',
+		'       man - an interface to the system reference manuals',
+		'',
+		'DESCRIPTION',
+		`       This machine only has one manual worth reading: try man ${profile.host}.`,
+	].join('\n'),
+}
+
+// `sl`: the steam locomotive you get for mistyping ls (two frames: the wheels turn)
+const TRAIN = [
+	'      ====        ________                ___________ ',
+	'  _D _|  |_______/        \\__I_I_____===__|_________| ',
+	'   |(_)---  |   H\\________/ |   |        =|___ ___|   ',
+	'   /     |  |   H  |  |     |   |         ||_| |_||   ',
+	'  |      |  |   H  |__--------------------| [___] |   ',
+	'  | ________|___H__/__|_____/[][]~\\_______|       |   ',
+	'  |/ |   |-----------I_____I [][] []  D   |=======|__ ',
+]
+const WHEELS = [
+	[
+		'__/ =| o |=-~~\\  /~~\\  /~~\\  /~~\\ ____Y___________|__ ',
+		' |/-=|___|=    ||    ||    ||    |_____/~\\___/        ',
+		'  \\_/      \\O=====O=====O=====O_/      \\_/            ',
+	],
+	[
+		'__/ =| o |=-O=====O=====O=====O \\ ____Y___________|__ ',
+		' |/-=|___|=    ||    ||    ||    |_____/~\\___/        ',
+		'  \\_/      \\__/  \\__/  \\__/  \\__/      \\_/            ',
+	],
+]
+const TRAIN_MS = 2200
+
+// `vim`: you're stuck until one of these
+const VIM_QUIT = /^:(q|q!|qa|qa!|wq|wq!|x|x!)$/
+
 interface Line {
 	kind: 'in' | 'out'
 	text: string
 	cwd?: string
+	id?: number // a line that's still being animated (sl)
 }
 
 export function Terminal({ winId, props }: { winId: string; props?: Record<string, unknown> }) {
@@ -254,6 +380,91 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 		const above = lineTop - 72
 		return { x: caretX - 55, y: above >= 0 ? above : lineTop + inp.offsetHeight - 14 }
 	}
+	// `rm -rf /*`: everything scrolls by as it's "removed", Slumpy loses it, and
+	// the kernel panics (the Desktop shows that, then reboots; nothing's really gone)
+	const meltdown = useRef(0) // its timer while files are going (0 when it isn't)
+	useEffect(() => () => clearInterval(meltdown.current), [])
+	const destroyEverything = () => {
+		const paths = walk('/')
+		let i = 0
+		// he panics the whole time it's going (and glitches out when the kernel does, see Desktop)
+		face.react('panic', paths.length * 0.025 + 1)
+		playFaceSound('panic')
+		speak('wait, no!')
+		clearInterval(meltdown.current)
+		meltdown.current = window.setInterval(() => {
+			const batch = paths.slice(i, i + 2).map((p) => ({ kind: 'out' as const, text: `removed '${p}'` }))
+			i += 2
+			setLines((l) => [...l, ...batch])
+			if (i >= paths.length) {
+				clearInterval(meltdown.current)
+				meltdown.current = 0
+				setTimeout(() => useStore.setState({ panic: true }), 400)
+			}
+		}, 50)
+	}
+
+	// `sl`: a train chugs across the output, right to left, then it's gone
+	const train = useRef(0)
+	useEffect(() => () => clearInterval(train.current), [])
+	const chugAlong = () => {
+		// how many columns fit, measured (a line that wraps would break the train up)
+		const body = bodyRef.current
+		let cols = 80
+		if (body) {
+			const css = getComputedStyle(body)
+			const ctx = document.createElement('canvas').getContext('2d')!
+			ctx.font = css.font
+			const charW = ctx.measureText('M'.repeat(10)).width / 10 || parseFloat(css.fontSize) * 0.6
+			cols = Math.floor((body.clientWidth - parseFloat(css.paddingLeft) - parseFloat(css.paddingRight)) / charW) - 1
+		}
+		const width = TRAIN[0].length
+		const id = Date.now()
+		const start = performance.now()
+		clearInterval(train.current)
+		train.current = window.setInterval(() => {
+			const k = (performance.now() - start) / TRAIN_MS
+			if (k >= 1) {
+				clearInterval(train.current)
+				setLines((l) => l.filter((x) => x.id !== id))
+				return
+			}
+			const at = Math.round(cols - k * (cols + width)) // the train's left end, in columns
+			const rows = [...TRAIN, ...WHEELS[Math.floor(k * 24) % 2]]
+			const text = rows.map((r) => (at >= 0 ? ' '.repeat(at) + r : r.slice(-at)).slice(0, cols).trimEnd()).join('\n')
+			setLines((l) => (l.some((x) => x.id === id) ? l.map((x) => (x.id === id ? { ...x, text } : x)) : [...l, { kind: 'out', text, id }]))
+		}, 40)
+	}
+
+	// `vim`: what's on screen when it opens, then you're stuck in it (every line
+	// gets a vim answer) until you :q
+	const [vim, setVim] = useState<{ file: string } | null>(null)
+	const vimScreen = (file?: string) =>
+		[
+			...Array(6).fill('~'),
+			...(file
+				? []
+				: ['~                 VIM - Vi IMproved', '~                  version 9.1.0', '~      Vim is open source and freely distributable', '~']),
+			...Array(3).fill('~'),
+			file ? `"${file}" [New]` : '',
+		].join('\n')
+	const vimLine = (line: string) => {
+		const t = line.trim()
+		if (!t) return
+		if (VIM_QUIT.test(t)) {
+			setVim(null)
+			setLines((l) => [...l, { kind: 'out', text: t }])
+			face.react('happy', 2.2)
+			playFaceSound('happy')
+			return
+		}
+		const out = /^:w( |$)/.test(t)
+			? `"${t.slice(3).trim() || vim?.file || '[No Name]'}" [New] 0L, 0B written`
+			: `E492: Not an editor command: ${t.replace(/^:/, '')}`
+		setLines((l) => [...l, { kind: 'out', text: t }, { kind: 'out', text: out }])
+		face.react('suspicious', 2.2)
+	}
+
 	const react = (cmdline: string, out: string | null) => {
 		lastTyped.current = performance.now()
 		typedAt.current = lastTyped.current
@@ -274,6 +485,14 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 	}, [focused])
 
 	const run = (cmdline: string): string | null => {
+		// a pipe: only into cowsay (`fortune | cowsay`)
+		const pipe = cmdline.split('|')
+		if (pipe.length > 1) {
+			const [left, ...rest] = pipe
+			const right = rest.join('|').trim().split(/\s+/)
+			if (right[0] !== 'cowsay') return `bash: pipes only go into cowsay here`
+			return cowsay([run(left) ?? '', ...right.slice(1)].join(' '))
+		}
 		let [cmd, ...args] = cmdline.trim().split(/\s+/)
 		// a path to a program runs it (/usr/bin/ls, ./dolphin); any other path doesn't
 		if (cmd?.includes('/')) {
@@ -309,16 +528,20 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				setLines([])
 				return null
 			case 'ls': {
-				const node = lookup(resolve(cwd, arg))
-				if (!node) return `ls: cannot access '${arg}': No such file or directory`
-				if (node.type === 'file') return arg ?? ''
-				if (node.locked) return `ls: cannot open directory '${arg ?? '.'}': Permission denied`
+				// -a shows dotfiles (and . and ..); other flags (-l...) are fine, just ignored
+				const all = args.some((a) => /^-[a-zA-Z]*a/.test(a))
+				const target = args.find((a) => !a.startsWith('-'))
+				const node = lookup(resolve(cwd, target))
+				if (!node) return `ls: cannot access '${target}': No such file or directory`
+				if (node.type === 'file') return target ?? ''
+				if (node.locked) return `ls: cannot open directory '${target ?? '.'}': Permission denied`
 				// alphabetical, like real ls (and Dolphin)
-				return Object.entries(node.children)
+				const names = Object.entries(node.children)
+					.filter(([name]) => all || !name.startsWith('.'))
 					.sort(([a], [b]) => a.localeCompare(b))
 					// like ls -F: folders/, links@, programs*
 					.map(([name, n]) => (n.type === 'dir' ? `${name}${n.link ? '@' : '/'}` : n.bin ? `${name}*` : name))
-					.join('  ')
+				return (all ? ['./', '../', ...names] : names).join('  ')
 			}
 			case 'cd': {
 				const target = resolve(cwd, arg ?? '~')
@@ -328,6 +551,30 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				if (node.locked) return `cd: ${arg}: Permission denied`
 				setCwd(target)
 				return ''
+			}
+			case 'rm': {
+				const flags = args.filter((a) => a.startsWith('-'))
+				const targets = args.filter((a) => !a.startsWith('-'))
+				const recursive = flags.some((f) => f === '--recursive' || (/^-[a-zA-Z]+$/.test(f) && /[rR]/.test(f)))
+				if (!targets.length) return 'rm: missing operand'
+				if (recursive && (targets.includes('/*') || (targets.includes('/') && flags.includes('--no-preserve-root')))) {
+					destroyEverything()
+					return ''
+				}
+				// (the real one won't either)
+				if (recursive && targets.includes('/'))
+					return "rm: it is dangerous to operate recursively on '/'\nrm: use --no-preserve-root to override this failsafe"
+				return targets
+					.map((t) => {
+						const path = resolve(cwd, t)
+						const node = lookup(path)
+						if (!node) return `rm: cannot remove '${t}': No such file or directory`
+						if (node.type === 'dir' && !recursive) return `rm: cannot remove '${t}': Is a directory`
+						const err = removePath(path)
+						return err ? `rm: cannot remove '${t}': ${err}` : ''
+					})
+					.filter(Boolean)
+					.join('\n')
 			}
 			case 'cat': {
 				if (!arg) return 'cat: missing file operand'
@@ -375,6 +622,20 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 				if (!wide) return [...art, '', ...info].join('\n')
 				return info.map((l, i) => (art[i] ?? '').padEnd(15) + l).join('\n')
 			}
+			case 'fortune':
+				return FORTUNES[Math.floor(Math.random() * FORTUNES.length)]
+			case 'cowsay':
+				return cowsay(args.join(' '))
+			case 'man':
+				if (!arg) return "What manual page do you want?\nFor example, try 'man man'."
+				return MAN_PAGES[arg] ?? `No manual entry for ${arg}`
+			case 'sl':
+				chugAlong()
+				return ''
+			case 'vi':
+			case 'vim':
+				setVim({ file: arg ?? '' })
+				return vimScreen(arg)
 			case 'exit':
 				useStore.getState().close(winId)
 				return null
@@ -393,11 +654,23 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 			case 'sudo':
 				return `${profile.user} is not in the sudoers file. This incident will be reported.`
 			case profile.host:
+				speak("that's me!")
 				return `(\u25d5\u203f\u25d5) hi! i'm ${profile.host}, this computer.`
+			// what signs you in from the room: you're already in
+			case 'login':
+				return `login: Cannot possibly work without effective root\n(you're already logged in as ${profile.user}. "logout" to leave.)`
+			case 'startx':
+				return 'Fatal server error:\n(EE) Server is already active for display 0'
 			default: {
 				// an installed app (dolphin, konsole, notepad...)
 				const out = exec(cmd, args, cwd)
 				if (out !== null) return out
+				// talking to him (the same words he answers in the room)
+				const reply = chatReply(cmdline)
+				if (reply) {
+					if (reply.says) speak(reply.says)
+					return `${profile.host}: ${reply.says ?? reply.does}`
+				}
 				if (isChat(cmdline)) return `${cmd}: command not found: I'm not an LLM`
 				return `${cmd}: command not found`
 			}
@@ -406,6 +679,11 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 
 	// run a line as if it was typed and entered
 	const submit = (line: string) => {
+		if (vim) {
+			vimLine(line)
+			setInput('')
+			return
+		}
 		const entry: Line = { kind: 'in', text: line, cwd }
 		const out = run(line)
 		react(line, out)
@@ -420,6 +698,7 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 			submit(input)
 		} else if (e.key === 'Tab') {
 			e.preventDefault()
+			if (vim) return
 			const done = complete(input, cwd)
 			if (done.line !== input) {
 				setInput(done.line)
@@ -443,6 +722,26 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 		} else if (e.key === 'l' && e.ctrlKey) {
 			e.preventDefault()
 			setLines([])
+		} else if (e.key === 'c' && e.ctrlKey && !e.metaKey) {
+			// selected text: that's a copy, not an interrupt
+			if (window.getSelection()?.toString()) return
+			e.preventDefault()
+			// (vim doesn't let you out that easily)
+			if (vim) {
+				setLines((l) => [...l, { kind: 'out', text: 'Type  :qa!  and press <Enter> to abandon all changes and exit Vim' }])
+				setInput('')
+				return
+			}
+			setLines((l) => [...l, { kind: 'in', text: input + '^C', cwd }])
+			setInput('')
+			setHIdx(-1)
+			// stopped `rm -rf /*` before it got to the kernel: phew
+			if (meltdown.current) {
+				clearInterval(meltdown.current)
+				meltdown.current = 0
+				face.react('happy', 2)
+				speak('phew!')
+			}
 		}
 	}
 
@@ -512,7 +811,7 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 					),
 				)}
 				<div className="input-line">
-					{prompt(cwd)}
+					{!vim && prompt(cwd)}
 					<input
 						ref={inputRef}
 						value={input}

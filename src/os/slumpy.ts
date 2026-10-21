@@ -17,7 +17,8 @@ const tick = (now: number) => {
   raf = requestAnimationFrame(tick)
 }
 
-function getFace() {
+// (for things outside React, like the Konami code)
+export function getFace() {
   if (!face) {
     face = new SlumpyFace({ transparent: true }) // copies onto black screens look the same
     face.set(null) // wake up

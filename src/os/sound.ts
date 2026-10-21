@@ -319,6 +319,13 @@ const FACE_SOUNDS: Record<string, Note[]> = {
     [0.3, 0.3, 600, 400, 'sine', 0.06],
     [0.6, 0.3, 400, 600, 'sine', 0.06],
   ],
+  // a frantic little alarm
+  panic: [
+    [0, 0.07, 1250, 1250, 'square', 0.03],
+    [0.09, 0.07, 940, 940, 'square', 0.03],
+    [0.18, 0.07, 1250, 1250, 'square', 0.03],
+    [0.27, 0.07, 940, 940, 'square', 0.03],
+  ],
   // wobbly warble
   dizzy: [
     [0, 0.12, 700, 500, 'triangle', 0.04],
@@ -429,6 +436,18 @@ export function playBump(speed: number) {
   const g = Math.min(1, speed / 3)
   tone(c, t, 0.1, 'triangle', 190, 120, env(c, t, 0.3 * g, 0.002, 0.095))
   noise(c, t, 0.04, 'lowpass', 1200, env(c, t, 0.15 * g, 0.001, 0.035))
+}
+
+// being petted: a little rumbling purr, in and out like breathing
+export function playPurr() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  for (let i = 0; i < 4; i++) {
+    const at = t + i * 0.3
+    noise(c, at, 0.24, 'lowpass', 220, env(c, at, 0.22, 0.05, 0.18))
+    tone(c, at, 0.24, 'sawtooth', 48, 42, env(c, at, 0.05, 0.05, 0.18))
+  }
 }
 
 // Slumpy bouncing off the edge of the Konsole after a fling; strength 0..1

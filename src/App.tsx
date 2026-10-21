@@ -12,10 +12,11 @@ export function App() {
   const device = useStore((s) => s.hoverDevice)
   const off = useStore((s) => s.poweredOff)
   const booting = useStore((s) => s.booting) // the boot log is up: it heads into the sign-in by itself
+  const rebooting = useStore((s) => s.rebooting) // off for a moment, coming back on by itself
   return (
     <>
       <Scene />
-      {mode === 'room' && !booting && (
+      {mode === 'room' && !booting && !rebooting && (
         <div className="hint">
           {device ? `${devices[device].name}, the ${devices[device].type.toLowerCase()}` : off ? 'press the power button' : `${TOUCH ? 'tap' : 'click'} the computer`}
         </div>

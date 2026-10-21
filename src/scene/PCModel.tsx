@@ -6,10 +6,15 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
 import { useStore } from '../store'
-import { unlockAudio, playBoing, playPowerOn, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, speak, speakSoon } from '../os/sound'
+import { unlockAudio, playKeyClack, playPowerOn, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
-import { brainHatch, makeHatch } from './Brain'
+import { brainBusy, brainHatch, makeHatch } from './Brain'
+import { makeFloppy } from './Floppy'
+import { makeKeyCaps } from './KeyCaps'
+import { makeSantaHat } from './SantaHat'
+import { isDecember } from '../os/occasion'
+import { chatReply, SIGN_IN_COMMANDS } from '../os/chat'
 import { restoreCursor, type HoverKind } from './cursor'
 import { devices } from '../data/devices'
 import { profile } from '../data/profile'
@@ -27,6 +32,15 @@ const FAN_TEXELS = { x0: 60, x1: 67, y0: 51, y1: 58 }
 // easter egg: the back of the monitor (the big box behind the screen) has a hatch
 // in it: his brain pops out (see Brain)
 const MONITOR_BACK_MESH_INDEX = 8
+// Typing in the room (before going into the desktop) turns his screen into a
+// command line; Enter and his face comes back to answer it (see os/chat)
+const TYPED_LENGTH = 72 // letters on the line, at most
+const TYPING_IDLE_MS = 10_000 // left alone this long, the line clears and his face comes back
+// easter eggs: the screensaver comes on after the room's been left alone this long
+const SAVER_AFTER_MS = 90_000
+// petting: rub the pointer back and forth over the top of the monitor (above
+// the screen): this many turns within PET_WINDOW_MS, each at least PET_SWIPE px
+const PET = { above: 1.5, turns: 4, windowMs: 1500, swipe: 12, everyMs: 1600 }
 // picking up the keyboard and mouse is a mouse/trackpad thing; on touch screens
 // dragging orbits the camera and tapping them turns the PC on like the rest of it
 const CAN_GRAB = !matchMedia('(pointer: coarse)').matches
@@ -171,7 +185,13 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     // the hatch in the back of the monitor the brain comes out of
     const hatch = makeHatch(meshes[MONITOR_BACK_MESH_INDEX], material)
     root.add(hatch.group)
-    return { root, meshes, face, material, mouse, props, screenBox, button, hatch }
+    const floppy = makeFloppy()
+    root.add(floppy.group)
+    // typing in the room presses its keys (only rocks it while it's sitting still)
+    const keyboard = props.find(meshes[KEYBOARD_MESH_INDEX])
+    const keys = makeKeyCaps(meshes[KEYBOARD_MESH_INDEX], () => keyboard?.state === 'rest')
+    if (isDecember()) root.add(makeSantaHat())
+    return { root, meshes, face, material, mouse, props, screenBox, button, hatch, floppy, keys }
   }, [scene])
 
   // the happy face is for pointing at the PC itself, not for messing with the
@@ -180,18 +200,23 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   // asleep from the start, so the loading screen fades onto a sleepy face; he
   // wakes up just after (the wake-up effect below)
   const [asleep, setAsleep] = useState(true)
+  const [typing, setTyping] = useState(false) // his screen's a command line (typing in the room)
+  const typingRef = useRef(false)
+  typingRef.current = typing
+  const [saver, setSaver] = useState(false) // the screensaver's on (left alone in the room)
   // shut down (the screen and lights go dark), and the loading face while he
   // turns back on from the power button
   const poweredOff = useStore((s) => s.poweredOff)
   const rebooting = useStore((s) => s.rebooting)
   const booting = useStore((s) => s.booting)
-  const setBooting = (booting: boolean) => useStore.setState({ booting })
+  const setBooting = (booting: boolean) => useStore.setState({ booting, leaning: booting })
+  const bootStart = useRef(0) // when the boot log started (performance.now())
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
-    // off or booting: the power button is the only thing on him that can be clicked
-    const { poweredOff, booting } = useStore.getState()
-    const dead = !prop && obj !== model.button && (poweredOff || booting)
+    // off: the power button is the only thing on him that can be clicked
+    const { poweredOff } = useStore.getState()
+    const dead = !prop && obj !== model.button && poweredOff
     onHover(prop ? 'prop' : dead ? null : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
@@ -233,6 +258,8 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     if (mode === 'exiting' || poweredOff || (mode === 'desktop' && !booting)) expr = 'off'
     else if (booting) expr = 'boot'
     else if (mode === 'zooming') expr = 'surprised'
+    else if (saver) expr = 'starfield'
+    else if (typing) expr = 'prompt'
     else if (asleep) expr = 'asleep'
     else if (hovered) expr = 'happy'
     // hovering on and off shouldn't cut a reaction short (getting hit, a fart, …)
@@ -241,7 +268,69 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     invalidate()
     // leaving the desktop puts the keyboard and mouse back where they belong
     if (mode === 'exiting') model.props.reset()
-  }, [mode, hovered, asleep, booting, poweredOff, model, invalidate])
+  }, [mode, hovered, asleep, typing, saver, booting, poweredOff, model, invalidate])
+
+  // the screensaver: the room left alone (no pointer, keys or wheel) for a while.
+  // Anything at all and he wakes up with a start.
+  const saverRef = useRef(false)
+  saverRef.current = saver
+  useEffect(() => {
+    let last = performance.now()
+    const input = () => {
+      last = performance.now()
+      if (!saverRef.current) return
+      setSaver(false)
+      model.face.react('surprised', 1.2)
+    }
+    const events = ['pointermove', 'pointerdown', 'keydown', 'wheel'] as const
+    events.forEach((ev) => window.addEventListener(ev, input, { passive: true }))
+    const id = setInterval(() => {
+      const s = useStore.getState()
+      if (s.mode !== 'room' || s.poweredOff || s.booting) last = performance.now()
+      else if (!saverRef.current && performance.now() - last > SAVER_AFTER_MS) setSaver(true)
+    }, 1000)
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, input))
+      clearInterval(id)
+    }
+  }, [model])
+
+  // the Konami code (see os/konami): he dances along in the room too
+  const disco = useStore((s) => s.disco)
+  useEffect(() => {
+    const left = disco - performance.now()
+    if (left > 0) model.face.react('music', left / 1000)
+  }, [disco, model])
+
+  // petting: back and forth over the top of the monitor makes him purr
+  const pet = useRef({ x: 0, travel: 0, turns: [] as number[], last: -Infinity })
+  const petAt = (e: { object: THREE.Object3D; point: THREE.Vector3; clientX: number }) => {
+    const p = pet.current
+    const dx = e.clientX - p.x
+    p.x = e.clientX
+    const s = useStore.getState()
+    const onTop = e.point.y > PET.above && model.meshes.includes(e.object as THREE.Mesh) && !model.props.find(e.object)
+    if (!CAN_GRAB || !onTop || s.mode !== 'room' || s.poweredOff || s.booting || Math.abs(dx) > 200) {
+      p.travel = 0
+      return
+    }
+    // a turn: the pointer changed direction after a decent swipe
+    if (p.travel && Math.sign(dx) !== Math.sign(p.travel) && Math.abs(p.travel) > PET.swipe) {
+      const now = performance.now()
+      p.turns = [...p.turns.filter((t) => now - t < PET.windowMs), now]
+      p.travel = 0
+      if (p.turns.length >= PET.turns && now - p.last > PET.everyMs) {
+        p.last = now
+        model.face.react('love', 2)
+        playPurr()
+      }
+    }
+    p.travel += dx
+  }
+
+  // stacking: the mouse put down on top of the keyboard (or the other way round)
+  // gets a puzzled look
+  const stacked = useRef<string | null>(null)
 
   // spun around too fast: dizzy for a few seconds (its sound plays via onChange)
   const spins = useStore((s) => s.spins)
@@ -281,6 +370,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const raycaster = useRef(new THREE.Raycaster())
   const jolt = useRef(0) // seconds of shake left (fan easter egg)
   const clockRef = useRef(0)
+  const floppyOut = useRef({ goal: 0, k: 0 }) // the disk: 0 in the drive .. 1 ejected
   const pressedUntil = useRef(0) // the power button is pushed in until then (clock seconds)
   const buttonAt = useRef(new THREE.Vector3())
   useFrame(({ clock, camera, pointer, size }, dt) => {
@@ -331,14 +421,32 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       model.face.watch(THREE.MathUtils.clamp(right * 9, -10, 10), THREE.MathUtils.clamp(down * 6, -5, 5))
     }
     model.face.update(Math.min(dt, 0.1))
+    const [kb, ms] = [model.props.find(model.meshes[KEYBOARD_MESH_INDEX]), model.mouse]
+    const onTopOf = ms && kb && model.props.restingOn(ms) === kb ? 'mouse' : kb && ms && model.props.restingOn(kb) === ms ? 'keyboard' : null
+    if (onTopOf !== stacked.current) {
+      stacked.current = onTopOf
+      if (onTopOf && mode === 'room' && !poweredOff) {
+        model.face.react('confused', 2.5)
+        model.face.glance(0, 5, 2.5) // down at the pile
+      }
+    }
+    model.keys.update(dt)
+
+    const f = floppyOut.current
+    if (f.k !== f.goal) {
+      f.k = Math.abs(f.goal - f.k) < 0.002 ? f.goal : f.k + (f.goal - f.k) * (1 - Math.exp(-dt * 9))
+      model.floppy.setOut(f.k)
+      if (f.goal !== f.k) lights.current.hddUntil = clock.elapsedTime + 0.1 // the drive light while it moves
+    }
 
     const b = POWER_BUTTON
     model.button.position.z = b.at.z - b.depth / 2 + (clock.elapsedTime < pressedUntil.current ? b.travel : 0)
-    // the arrow only points at it while he's off and it's in view (from the front)
+    // the arrow only points at it while he's off and it's in view (from the front),
+    // and not while he's rebooting (he comes back on by himself)
     const p = buttonAt.current.set(b.at.x, b.at.y, b.at.z - b.depth).project(camera)
     powerButtonOnScreen.x = ((p.x + 1) / 2) * size.width
     powerButtonOnScreen.y = ((1 - p.y) / 2) * size.height
-    powerButtonOnScreen.visible = poweredOff && mode === 'room' && p.z < 1 && camera.position.z < b.at.z
+    powerButtonOnScreen.visible = poweredOff && !rebooting && mode === 'room' && p.z < 1 && camera.position.z < b.at.z
 
     raycaster.current.setFromCamera(pointer, camera)
     model.props.update(Math.min(dt, 0.05), raycaster.current.ray)
@@ -413,17 +521,18 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const talkingUntil = useRef(0) // no expression bleeps while he's talking
   const inRoom = () => useStore.getState().mode === 'room'
   // once the loading screen is gone (or he's been turned back on), he wakes up:
-  // still sleepy for a moment, a little yawn ("mmhmm?", if the browser already
-  // allows sound; usually it waits for a tap), then blinks awake and smiles.
+  // still asleep for a moment, then his eyes open with a little yawn ("mmhmm?",
+  // if the browser already allows sound; usually it waits for a tap), he blinks
+  // awake and smiles.
   // ("hellooo" is for when the PC is clicked; clicking it before he's awake
   // wakes him right away.)
   const wake = () => {
     unlockAudio() // only starts if the browser already allows sound here
-    later(700, () => {
+    // eyes open with the yawn, a couple of blinks to get going, then a smile
+    later(1700, () => {
       if (inRoom() && speak('mmhmm?', 0.8)) talkingUntil.current = performance.now() + 700
+      setAsleep(false)
     })
-    // eyes open, a couple of blinks to get going, then a smile
-    later(1700, () => setAsleep(false))
     later(2300, () => inRoom() && model.face.blink(2))
     later(3000, () => inRoom() && model.face.react('happy', 1.4))
   }
@@ -449,6 +558,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     playSpinUp(1.6)
     setAsleep(true)
     setBooting(true)
+    bootStart.current = performance.now()
     later(BOOT_MS, () => {
       if (inRoom()) return signIn() // (the log stays up: see signIn)
       setBooting(false)
@@ -463,6 +573,37 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     model.face.react('sleepy', 2)
     later(1100, () => useStore.getState().setPoweredOff(true))
   }
+  const toggleFloppy = () => {
+    const f = floppyOut.current
+    f.goal = f.goal ? 0 : 1
+    playClick()
+    later(160, () => playClick(true))
+    model.face.react(f.goal ? 'surprised' : 'wink', 1.2)
+  }
+  const bootFloppy = () => {
+    floppyOut.current.goal = 0
+    playClick()
+    later(160, () => playClick(true))
+    useStore.setState({ openOnSignIn: 'about' })
+    later(450, signIn) // once it's slid in
+  }
+  // a click during the power-on's boot log (or the zoom in after it): the camera
+  // backs out to the room, but the log still finishes on his screen, and then he
+  // wakes up (eyes open with a yawn) instead of going on to the sign-in
+  const cancelBoot = () => {
+    if (!useStore.getState().leaning) return // backed out already
+    clearTimers()
+    useStore.setState({ leaning: false, openOnSignIn: null })
+    if (useStore.getState().mode === 'zooming') setMode('room')
+    const left = BOOT_MS - (performance.now() - bootStart.current)
+    later(Math.max(600, left), () => {
+      setBooting(false)
+      wake()
+    })
+  }
+  // (the typing listener below is set up once, so it calls the latest signIn)
+  const signInRef = useRef(signIn)
+  signInRef.current = signIn
   const pressPower = () => {
     pressedUntil.current = clockRef.current + 0.18
     playClick()
@@ -489,6 +630,68 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     window.addEventListener('press-power', onPress)
     return () => window.removeEventListener('press-power', onPress)
   }) // every render: pressPower closes over this render's state
+
+  // typing in the room: Chiba clacks and its keys go down, the drive light
+  // flickers, and his screen shows the line as it's typed. Enter: his face comes
+  // back and answers it. Escape (or leaving it alone) drops it.
+  useEffect(() => {
+    let line = ''
+    let idle = 0
+    const show = (text: string) => {
+      line = text
+      model.face.typed = text
+      setTyping(true)
+      clearTimeout(idle)
+      idle = window.setTimeout(() => done(), TYPING_IDLE_MS)
+    }
+    const done = () => {
+      clearTimeout(idle)
+      line = ''
+      setTyping(false)
+    }
+    const answer = (text: string) => {
+      const words = text.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean)
+      if (!words.length) return
+      if (words.length === 1 && SIGN_IN_COMMANDS.test(words[0])) return signInRef.current()
+      const { expr, says } = chatReply(text) ?? { expr: 'confused' as const, says: 'huh?' }
+      model.face.react(expr, 2.2)
+      if (says && speak(says)) talkingUntil.current = performance.now() + 900
+    }
+    const onKey = (e: KeyboardEvent) => {
+      const s = useStore.getState()
+      if (s.mode !== 'room' || s.poweredOff || s.booting) return
+      if ((e.target as HTMLElement | null)?.closest?.('input, textarea')) return
+      // Ctrl+C: like a shell, ^C and the line's dropped
+      if (e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'c' && typingRef.current) {
+        e.preventDefault()
+        model.face.typed = line + '^C'
+        clearTimeout(idle)
+        idle = window.setTimeout(() => done(), 350)
+        line = ''
+        return
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      if (e.key === 'Escape') return done()
+      if (e.key !== 'Enter' && e.key !== 'Backspace' && e.key.length !== 1) return
+      e.preventDefault() // (the space bar doesn't scroll the page, quote keys don't open quick find)
+      unlockAudio()
+      model.keys.press(e.key)
+      lights.current.hddUntil = clockRef.current + 0.15
+      if (e.key === 'Enter') {
+        playKeyClack('enter')
+        const text = line
+        done()
+        return answer(text)
+      }
+      playKeyClack(e.key === ' ' ? 'space' : e.key === 'Backspace' ? 'back' : 'key')
+      show(e.key === 'Backspace' ? line.slice(0, -1) : (line + e.key).slice(0, TYPED_LENGTH))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      clearTimeout(idle)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [model])
 
   useEffect(() => {
     // the face bleeps as it changes expression (the spin-up covers the zoom)
@@ -532,7 +735,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         hoverAt(e.object)
       }}
       // moving between the PC and the keyboard/mouse doesn't re-fire "over"
-      onPointerMove={(e: { object: THREE.Object3D }) => hoverAt(e.object)}
+      onPointerMove={(e: { object: THREE.Object3D; point: THREE.Vector3; clientX: number }) => {
+        hoverAt(e.object)
+        petAt(e)
+      }}
       onPointerOut={() => {
         onHover(null)
         useStore.getState().setHoverDevice(null)
@@ -552,7 +758,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         e.stopPropagation()
         // a drag that ends over the PC is an orbit, not a click; the keyboard and
         // mouse are for picking up, not for turning it on
-        if (mode !== 'room' || e.delta > 6 || (CAN_GRAB && model.props.find(e.object))) return
+        // (and while the camera's zooming in after the boot log, which a click cancels)
+        const bootZoom = mode === 'zooming' && useStore.getState().booting
+        if ((mode !== 'room' && !bootZoom) || e.delta > 6 || (CAN_GRAB && model.props.find(e.object))) return
         // lifting the finger after a hold isn't a tap: don't turn it on
         if (touchHold.current.held) {
           touchHold.current.held = false
@@ -562,15 +770,20 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         const hitMonitorBack = (e: ClickEvent) =>
           (e.object === model.meshes[MONITOR_BACK_MESH_INDEX] && facing(e) > 0.5) || e.object === model.hatch.door || e.object === model.hatch.hole
         if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
-        // off, or booting (the log finishes and heads into the sign-in by itself):
-        // only the power button does anything
-        if (useStore.getState().poweredOff || useStore.getState().booting) return
+        // booting (or zooming in after it): a click backs out to the room, awake
+        if (useStore.getState().booting) return cancelBoot()
+        // off: only the power button does anything
+        if (useStore.getState().poweredOff) return
         if (hitMonitorBack(e)) {
-          useStore.getState().showBrain()
-          playBoing(1)
+          if (brainBusy.current) return // it's out already: let it finish
+          useStore.getState().showBrain() // (its sounds play from Brain)
           model.face.react('thinking', 4.2) // (the brain's up for about that long)
           return
         }
+        // the floppy drive: the slot ejects the disk (or takes it back), and
+        // clicking the disk puts it in and boots into what's on it
+        if (e.object === model.floppy.slot || e.object === model.floppy.slotTarget) return toggleFloppy()
+        if (model.floppy.has(e.object)) return bootFloppy()
         if (hitFan(e)) {
           // the fan blows out along the face it's on
           const dir = (e.face?.normal ?? new THREE.Vector3(0, 0, 1)).clone().transformDirection(e.object.matrixWorld)

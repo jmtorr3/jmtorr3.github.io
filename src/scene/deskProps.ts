@@ -243,6 +243,11 @@ export class DeskProps {
   // Where p comes to rest: flat on the desk, flat on top of the other prop if it
   // fits on it, or (like the keyboard on the mouse) with one edge on the desk and
   // the other propped up on it, which tilts it. y is p's center height there.
+  // the other prop this one's sitting on, if any (the mouse on the keyboard, say)
+  restingOn(p: Prop) {
+    return p.state === 'rest' ? this.floor(p).under : null
+  }
+
   private floor(p: Prop): { y: number; under: Prop | null; tiltX: number; tiltZ: number } {
     const desk = p.rest.y - p.half.y // bottom height when lying on the desk
     let best = { y: p.rest.y, under: null as Prop | null, tiltX: 0, tiltZ: 0 }

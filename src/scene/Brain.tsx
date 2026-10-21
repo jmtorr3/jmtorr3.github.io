@@ -108,6 +108,8 @@ export function makeHatch(monitor: THREE.Mesh, material: THREE.Material): Hatch 
 
 // set by PCModel once the PC is built
 export const brainHatch: { current: Hatch | null } = { current: null }
+// out (or on its way out or back in): clicking the back of the monitor again does nothing
+export const brainBusy = { current: false }
 
 export function Brain() {
   const { scene } = useGLTF(URL)
@@ -145,18 +147,17 @@ export function Brain() {
     const now = clock.elapsedTime
     if (pending.current) {
       pending.current = false
-      const t = now - shownAt.current
-      if (t >= SHOW) {
+      // (clicked again while it's still out: nothing, it plays out as it is)
+      if (now - shownAt.current >= SHOW) {
         shownAt.current = now
         latched.current = false
         playClick() // the hatch unlatching
         setTimeout(() => playBoing(1), T.out[0] * 1000) // and out it pops
       }
-      // clicked again while it's out: it stays out longer (no second pop)
-      else if (t > T.out[1] && t < T.in[0]) shownAt.current = now - T.out[1]
     }
     let t = now - shownAt.current
     if (useStore.getState().mode !== 'room') t = Infinity // gone (and shut) while you're at the desk
+    brainBusy.current = t >= 0 && t < SHOW
     if (t >= SHOW && !latched.current) {
       latched.current = true
       playClick(true)
