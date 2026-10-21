@@ -197,7 +197,17 @@ a:hover {
   image-rendering: pixelated;
 }
 
-/* off in the Konsole */
+/* Slumpy is somewhere else (slumpyLocation): his face fades out; framed
+   screens stay, just dark */
+.face-screen canvas {
+  transition: opacity 0.3s;
+}
+
+.face-screen.away canvas {
+  opacity: 0;
+}
+
+/* the wallpaper face also shrinks away */
 .wallpaper-face.away {
   opacity: 0;
   transform: scale(0.8);

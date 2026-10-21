@@ -8,7 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { fitScreen, isCompact } from '../scene/screenFit'
-import { useStore, TASKBAR_H } from '../store'
+import { useStore, TASKBAR_H, slumpyLocation } from '../store'
 import { APPS, LAUNCHABLE, type AppId } from './apps/registry'
 import { Icon } from './Icon'
 import { Window } from './Window'
@@ -152,19 +152,14 @@ export function Desktop() {
   const closeMenu = useStore((s) => s.hideMenu)
   const [snow, setSnow] = useState(readSnow)
   const [refreshes, setRefreshes] = useState(0)
-  // there's one Slumpy, and it leaves the wallpaper while it's somewhere else:
-  // the focused Konsole, the Start menu, or an open About This Computer
-  const slumpyAway = useStore((s) => {
-    const focused = s.windows.find((x) => x.id === s.focused)
-    return (
-      (focused?.app === 'terminal' && !focused.minimized) ||
-      s.startOpen ||
-      s.windows.some((x) => x.app === 'system' && !x.minimized)
-    )
-  })
+  const slumpyHere = useStore((s) => slumpyLocation(s) === 'wallpaper')
   // the welcome screen plays every time the PC turns on
   const [signedIn, setSignedIn] = useState(false)
   const finishLogin = useCallback(() => setSignedIn(true), [])
+  useEffect(() => {
+    useStore.setState({ signingIn: !signedIn })
+    return () => useStore.setState({ signingIn: false })
+  }, [signedIn])
 
   const toggleSnow = () => {
     setSnow(!snow)
@@ -250,7 +245,7 @@ export function Desktop() {
           }}
           onContextMenu={(e) => openMenu(e, desktopMenu)}
         >
-          <FaceScreen transparent className={`wallpaper-face ${slumpyAway ? 'away' : ''}`} />
+          <FaceScreen transparent className="wallpaper-face" away={!slumpyHere} />
           {snow && <Snow />}
         </div>
 

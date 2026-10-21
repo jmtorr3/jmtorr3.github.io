@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useStore } from '../store'
+import { useStore, slumpyLocation } from '../store'
 import { APPS, LAUNCHABLE, START_EXTRAS, type AppId } from './apps/registry'
 import { Icon } from './Icon'
 import { profile } from '../data/profile'
@@ -41,6 +41,7 @@ export function Taskbar() {
   const focused = useStore((s) => s.focused)
   const { open, focus, minimize, logOff } = useStore.getState()
   const [menu, setMenu] = useState(false)
+  const slumpyHere = useStore((s) => slumpyLocation(s) === 'start')
   const [query, setQuery] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -80,7 +81,7 @@ export function Taskbar() {
           <div className="start-menu">
             {/* the account is the computer's own */}
             <div className="start-head">
-              <FaceScreen className="start-avatar" />
+              <FaceScreen className="start-avatar" away={!slumpyHere} />
               <span>
                 {profile.host}
                 <span className="start-role">{systemOS}</span>

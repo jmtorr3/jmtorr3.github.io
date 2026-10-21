@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { profile } from '../data/profile'
 import { systemOS } from '../data/system'
 import { FaceScreen } from './FaceScreen'
+import { useStore, slumpyLocation } from '../store'
 import { playKeyTick, playLoginChime } from './sound'
 
 const DOTS = 6
@@ -11,6 +12,7 @@ const DOTS = 6
 // to skip.
 export function LoginScreen({ onDone }: { onDone: () => void }) {
   const [typed, setTyped] = useState(0)
+  const slumpyHere = useStore((s) => slumpyLocation(s) === 'login')
   const [phase, setPhase] = useState<'typing' | 'welcome' | 'leaving'>('typing')
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function LoginScreen({ onDone }: { onDone: () => void }) {
   return (
     <div className={`login ${phase}`} role="status" aria-label={`Signing in to ${profile.host}`}>
       <div className="login-tile">
-        <FaceScreen className="login-avatar" />
+        <FaceScreen className="login-avatar" away={!slumpyHere} />
         <div className="login-who">
           <span className="login-user">{profile.user}</span>
           {phase === 'typing' ? (

@@ -5,11 +5,12 @@ import { resumes } from '../../data/resume'
 import { contactLinks } from '../../data/contact'
 import { projects, slugOf, type Project } from '../../data/projects'
 import { skillGroups } from '../../data/skills'
-import { useStore } from '../../store'
+import { useStore, slumpyLocation } from '../../store'
 import { plain } from '../richText'
 import { LAUNCHABLE, type AppId } from './registry'
 import { openProject } from './Explorer'
-import { SlumpyFace, type Expression } from '../../scene/SlumpyFace'
+import type { Expression } from '../../scene/SlumpyFace'
+import { useSlumpy } from '../slumpy'
 import { SlumpyCam, type SlumpyControl } from '../SlumpyCam'
 import { addMenuItems } from '../appMenu'
 import { playFaceSound } from '../sound'
@@ -210,23 +211,37 @@ export function Terminal({ winId }: { winId: string }) {
 	const inputRef = useRef<HTMLInputElement>(null)
 	const bodyRef = useRef<HTMLDivElement>(null)
 	const focused = useStore((s) => s.focused === winId)
-	const startOpen = useStore((s) => s.startOpen) // Slumpy's up in the Start menu then
+	const slumpyHere = useStore((s) => slumpyLocation(s) === 'konsole')
 
 	// Slumpy watches you type: eyes follow the text, reacts to each command,
 	// dozes off when you stop for a while and startles awake when you start again
-	const [face] = useState(() => new SlumpyFace({ idle: false, transparent: true }))
+	const face = useSlumpy() // the desktop's one Slumpy (same mood wherever he is)
 	const lastTyped = useRef(performance.now())
 	// last actual keystroke or command (not when the window opened), for following
 	const typedAt = useRef(-Infinity)
 	const dozing = useRef(false)
+	// (only while he's actually in here: it's the same Slumpy as on the wallpaper)
 	useEffect(() => {
+		let here = false
+		const wake = () => {
+			if (!dozing.current) return
+			dozing.current = false
+			face.react('neutral', 0)
+		}
 		const id = setInterval(() => {
-			if (!dozing.current && performance.now() - lastTyped.current > 25_000) {
+			const now = slumpyLocation(useStore.getState()) === 'konsole'
+			if (now && !here) lastTyped.current = performance.now() // just arrived: start the clock
+			if (!now) wake() // left while asleep: don't stay asleep somewhere else
+			here = now
+			if (here && !dozing.current && performance.now() - lastTyped.current > 25_000) {
 				dozing.current = true
 				face.react('sleepy', 1e9)
 			}
 		}, 1000)
-		return () => clearInterval(id)
+		return () => {
+			clearInterval(id)
+			wake()
+		}
 	}, [face])
 	const onType = (value: string) => {
 		lastTyped.current = performance.now()
@@ -490,8 +505,8 @@ export function Terminal({ winId }: { winId: string }) {
 					/>
 				</div>
 			</div>
-			{/* only here while the Konsole is focused (and the Start menu, which takes him, is closed) */}
-			<SlumpyCam face={face} follow={follow} onClick={pet} control={slumpy} away={!focused || startOpen} />
+			{/* only here while slumpyLocation() says so (the Konsole is focused, nothing else has him) */}
+			<SlumpyCam face={face} follow={follow} onClick={pet} control={slumpy} away={!slumpyHere} />
 		</div>
 	)
 }

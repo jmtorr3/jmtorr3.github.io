@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import type { SlumpyFace } from '../scene/SlumpyFace'
+import { FACE_W, FACE_H, type SlumpyFace } from '../scene/SlumpyFace'
+import { copyFaceLoop } from './slumpy'
 import { playBoing } from './sound'
 
 type Point = { x: number; y: number }
@@ -37,8 +38,12 @@ export function SlumpyCam({
   useEffect(() => {
     const el = host.current
     if (!el) return
-    el.appendChild(face.canvas)
-    face.set(null) // wake up
+    // a copy of the shared face (slumpy.ts animates it)
+    const view = document.createElement('canvas')
+    view.width = FACE_W
+    view.height = FACE_H
+    el.appendChild(view)
+    const stopCopy = copyFaceLoop(face, view, false)
 
     const pos: Point = { x: -1, y: 0 }
     let target: Point = { x: 0, y: 0 }
@@ -129,7 +134,6 @@ export function SlumpyCam({
     const tick = (now: number) => {
       const dt = Math.min((now - last) / 1000, 0.1)
       last = now
-      face.update(dt)
 
       const parent = el.parentElement
       if (parent) {
@@ -194,7 +198,8 @@ export function SlumpyCam({
       el.removeEventListener('pointerup', up)
       el.removeEventListener('pointercancel', up)
       if (control) control.current.comeTo = undefined
-      face.canvas.remove()
+      stopCopy()
+      view.remove()
     }
   }, [face, control])
 

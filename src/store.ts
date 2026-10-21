@@ -38,6 +38,7 @@ interface State {
   // the right-click menu (any app can open one; the Desktop draws it), at a screen point
   menu: { clientX: number; clientY: number; items: MenuItem[] } | null
   startOpen: boolean // the Start menu (its header shows Slumpy)
+  signingIn: boolean // the welcome screen after power-on (shows Slumpy)
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
   screen: ScreenInfo | null
@@ -73,6 +74,7 @@ export const useStore = create<State>((set, get) => ({
   fart: null,
   menu: null,
   startOpen: false,
+  signingIn: false,
   screen: null,
   desk: { w: window.innerWidth, h: window.innerHeight, scale: 1 },
   windows: [],
@@ -160,3 +162,18 @@ export const useStore = create<State>((set, get) => ({
 
   closeAll: () => set({ windows: [], focused: null }),
 }))
+
+// There's only one Slumpy. Everything that can show him asks where he is right
+// now, and only that place shows his face (the rest step aside).
+export type SlumpyPlace = 'login' | 'start' | 'konsole' | 'system' | 'wallpaper'
+
+export function slumpyLocation(s: State): SlumpyPlace {
+  if (s.signingIn) return 'login'
+  if (s.startOpen) return 'start'
+  const focused = s.windows.find((w) => w.id === s.focused && !w.minimized)
+  if (focused?.app === 'terminal') return 'konsole'
+  if (focused?.app === 'system') return 'system'
+  // About This Computer still on screen behind other windows keeps him
+  if (s.windows.some((w) => w.app === 'system' && !w.minimized)) return 'system'
+  return 'wallpaper'
+}

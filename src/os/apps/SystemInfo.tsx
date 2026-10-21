@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { profile } from '../../data/profile'
 import { systemSpecs, systemTagline } from '../../data/system'
 import { FaceScreen } from '../FaceScreen'
+import { useStore, slumpyLocation } from '../../store'
 
 const BOOTED = performance.now() // "uptime" counts from page load
 
@@ -15,6 +16,7 @@ const fmtUptime = (ms: number) => {
 // KDE "About this System", for Slumpy: its face, its name, made-up specs
 export function SystemInfo() {
   const [uptime, setUptime] = useState(() => performance.now() - BOOTED)
+  const slumpyHere = useStore((s) => slumpyLocation(s) === 'system')
 
   useEffect(() => {
     const id = setInterval(() => setUptime(performance.now() - BOOTED), 1000)
@@ -24,7 +26,7 @@ export function SystemInfo() {
   return (
     <div className="sysinfo">
       <div className="sysinfo-head">
-        <FaceScreen className="sysinfo-screen" />
+        <FaceScreen className="sysinfo-screen" away={!slumpyHere} />
         <div>
           <h2 className="sysinfo-name">{profile.host}</h2>
           <p className="muted">{systemTagline}</p>
