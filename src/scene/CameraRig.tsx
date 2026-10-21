@@ -31,6 +31,11 @@ const DIZZY_SPIN = Math.PI * 2
 const DIZZY_COOLDOWN = 4 // seconds before it can get dizzy again
 // the PC's bounding box reaches ~1.5 from its middle; keep the room camera outside that
 const MIN_ROOM_DISTANCE = 2.2
+// zooming in the room (the wheel; not on touch screens): how far the camera can be from the PC's
+// middle. In as far as MIN_ROOM_DISTANCE (outside the PC, so it never clips in),
+// out to this; and how much a wheel notch zooms
+const MAX_ROOM_DISTANCE = 8.5
+const WHEEL_ZOOM = 0.0015
 // how far up/down the user can orbit, as angles from straight up (radians)
 const MIN_POLAR = 0.35
 const MAX_POLAR = 1.45 // just above the desk
@@ -115,6 +120,8 @@ export function CameraRig() {
   // recent turning (fades out over about a second) and when it last got dizzy
   const spin = useRef({ amount: 0, lastYaw: 0, dizzyAt: -Infinity })
   const lean = useRef(0) // 0..1, leaning in to read the boot log
+  // zoom: the room camera's distance times this (eased toward goal)
+  const zoom = useRef({ k: 1, goal: 1 })
 
   // any input counts as "not idle" and stops a return in progress
   useEffect(() => {
@@ -174,15 +181,23 @@ export function CameraRig() {
       if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId)
       restoreCursor()
     }
+    // the wheel (or a trackpad's two-finger scroll / pinch, which arrives as ctrl+wheel)
+    const wheel = (e: WheelEvent) => {
+      if (useStore.getState().mode !== 'room') return
+      e.preventDefault()
+      zoom.current.goal *= Math.exp(e.deltaY * WHEEL_ZOOM * (e.ctrlKey ? 4 : 1))
+    }
     el.addEventListener('pointerdown', down)
     el.addEventListener('pointermove', move)
     el.addEventListener('pointerup', up)
     el.addEventListener('pointercancel', up)
+    el.addEventListener('wheel', wheel, { passive: false })
     return () => {
       el.removeEventListener('pointerdown', down)
       el.removeEventListener('pointermove', move)
       el.removeEventListener('pointerup', up)
       el.removeEventListener('pointercancel', up)
+      el.removeEventListener('wheel', wheel)
     }
   }, [gl])
 
@@ -230,6 +245,12 @@ export function CameraRig() {
     const sph = new THREE.Spherical().setFromVector3(offset)
     // tall (phone) screens see less side to side, so back up until the PC fits
     sph.radius *= Math.max(1, 0.95 / (size.width / size.height))
+    // zoomed in or out, never into the PC or off into the distance (the goal's
+    // held to what's reachable, so zooming back the other way responds at once)
+    const z = zoom.current
+    z.goal = THREE.MathUtils.clamp(z.goal, MIN_ROOM_DISTANCE / sph.radius, MAX_ROOM_DISTANCE / sph.radius)
+    z.k += (z.goal - z.k) * (1 - Math.exp(-delta * 10))
+    sph.radius *= z.k
     sph.theta += o.yaw + Math.sin(time * 0.3) * 0.06 - sway.current.x * 0.12
     const polar = THREE.MathUtils.clamp(sph.phi + o.pitch, MIN_POLAR, MAX_POLAR)
     o.pitch = polar - sph.phi // stop at the limits instead of storing overshoot

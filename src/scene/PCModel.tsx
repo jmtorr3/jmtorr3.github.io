@@ -10,7 +10,7 @@ import { useStore } from '../store'
 import { unlockAudio, playKeyClack, playCrtOn, playCrtOff, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
-import { brainBusy, brainHatch, makeHatch } from './Brain'
+import { brainBusy, brainHatch, hatchOpenByHand, makeHatch, toggleHatch } from './Brain'
 import { makeFloppy } from './Floppy'
 import { makeKeyCaps } from './KeyCaps'
 import { makeSantaHat } from './SantaHat'
@@ -215,9 +215,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const hoverAt = (obj: THREE.Object3D) => {
     if (!CAN_GRAB) return // touch: see holdStart
     const prop = CAN_GRAB && model.props.find(obj)
-    // off: the power button is the only thing on him that can be clicked
+    // off: the power button (and the hatch on his back) are the only things on him that can be clicked
     const { poweredOff } = useStore.getState()
-    const dead = !prop && obj !== model.button && poweredOff
+    const hatch = obj === model.meshes[MONITOR_BACK_MESH_INDEX] || obj === model.hatch.door || obj === model.hatch.hole
+    const dead = !prop && obj !== model.button && !hatch && poweredOff
     onHover(prop ? 'prop' : dead ? null : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
@@ -459,7 +460,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const p = buttonAt.current.set(b.at.x, b.at.y, b.at.z - b.depth).project(camera)
     powerButtonOnScreen.x = ((p.x + 1) / 2) * size.width
     powerButtonOnScreen.y = ((1 - p.y) / 2) * size.height
-    powerButtonOnScreen.visible = poweredOff && !rebooting && mode === 'room' && p.z < 1 && camera.position.z < b.at.z
+    powerButtonOnScreen.visible = poweredOff && !rebooting && !useStore.getState().brainOut && mode === 'room' && p.z < 1 && camera.position.z < b.at.z
 
     raycaster.current.setFromCamera(pointer, camera)
     model.props.update(Math.min(dt, 0.05), raycaster.current.ray)
@@ -620,6 +621,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     pressedUntil.current = clockRef.current + 0.18
     playClick()
     later(140, () => playClick(true))
+    if (useStore.getState().brainOut) return // no brain, no power: it just clicks
     if (useStore.getState().poweredOff) powerOn()
     else powerOff()
   }
@@ -794,14 +796,18 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
         // booting (or zooming in after it): a click backs out to the room, awake
         if (useStore.getState().booting) return cancelBoot()
-        // off: only the power button does anything
-        if (useStore.getState().poweredOff) return
         if (hitMonitorBack(e)) {
+          const s = useStore.getState()
+          // his brain's been pulled out (or the hatch is open by hand): the hatch
+          // opens and shuts by hand, to put it back
+          if (s.brainOut || hatchOpenByHand()) return toggleHatch()
           if (brainBusy.current) return // it's out already: let it finish
-          useStore.getState().showBrain() // (its sounds play from Brain)
-          model.face.react('thinking', 4.2) // (the brain's up for about that long)
+          s.showBrain() // (its sounds play from Brain; it pops out whether he's on or off)
+          if (!s.poweredOff) model.face.react('thinking', 4.2) // (the brain's up for about that long)
           return
         }
+        // off: only the power button (and the hatch) do anything
+        if (useStore.getState().poweredOff) return
         // the floppy drive: the slot ejects the disk (or takes it back), and
         // clicking the disk puts it in and boots into what's on it
         if (e.object === model.floppy.slot || e.object === model.floppy.slotTarget) return toggleFloppy()
