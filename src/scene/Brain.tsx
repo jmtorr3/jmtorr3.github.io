@@ -540,6 +540,10 @@ export function Brain() {
     nowRef.current = now
     const dt = Math.min(delta, 0.05)
     const g = brain
+    // inside, it's hidden, every frame: React's Suspense shows things it's managing
+    // again once everything's loaded, which would show it (and its cable), unplaced,
+    // at the middle of the room
+    if (B.mode === 'inside') g.visible = false
     inside.copy(hatch.center).setZ(hatch.center.z - 0.25)
     if (pending.current) {
       pending.current = false
