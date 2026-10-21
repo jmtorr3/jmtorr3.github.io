@@ -16,6 +16,7 @@ import { Icon } from './Icon'
 import { Window } from './Window'
 import { Taskbar } from './Taskbar'
 import { Snow } from './Snow'
+import { Pets } from './Pets'
 import { FaceScreen } from './FaceScreen'
 import { HOME, TRASH, lookup, openNotepad, removePath } from './vfs'
 import { useSlumpy } from './slumpy'
@@ -230,6 +231,8 @@ export function Desktop() {
   // instead of the CRT switching on again (it's already on)
   // (the log stays on the 3D screen underneath until the fade is done)
   const [fromBoot] = useState(() => useStore.getState().booting)
+  // back from the room still signed in: it's still on too, so it just fades in
+  const [resumed] = useState(() => useStore.getState().session)
   const { rect, scale, w, h, compact } = useScreenRect()
   const { selected, setSelected, marquee, iconRefs, startMarquee } = useMarquee()
   const icons = useDesktopIcons({ w, h, scale, selected, setSelected })
@@ -256,9 +259,13 @@ export function Desktop() {
     const who = `${profile.user}@${profile.host}`
     document.title = focusedApp ? `${who}: ${APPS[focusedApp].label}` : who
   }, [focusedApp])
-  // the welcome screen plays every time the PC turns on
-  const [signedIn, setSignedIn] = useState(false)
-  const finishLogin = useCallback(() => setSignedIn(true), [])
+  // the welcome screen plays every time the PC turns on (but not coming back
+  // from the room, still signed in)
+  const [signedIn, setSignedIn] = useState(() => useStore.getState().session)
+  const finishLogin = useCallback(() => {
+    setSignedIn(true)
+    useStore.setState({ session: true })
+  }, [])
   useEffect(() => {
     useStore.setState({ signingIn: !signedIn })
     return () => useStore.setState({ signingIn: false })
@@ -392,7 +399,7 @@ export function Desktop() {
 
   return (
     <div
-      className={`desktop ${poweringOff ? 'crt-off' : fromBoot ? 'boot-in' : 'crt-on'} ${compact ? 'compact' : ''} ${unplugged.mouse ? 'no-mouse' : ''}`}
+      className={`desktop ${poweringOff ? 'crt-off' : fromBoot || resumed ? 'boot-in' : 'crt-on'} ${compact ? 'compact' : ''} ${unplugged.mouse ? 'no-mouse' : ''}`}
       style={rect}
       onPointerDownCapture={() => playClick()}
       onPointerUpCapture={() => playClick(true)}
@@ -430,6 +437,9 @@ export function Desktop() {
           <FaceScreen transparent className="wallpaper-face" away={!slumpyHere} />
           {snow && <Snow />}
         </div>
+
+        {/* Chiba and Hanzo, Slumpy's pets, pottering about along the bottom */}
+        <Pets />
 
         {/* keyed so Refresh re-mounts it, replaying its flicker-in */}
         <div className={`icons ${refreshes ? 'refresh' : ''}`} key={refreshes}>

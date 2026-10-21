@@ -6,7 +6,7 @@ import { DustPuff } from './DustPuff'
 import { Brain } from './Brain'
 import { PicoPostFX } from './PicoPostFX'
 import { CameraRig } from './CameraRig'
-import { useStore } from '../store'
+import { useStore, canHighlight } from '../store'
 import { FOV } from './screenFit'
 
 // touch screens have no hover, so the rainbow "you can tap this" outline stays on
@@ -15,7 +15,7 @@ const TOUCH = matchMedia('(pointer: coarse)').matches
 export function Scene() {
   const [hovered, setHovered] = useState<HoverKind>(null)
   const mode = useStore((s) => s.mode)
-  const off = useStore((s) => s.poweredOff)
+  const highlight = useStore(canHighlight)
 
   // the PC is clickable and the keyboard and mouse can be picked up (pointing
   // hand); anywhere else in the room can be dragged to orbit (open hand)
@@ -39,9 +39,8 @@ export function Scene() {
         <Brain />
       </Suspense>
       <CameraRig />
-      {/* off: only the power button lights him up (not the keyboard or mouse), and
-          on touch, where the outline is always on, it goes away until he's back on */}
-      <PicoPostFX hovered={mode === 'room' && (TOUCH ? !off : hovered !== null && !(off && hovered === 'prop'))} />
+      {/* (never while he's off: see canHighlight) */}
+      <PicoPostFX hovered={highlight && (TOUCH || hovered !== null)} />
     </Canvas>
   )
 }

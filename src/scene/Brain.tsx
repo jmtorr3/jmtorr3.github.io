@@ -46,6 +46,7 @@ export type Hatch = {
   group: THREE.Group
   door: THREE.Mesh
   hole: THREE.Mesh
+  frame: THREE.Mesh // the back panel round the opening (clicks on it are clicks on the monitor's back)
   // the middle of the opening, on the back face (which faces +z)
   center: THREE.Vector3
   room: BrainRoom // what's behind it (the brain's little room)
@@ -150,7 +151,8 @@ export function makeHatch(monitor: THREE.Mesh, material: THREE.Material): Hatch 
   theme(useTheme.getState().theme)
   useTheme.subscribe((s) => theme(s.theme))
 
-  const hole = new THREE.Mesh(new THREE.PlaneGeometry(HATCH.w, HATCH.h), new THREE.MeshBasicMaterial({ visible: false }))
+  // (drawn as nothing at all, but still there to be clicked: an invisible material isn't)
+  const hole = new THREE.Mesh(new THREE.PlaneGeometry(HATCH.w, HATCH.h), new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false }))
   hole.position.set(center.x, center.y, face + 0.001)
 
   const group = new THREE.Group()
@@ -159,6 +161,7 @@ export function makeHatch(monitor: THREE.Mesh, material: THREE.Material): Hatch 
     group,
     door,
     hole,
+    frame,
     center,
     room,
     setOpen: (k) => {
@@ -392,8 +395,27 @@ export function Brain() {
   const exit = useMemo(() => new THREE.Vector3(), []) // where it comes out through the hatch's opening
   // grabbed: still plugged in, it's a tug first; already apart, it's picked up
   const onDown = (e: ThreeEvent<PointerEvent>) => {
-    if (!CAN_GRAB || (B.mode !== 'show' && B.mode !== 'loose')) return
+    if (B.mode !== 'show' && B.mode !== 'loose') return
     e.stopPropagation()
+    // on touch there's no dragging it about: a tap pulls it off its cable and it
+    // tumbles out onto the desk (and tapped again lying there, it jumps)
+    if (!CAN_GRAB) {
+      if (B.mode === 'show') {
+        tug.home.copy(brain.position)
+        separate()
+        endBuddy()
+        B.mode = 'loose'
+        B.looseSince = nowRef.current
+        B.vel.set((Math.random() - 0.5) * 0.6, 1.2, 0.7)
+      } else {
+        endBuddy()
+        B.looseSince = nowRef.current
+        B.vel.set((Math.random() - 0.5) * 0.8, 2, (Math.random() - 0.5) * 0.8)
+      }
+      B.spin.set((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6)
+      playPickup()
+      return
+    }
     grab.plane.setFromNormalAndCoplanarPoint(e.camera.getWorldDirection(grab.hit).clone(), e.point)
     grab.offset.copy(brain.position).sub(e.point)
     grabState.active = true // (dragging doesn't spin the view)
@@ -546,7 +568,7 @@ export function Brain() {
         latched.current = false
         playClick() // the hatch unlatching
         setTimeout(() => playBoing(1), T.out[0] * 1000) // and out it pops
-        pickable(CAN_GRAB)
+        pickable(true) // (on touch, a tap pulls it free)
       }
     }
 
@@ -905,6 +927,7 @@ export function Brain() {
       <primitive
         object={brain}
         onPointerDown={onDown}
+        onClick={(e: ThreeEvent<MouseEvent>) => e.stopPropagation()} // (not a click on the PC behind it)
         onPointerOver={(e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation()
           if (CAN_GRAB && (B.mode === 'show' || B.mode === 'loose')) document.body.style.cursor = 'var(--cursor-pointer)'

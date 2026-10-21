@@ -5,8 +5,9 @@ import * as THREE from 'three'
 import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, CRT_OFF, type Expression } from './SlumpyFace'
+import { paintDesktop } from './screenDesktop'
 import { DURATION as ZOOM_SECONDS } from './CameraRig'
-import { useStore } from '../store'
+import { useStore, isOff } from '../store'
 import { unlockAudio, playKeyClack, playCrtOn, playCrtOff, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, playPurr, playUsb, speak, speakSoon } from '../os/sound'
 import { DeskProps, grabState } from './deskProps'
 import { poofAt } from './DustPuff'
@@ -35,6 +36,9 @@ const FAN_TEXELS = { x0: 60, x1: 67, y0: 51, y1: 58 }
 // easter egg: the back of the monitor (the big box behind the screen) has a hatch
 // in it: his brain pops out (see Brain)
 const MONITOR_BACK_MESH_INDEX = 8
+// all of the monitor seen from behind: its housing, its neck, and the back of the
+// frame round the screen (which shows above and beside the housing)
+const MONITOR_REAR_MESH_INDICES = [3, 4, 5, 6, MONITOR_BACK_MESH_INDEX, 9]
 // Typing in the room (before going into the desktop) turns his screen into a
 // command line; Enter and his face comes back to answer it (see os/chat)
 export const TYPED_LENGTH = 72 // letters on the line, at most
@@ -153,6 +157,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
 
     // the screen glows with the Slumpy face (black while the desktop is up)
     const face = new SlumpyFace()
+    face.paintDesktop = paintDesktop // (still signed in, back in the room)
     face.bootLog = BOOT_LOG
     const screen = meshes[SCREEN_MESH_INDEX]
     let screenBox: THREE.Box3 | null = null
@@ -178,9 +183,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     props.onGrab = () => playPickup()
     props.onLand = (p, speed) => playLand(p.kind, speed)
     props.onClack = (p, speed) => playLand(p.kind, Math.min(speed, 2) * 0.6)
-    // left out too long: gone in a puff, back home in another
-    props.onPoof = (_, at, phase) => {
+    // left out too long: gone in a puff, back home in another (its cable too)
+    props.onPoof = (p, at, phase) => {
       poofAt(at)
+      poofAt(usb.poof(p.kind, phase))
       playPoof(phase)
     }
     const mouse = props.find(meshes[MOUSE_MESH_INDEX])
@@ -220,6 +226,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const poweredOff = useStore((s) => s.poweredOff)
   const rebooting = useStore((s) => s.rebooting)
   const booting = useStore((s) => s.booting)
+  const session = useStore((s) => s.session) // signed in to the desktop (see stepAway)
   const setBooting = (booting: boolean) => useStore.setState({ booting, leaning: booting })
   const bootStart = useRef(0) // when the boot log started (performance.now())
   const hoverAt = (obj: THREE.Object3D) => {
@@ -227,9 +234,8 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     if (CAN_GRAB && model.usb.find(obj)) return onHover('prop') // a plug: grab it
     const prop = CAN_GRAB && model.props.find(obj)
     // off: the power button (and the hatch on his back) are the only things on him that can be clicked
-    const { poweredOff } = useStore.getState()
-    const hatch = obj === model.meshes[MONITOR_BACK_MESH_INDEX] || obj === model.hatch.door || obj === model.hatch.hole
-    const dead = !prop && obj !== model.button && !hatch && poweredOff
+    const hatch = obj === model.meshes[MONITOR_BACK_MESH_INDEX] || obj === model.hatch.frame || obj === model.hatch.door || obj === model.hatch.hole
+    const dead = !prop && obj !== model.button && !hatch && isOff(useStore.getState())
     onHover(prop ? 'prop' : dead ? null : 'pc')
     useStore.getState().setHoverDevice(prop ? prop.kind : null)
     setHovered(!prop && !model.props.holding)
@@ -268,7 +274,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     let expr: Expression | null = null // idle: cycles moods by itself
     // (the boot log stays up through the zoom into the sign-in, and under it
     // while it fades in)
-    if (mode === 'exiting' || poweredOff || (mode === 'desktop' && !booting)) expr = 'off'
+    // still signed in: the desktop stays on his screen (typing at him in the room
+    // still brings up his command line)
+    if (session && !poweredOff) expr = typing && mode === 'room' ? 'prompt' : 'desktop'
+    else if (mode === 'exiting' || poweredOff || (mode === 'desktop' && !booting)) expr = 'off'
     else if (booting) expr = 'boot'
     else if (mode === 'zooming') expr = 'surprised'
     else if (saver) expr = 'starfield'
@@ -284,7 +293,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     invalidate()
     // leaving the desktop puts the keyboard and mouse back where they belong
     if (mode === 'exiting') model.props.reset()
-  }, [mode, hovered, asleep, typing, saver, booting, poweredOff, model, invalidate])
+  }, [mode, hovered, asleep, typing, saver, booting, poweredOff, session, model, invalidate])
 
   // the screensaver: the room left alone (no pointer, keys or wheel) for a while.
   // Anything at all and he wakes up with a start.
@@ -352,7 +361,8 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   // does, down to a dot just as the desktop appears (which switches on from a dot).
   // Straight from the boot log, the sign-in fades in over the log instead.
   useEffect(() => {
-    if (mode !== 'zooming' || useStore.getState().booting) return
+    // (still signed in, the desktop's already on: it just stays on)
+    if (mode !== 'zooming' || useStore.getState().booting || useStore.getState().session) return
     const id = setTimeout(() => model.face.powerDown(), (ZOOM_SECONDS - CRT_OFF) * 1000 - 60)
     return () => clearTimeout(id)
   }, [mode, model])
@@ -848,8 +858,9 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       }}
       onClick={(e: ClickEvent) => {
         e.stopPropagation()
-        // at the desktop: clicking the PC around the screen (its beige frame) goes back to the room
-        if (mode === 'desktop') return useStore.getState().logOff()
+        // at the desktop: clicking the PC around the screen (its beige frame) goes
+        // back to the room, still signed in (only logging off ends it)
+        if (mode === 'desktop') return useStore.getState().stepAway()
         const bootZoom = mode === 'zooming' && useStore.getState().booting
         // a phone: tapping Chiba (the keyboard) is for talking to him (its own keyboard comes up)
         if (!CAN_GRAB && mode === 'room' && e.delta <= 6 && model.props.find(e.object)?.kind === 'keyboard') {
@@ -867,7 +878,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         }
         unlockAudio()
         const hitMonitorBack = (e: ClickEvent) =>
-          (e.object === model.meshes[MONITOR_BACK_MESH_INDEX] && facing(e) > 0.5) || e.object === model.hatch.door || e.object === model.hatch.hole
+          ((MONITOR_REAR_MESH_INDICES.some((i) => e.object === model.meshes[i]) || e.object === model.hatch.frame) && facing(e) > 0.5) || e.object === model.hatch.door || e.object === model.hatch.hole
         if (model.usb.find(e.object)) return // (plugs are pulled, not clicked)
         if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
         // booting (or zooming in after it): a click backs out to the room, awake
@@ -882,7 +893,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           // the back lets it finish (it doesn't start over)
           if (brainBusy.current) return e.object === model.hatch.door || e.object === model.hatch.hole ? closeHatch() : undefined
           s.showBrain() // (its sounds play from Brain; it pops out whether he's on or off)
-          if (!s.poweredOff) model.face.react('thinking', 4.2) // (the brain's up for about that long)
+          if (!isOff(s)) model.face.react('pondering', 4) // (the brain's up for about that long)
           return
         }
         // off: only the power button (and the hatch) do anything

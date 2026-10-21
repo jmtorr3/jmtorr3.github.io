@@ -41,6 +41,12 @@ export function useSlumpy() {
   return f
 }
 
+// Keep him going while nothing on the desktop is (back in the room, still signed
+// in, his face shows on the little desktop on the monitor: see screenDesktop)
+export function tickFace(dt: number) {
+  if (users === 0) getFace().update(Math.min(dt, 0.1))
+}
+
 // Draw the shared face into a display canvas every frame. black: on a dark
 // screen (its outline then disappears into the black, like the monitor).
 export function copyFaceLoop(face: SlumpyFace, canvas: HTMLCanvasElement, black: boolean) {

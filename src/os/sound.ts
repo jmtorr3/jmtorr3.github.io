@@ -140,6 +140,26 @@ export function playStep() {
   tone(c, t, 0.03, 'sine', 160 + Math.random() * 40, 110, env(c, t, 0.025, 0.002, 0.025))
 }
 
+// Chiba (the desktop's Shiba) barking: a quick little "wuf"
+export function playBark() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  for (const [at, f] of [[0, 520], [0.16, 600]]) {
+    tone(c, t + at, 0.09, 'sawtooth', f, f * 0.55, env(c, t + at, 0.05, 0.004, 0.085))
+    noise(c, t + at, 0.06, 'bandpass', 900, env(c, t + at, 0.12, 0.003, 0.055))
+  }
+}
+
+// Hanzo (the desktop's mouse) squeaking
+export function playSqueak() {
+  const c = audio()
+  if (!c) return
+  const t = c.currentTime
+  tone(c, t, 0.07, 'sine', 2600, 3600, env(c, t, 0.05, 0.004, 0.065))
+  tone(c, t + 0.09, 0.06, 'sine', 2900, 3900, env(c, t + 0.09, 0.04, 0.004, 0.055))
+}
+
 // a USB device plugged in (a rising two-note chime) or pulled out (falling)
 export function playUsb(plugged: boolean) {
   const c = audio()

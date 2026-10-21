@@ -31,9 +31,9 @@ const DIZZY_SPIN = Math.PI * 2
 const DIZZY_COOLDOWN = 4 // seconds before it can get dizzy again
 // the PC's bounding box reaches ~1.5 from its middle; keep the room camera outside that
 const MIN_ROOM_DISTANCE = 2.2
-// zooming in the room (the wheel; not on touch screens): how far the camera can be from the PC's
-// middle. In as far as MIN_ROOM_DISTANCE (outside the PC, so it never clips in),
-// out to this; and how much a wheel notch zooms
+// zooming in the room (the wheel, a trackpad pinch, or two fingers on a phone): how far
+// the camera can be from the PC's middle. In as far as MIN_ROOM_DISTANCE (outside
+// the PC, so it never clips in), out to this; and how much a wheel notch zooms
 const MAX_ROOM_DISTANCE = 8.5
 const WHEEL_ZOOM = 0.0015
 // how far up/down the user can orbit, as angles from straight up (radians)
@@ -122,6 +122,11 @@ export function CameraRig() {
   const lean = useRef(0) // 0..1, leaning in to read the boot log
   // zoom: the room camera's distance times this (eased toward goal)
   const zoom = useRef({ k: 1, goal: 1 })
+  // a phone's keyboard up (talking to him): the PC, keyboard and mouse lift into the
+  // part of the screen above it (lift, 0..1), backing off (fit, ×distance) to fit there
+  const lift = useRef({ k: 0, fit: 1 })
+  // fingers on the screen (for pinching)
+  const fingers = useRef(new Map<number, { x: number; y: number }>())
 
   // any input counts as "not idle" and stops a return in progress
   useEffect(() => {
@@ -147,12 +152,36 @@ export function CameraRig() {
   useEffect(() => {
     const el = gl.domElement
     const o = orbit.current
+    // two fingers: pinching zooms (and stops the orbit the first finger started)
+    const pinch = () => {
+      const [a, b] = [...fingers.current.values()]
+      return Math.hypot(a.x - b.x, a.y - b.y)
+    }
+    let spread = 0
     const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') {
+        fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (fingers.current.size === 2) {
+          spread = pinch()
+          o.dragging = false
+          o.vYaw = o.vPitch = 0
+          return
+        }
+      }
       if (useStore.getState().mode !== 'room' || e.button !== 0) return
       Object.assign(o, { dragging: true, x: e.clientX, y: e.clientY, at: e.timeStamp, vYaw: 0, vPitch: 0 })
       el.setPointerCapture(e.pointerId)
     }
     const move = (e: PointerEvent) => {
+      if (fingers.current.has(e.pointerId)) {
+        fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+        if (fingers.current.size === 2) {
+          const now = pinch()
+          if (spread > 0 && now > 0 && useStore.getState().mode === 'room') zoom.current.goal *= spread / now
+          spread = now
+          return
+        }
+      }
       if (!o.dragging) return
       // the press picked up the keyboard or mouse instead: don't orbit
       if (grabState.active) {
@@ -174,6 +203,7 @@ export function CameraRig() {
       document.body.style.cursor = 'var(--cursor-grabbing)'
     }
     const up = (e: PointerEvent) => {
+      fingers.current.delete(e.pointerId)
       if (!o.dragging) return
       o.dragging = false
       // held still before letting go: no glide
@@ -251,6 +281,7 @@ export function CameraRig() {
     z.goal = THREE.MathUtils.clamp(z.goal, MIN_ROOM_DISTANCE / sph.radius, MAX_ROOM_DISTANCE / sph.radius)
     z.k += (z.goal - z.k) * (1 - Math.exp(-delta * 10))
     sph.radius *= z.k
+    sph.radius *= 1 + (lift.current.fit - 1) * lift.current.k
     sph.theta += o.yaw + Math.sin(time * 0.3) * 0.06 - sway.current.x * 0.12
     const polar = THREE.MathUtils.clamp(sph.phi + o.pitch, MIN_POLAR, MAX_POLAR)
     o.pitch = polar - sph.phi // stop at the limits instead of storing overshoot
@@ -356,7 +387,18 @@ export function CameraRig() {
       minY = Math.min(minY, p.y)
       maxY = Math.max(maxY, p.y)
     }
-    const center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 }
+    // a phone's keyboard up: the outline's middle goes to the middle of the part
+    // above it, backing off until it fits there
+    const l = lift.current
+    const typing = useStore.getState().roomTyping && useStore.getState().mode === 'room'
+    const vv = window.visualViewport
+    const open = vv && vv.height < window.innerHeight * 0.85 ? vv.height / window.innerHeight : 0.55 // (how much is left above it)
+    l.k += ((typing ? 1 : 0) - l.k) * (1 - Math.exp(-delta * 6))
+    if (typing) {
+      const want = l.fit * Math.max(1, (maxY - minY) / (2 * open * 0.85))
+      l.fit += (Math.max(1, Math.min(2.5, want)) - l.fit) * (1 - Math.exp(-delta * 4))
+    }
+    const center = { x: (minX + maxX) / 2, y: (minY + maxY) / 2 - (1 - open) * l.k }
     // snap on the first frame, then follow smoothly as the camera moves
     if (!shiftReady.current) shift.current.copy(center)
     else shift.current.lerp(center, 1 - Math.exp(-delta * 6))

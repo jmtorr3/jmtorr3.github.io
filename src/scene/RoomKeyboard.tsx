@@ -1,4 +1,5 @@
 import { roomChat, TYPED_LENGTH } from './PCModel'
+import { useStore } from '../store'
 
 // Phones: tapping Chiba (the 3D keyboard) in the room brings up the phone's own
 // keyboard, to talk to Slumpy. A hidden text box takes the typing and passes the
@@ -38,6 +39,9 @@ export function RoomKeyboard() {
         maxLength={TYPED_LENGTH}
         aria-label={'talk to the computer'}
         onInput={(e) => roomChat.current?.setLine(e.currentTarget.value)}
+        // (while it's up, the view lifts the PC above the phone's keyboard)
+        onFocus={() => useStore.setState({ roomTyping: true })}
+        onBlur={() => useStore.setState({ roomTyping: false })}
       />
     </form>
   )

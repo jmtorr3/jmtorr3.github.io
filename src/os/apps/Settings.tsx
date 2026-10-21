@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { devices, DEVICE_KINDS } from '../../data/devices'
+import { Sprite, PET_PORTRAIT } from '../Pets'
 import { THEMES, useTheme } from '../theme'
 import { Icon, type IconName } from '../Icon'
 import { addMenuItems } from '../appMenu'
@@ -73,6 +74,13 @@ export function Settings({ props }: { props?: Record<string, unknown> }) {
                       <div className="muted">{d.model}</div>
                       <div className="muted">USB {d.usbId}</div>
                       <div className="device-note">{d.note}</div>
+                      <div className="device-pet">
+                        <Sprite rows={PET_PORTRAIT[k]} scale={2} />
+                        <span>
+                          <strong>On the desktop:</strong> {d.pet}. {d.petNote}
+                          {unplugged[k] && <span className="muted"> (not around while unplugged)</span>}
+                        </span>
+                      </div>
                     </div>
                     <span className={`device-status ${unplugged[k] ? 'off' : ''}`}>{unplugged[k] ? '○ Disconnected' : '● Connected'}</span>
                   </div>

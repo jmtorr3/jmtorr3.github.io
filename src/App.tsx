@@ -28,7 +28,7 @@ export function App() {
                 ? 'press the power button'
                 : missing.length
                   ? `plug ${missing.join(' and ')} back in (back of the case)`
-                  : TOUCH ? 'tap the computer, or the keyboard to talk' : 'click the computer'}
+                  : TOUCH ? 'tap the computer · tap the keyboard to talk' : 'click the computer'}
         </div>
       )}
       {mode === 'room' && <PowerHint />}

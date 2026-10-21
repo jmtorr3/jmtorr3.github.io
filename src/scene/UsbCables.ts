@@ -9,7 +9,9 @@ import { aroundPC } from './pcSolids'
 // follows the device wherever it's put. Grab a plug at its port and pull: it
 // holds, then comes free (the device is disconnected); carry it, let go and it
 // drops onto the desk; bring it back to its port and it clicks in. (Mouse and
-// trackpad only, like picking up the keyboard and mouse.)
+// trackpad only, like picking up the keyboard and mouse.) When its device poofs
+// home, its cable poofs with it: back in its port if it was plugged in, or else
+// lying on the desk just behind it.
 
 const solid = (rgb: [number, number, number]) => makePicoMaterial(new THREE.DataTexture(new Uint8Array([...rgb, 255]), 1, 1))
 
@@ -45,6 +47,9 @@ export type Usb = {
   release: () => void
   holding: () => boolean
   update: (dt: number, ray: THREE.Ray) => void
+  // its device poofing away (the cable and plug go too; where the plug was, for its puff)
+  // and back (in its port, or by it); see deskProps
+  poof: (kind: DeviceKind, phase: 'vanish' | 'appear') => THREE.Vector3
   // came out / went in (for the sounds, Slumpy's face, and the store)
   onChange?: (kind: DeviceKind, plugged: boolean) => void
 }
@@ -70,6 +75,8 @@ export function makeUsb(devices: Record<DeviceKind, THREE.Mesh>): Usb {
 
   const grab = { plug: null as Plug | null, plane: new THREE.Plane(), offset: new THREE.Vector3(), hit: new THREE.Vector3() }
   const home = (p: Plug) => PORTS[p.kind].clone().setZ(BACK + PLUG.len / 2)
+  // unplugged and tidied up: lying on the desk just behind its port
+  const byPort = (p: Plug) => PORTS[p.kind].clone().setY(DESK + PLUG.h / 2).setZ(BACK + CLEAR + 0.06)
   const tmp = new THREE.Vector3()
 
   // the cable's way from the device to the plug, as points for a smooth curve
@@ -185,6 +192,22 @@ export function makeUsb(devices: Record<DeviceKind, THREE.Mesh>): Usb {
         usb.onChange?.(p.kind, true)
       } else p.state = 'out' // falls to the desk
     },
+    poof: (kind, phase) => {
+      const p = plugs.find((q) => q.kind === kind)!
+      const at = p.at.clone()
+      if (phase === 'vanish') {
+        if (grab.plug === p) usb.release()
+        if (p.state === 'tug') p.state = 'in'
+        p.mesh.visible = p.cable.visible = false
+      } else {
+        if (p.state !== 'in') {
+          p.state = 'out'
+          p.at.copy(byPort(p))
+        }
+        p.mesh.visible = p.cable.visible = true
+      }
+      return phase === 'vanish' ? at : p.at.clone()
+    },
     update: (dt, ray) => {
       for (const p of plugs) {
         if (grab.plug === p && ray.intersectPlane(grab.plane, grab.hit)) {
@@ -204,6 +227,7 @@ export function makeUsb(devices: Record<DeviceKind, THREE.Mesh>): Usb {
         } else if (p.state === 'out' && p.at.y > DESK + PLUG.h / 2) {
           p.at.y = Math.max(DESK + PLUG.h / 2, p.at.y - FALL * dt)
         }
+        if (!p.mesh.visible) continue // (poofed away for a moment)
         p.mesh.position.copy(p.at)
         // plugged in it points straight into the port; out, it lies along its cable
         if (p.state === 'in' || p.state === 'tug') p.mesh.rotation.set(0, 0, 0)

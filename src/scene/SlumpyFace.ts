@@ -26,6 +26,7 @@ export type Expression =
   | 'blush'
   | 'cool'
   | 'thinking'
+  | 'pondering' // the hatch in his back opened: a start, then thought bubbles rising to his brain (plays out over ~4s)
   | 'confused'
   | 'suspicious'
   | 'bored'
@@ -36,6 +37,7 @@ export type Expression =
   | 'starfield' // the screensaver: stars flying out of the middle (left alone in the room)
   | 'prompt' // a command line showing what's being typed (see typed), when you type at him in the room
   | 'boot' // a Linux boot log scrolling by (see bootLog), when he's turned on
+  | 'desktop' // the desktop, in color (see paintDesktop): still signed in, back in the room
   | 'glitch'
   | 'panic' // wide eyes darting around, sweating, teeth chattering, shaking (`rm -rf /*`)
   | 'hypno'
@@ -189,6 +191,9 @@ export const CRT_OFF = 0.5
 const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5]
 const LINE_H = 6
 
+// a tiny brain, for thought bubbles
+const BRAIN = ['.##.##.', '#######', '#.###.#', '#######', '.#####.']
+
 const MOUTH_O = ['.###.', '#...#', '#...#', '#...#', '.###.']
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -258,6 +263,8 @@ export class SlumpyFace {
   bootLog: { at: number; text: string }[] = []
   // what 'prompt' shows after its "> "
   typed = ''
+  // draws 'desktop' straight onto the canvas (FACE_W×FACE_H, in color)
+  paintDesktop?: (ctx: CanvasRenderingContext2D, t: number) => void
   private transparent: boolean
 
   // idle: cycle through random moods by itself (off when something else drives it)
@@ -577,6 +584,15 @@ export class SlumpyFace {
       case 'thinking':
         // looking up and off to the side
         return this.pill(cx + 4, cy - 5, EYE_W - 2, Math.max(2, Math.round((EYE_H - 4) * this.open)), 6)
+      case 'pondering': {
+        // a start (wide eyes), then looking up and back toward the hatch,
+        // glancing about as he works out what's going on back there
+        const s = this.since
+        if (s < 0.35) return this.pill(cx, cy - 2, EYE_W + 2, Math.max(2, Math.round((EYE_H + 2) * this.open)), 8)
+        const k = Math.min(1, (s - 0.35) / 0.3)
+        const glance = s > 1.4 ? Math.round(Math.sin((s - 1.4) * 1.8) * 3) : 0
+        return this.pill(cx + Math.round(4 * k) + glance, cy - Math.round(6 * k), EYE_W - 2, Math.max(2, Math.round((EYE_H - 6) * this.open)), 6)
+      }
       case 'cool':
         return // the sunglasses cover the eyes (drawn in extras)
       case 'yawn':
@@ -690,6 +706,39 @@ export class SlumpyFace {
         }
         this.rect(cx - 7, gy - 1, 14, 2) // bridge
         if (drop >= 1) this.bitmap(SMIRK, cx + 4, cy + 18, 2)
+        return
+      }
+      case 'pondering': {
+        // the mouth: a little "o" at the start, then a "hmm" that wanders
+        if (since < 0.35) this.ellipse(cx, cy + 18, 2, 2)
+        else this.rect(cx - 4 + Math.round(Math.sin(since * 2.2) * 2), cy + 18, 8, 2)
+        // thought bubbles rising one after another up to a cloud (which grows in,
+        // and pops at the end)
+        const pop = since > 3.7 ? Math.max(0, 1 - (since - 3.7) / 0.25) : 1
+        const bob = Math.round(Math.sin(since * 3) * 1)
+        if (since > 0.5 && pop > 0) this.ellipse(cx + 39, cy - 16 + bob, 1, 1)
+        if (since > 0.8 && pop > 0) this.ellipse(cx + 41, cy - 21 + bob, 2, 2)
+        if (since > 1.1 && pop > 0) {
+          const grow = Math.min(1, (since - 1.1) / 0.25) * pop
+          const rx = Math.max(1, Math.round(12 * grow))
+          const ry = Math.max(1, Math.round(7 * grow))
+          const x = cx + 33
+          const y = cy - 31 + bob
+          // a cloud: three lumps, hollowed out to an outline
+          this.ellipse(x, y, rx, ry)
+          this.ellipse(x - Math.round(rx * 0.5), y - Math.round(ry * 0.45), Math.round(rx * 0.5), Math.round(ry * 0.6))
+          this.ellipse(x + Math.round(rx * 0.45), y - Math.round(ry * 0.5), Math.round(rx * 0.45), Math.round(ry * 0.55))
+          if (rx > 2) {
+            this.ellipse(x, y, rx - 1, ry - 1, 0)
+            this.ellipse(x - Math.round(rx * 0.5), y - Math.round(ry * 0.45), Math.round(rx * 0.5) - 1, Math.round(ry * 0.6) - 1, 0)
+            this.ellipse(x + Math.round(rx * 0.45), y - Math.round(ry * 0.5), Math.round(rx * 0.45) - 1, Math.round(ry * 0.55) - 1, 0)
+          }
+          // in it: "..." ticking along, then his brain, wiggling
+          if (grow >= 1 && since < 2.4) {
+            const n = Math.floor((since - 1.35) * 4) % 4
+            for (let i = 0; i < n; i++) this.rect(x - 6 + i * 5, y - 1, 2, 2)
+          } else if (grow >= 1) this.bitmap(BRAIN, x + (Math.floor(since * 6) % 2), y - 1, 2)
+        }
         return
       }
       case 'thinking': {
@@ -977,6 +1026,7 @@ export class SlumpyFace {
       d[i * 4 + 3] = on || !this.transparent || this.touchesOn(i) ? 255 : 0
     }
     this.ctx.putImageData(this.img, 0, 0)
+    if (expr === 'desktop' && !crt) this.paintDesktop?.(this.ctx, this.t)
     this.texture.needsUpdate = true
   }
 }

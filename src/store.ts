@@ -48,6 +48,11 @@ interface State {
   menu: { clientX: number; clientY: number; items: MenuItem[] } | null
   startOpen: boolean // the Start menu (its header shows Slumpy)
   signingIn: boolean // the welcome screen after power-on (shows Slumpy)
+  // signed in to the desktop: stepping back into the room (clicking round the
+  // screen) keeps it going, windows and all, and it stays on his screen there;
+  // logging off (or turning him off) ends it
+  session: boolean
+  roomTyping: boolean // a phone's keyboard is up in the room, talking to him (the view lifts above it)
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
   openOnSignIn: AppId | null // an app to open once the sign-in's done (the floppy opens About My Creator)
@@ -63,6 +68,7 @@ interface State {
   topZ: number
   setMode: (m: Mode) => void
   logOff: () => void // end the desktop session (Slumpy itself stays on)
+  stepAway: () => void // back to the room, still signed in (the desktop stays on his screen)
   shutDown: (reboot?: boolean) => void // log off and turn Slumpy off too
   setPoweredOff: (off: boolean) => void // the power button, in the room
   spunTooFast: () => void
@@ -105,6 +111,8 @@ export const useStore = create<State>((set, get) => ({
   menu: null,
   startOpen: false,
   signingIn: false,
+  session: false,
+  roomTyping: false,
   screen: null,
   desk: { w: window.innerWidth, h: window.innerHeight, scale: 1 },
   windows: [],
@@ -114,9 +122,13 @@ export const useStore = create<State>((set, get) => ({
   // (leaving the desktop always ends a boot, in case its fade-in never finished)
   setMode: (mode) => set((s) => ({ mode, poweringOff: false, booting: mode === 'exiting' ? false : s.booting, leaning: mode === 'exiting' ? false : s.leaning, panic: mode === 'exiting' ? false : s.panic })),
   // Desktop plays the CRT-off animation, then switches mode to 'exiting'
-  logOff: () => set({ poweringOff: true }),
-  shutDown: (reboot = false) => set({ poweringOff: true, poweredOff: true, rebooting: reboot }),
-  setPoweredOff: (poweredOff) => set({ poweredOff, rebooting: false }),
+  logOff: () => set({ poweringOff: true, session: false }),
+  stepAway: () => {
+    get().setMode('exiting')
+    set({ menu: null, startOpen: false })
+  },
+  shutDown: (reboot = false) => set({ poweringOff: true, poweredOff: true, rebooting: reboot, session: false }),
+  setPoweredOff: (poweredOff) => set((s) => ({ poweredOff, rebooting: false, session: poweredOff ? false : s.session })),
   spunTooFast: () => set((s) => ({ spins: s.spins + 1 })),
   showMenu: (clientX, clientY, items) => set({ menu: { clientX, clientY, items } }),
   hideMenu: () => set({ menu: null }),
@@ -215,3 +227,13 @@ export function slumpyLocation(s: State): SlumpyPlace {
   if (s.windows.some((w) => w.app === 'system' && !w.minimized)) return 'system'
   return 'wallpaper'
 }
+
+// Slumpy's off: shut down with the power button (or the Start menu), or his brain's
+// out (which turns him off). The one place that says so, for everything that
+// behaves differently while he's off
+export const isOff = (s: Pick<State, 'poweredOff' | 'brainOut'>) => s.poweredOff || s.brainOut
+
+// the rainbow "you can click this" outline round the PC: only in the room, and
+// never while he's off (nothing on him to click then but the power button, which
+// the room's hint points at)
+export const canHighlight = (s: Pick<State, 'mode' | 'poweredOff' | 'brainOut'>) => s.mode === 'room' && !isOff(s)

@@ -155,7 +155,11 @@ a:hover {
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%);
-  white-space: nowrap;
+  /* (wraps on a narrow phone rather than running off its sides) */
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  line-height: 1.4;
   color: #fff1e8;
   font-size: 16px;
   text-shadow: 2px 2px 0 #000;
@@ -1357,6 +1361,17 @@ button.card:hover {
   font-style: italic;
 }
 
+.device-pet {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dotted var(--border);
+}
+.device-pet svg {
+  flex: none;
+}
 .device-status {
   color: var(--ok);
   white-space: nowrap;
@@ -2283,4 +2298,74 @@ button.card:hover {
   min-height: 0;
   border: 0;
   background: #fff;
+}
+
+/* Slumpy's pets (Pets.tsx): along the bottom of the desktop, behind the windows */
+.pets {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 48px;
+  pointer-events: none;
+}
+.pet {
+  position: absolute;
+  bottom: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: var(--cursor-pointer);
+  pointer-events: auto;
+  line-height: 0;
+}
+.pet-body {
+  display: block;
+}
+.pet svg {
+  display: block;
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.35));
+}
+.pet.hop .pet-body {
+  animation: pet-hop 0.5s ease-out;
+}
+@keyframes pet-hop {
+  40% {
+    transform: translateY(-12px);
+  }
+}
+.pet.sleep .pet-body svg {
+  animation: pet-breathe 2.4s ease-in-out infinite;
+  transform-origin: bottom;
+}
+@keyframes pet-breathe {
+  50% {
+    transform: scaleY(1.06);
+  }
+}
+.pet-z,
+.pet-heart {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+}
+.pet-z {
+  color: var(--text);
+  animation: pet-float 2s linear infinite;
+}
+.pet-heart {
+  color: #ff5f8a;
+  animation: pet-float 1.2s ease-out forwards;
+}
+@keyframes pet-float {
+  from {
+    transform: translate(0, 0);
+    opacity: 1;
+  }
+  to {
+    transform: translate(6px, -18px);
+    opacity: 0;
+  }
 }
