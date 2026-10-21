@@ -1,4 +1,12 @@
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { fitScreen, isCompact } from '../scene/screenFit'
 import { useStore, TASKBAR_H } from '../store'
 import { APPS, LAUNCHABLE, type AppId } from './apps/registry'
@@ -9,7 +17,8 @@ import { Snow } from './Snow'
 import { NIX_ASCII } from './nixAscii'
 import { BrailleArt } from './BrailleArt'
 import { useDesktopIcons } from './useDesktopIcons'
-import { playPowerOn, playPowerOff, playClick } from './sound'
+import { playPowerOn, playPowerOff, playClick, useSound } from './sound'
+import { ContextMenu, type MenuItem } from './ContextMenu'
 
 const COARSE = matchMedia('(pointer: coarse)').matches
 
@@ -119,6 +128,15 @@ function useMarquee() {
   return { selected, setSelected, marquee, iconRefs, startMarquee }
 }
 
+const SNOW_KEY = 'snow-off'
+const readSnow = () => {
+  try {
+    return localStorage.getItem(SNOW_KEY) !== '1'
+  } catch {
+    return true
+  }
+}
+
 export function Desktop() {
   const windows = useStore((s) => s.windows)
   const poweringOff = useStore((s) => s.poweringOff)
@@ -126,6 +144,50 @@ export function Desktop() {
   const { rect, scale, w, h, compact } = useScreenRect()
   const { selected, setSelected, marquee, iconRefs, startMarquee } = useMarquee()
   const icons = useDesktopIcons({ w, h, scale, selected, setSelected })
+  const sound = useSound()
+
+  // right-click menu, at a point in desktop px
+  const deskRef = useRef<HTMLDivElement>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null)
+  const closeMenu = useCallback(() => setMenu(null), [])
+  const [snow, setSnow] = useState(readSnow)
+  const [refreshes, setRefreshes] = useState(0)
+
+  const toggleSnow = () => {
+    setSnow(!snow)
+    try {
+      localStorage.setItem(SNOW_KEY, snow ? '1' : '0')
+    } catch {
+      // storage blocked; the setting just won't persist
+    }
+  }
+
+  const openMenu = (e: ReactMouseEvent, items: MenuItem[]) => {
+    e.preventDefault()
+    const r = deskRef.current!.getBoundingClientRect()
+    setMenu({ x: (e.clientX - r.left) / scale, y: (e.clientY - r.top) / scale, items })
+  }
+
+  const desktopMenu: MenuItem[] = [
+    { label: 'Open Konsole Here', icon: 'terminal', onClick: () => open('terminal') },
+    { separator: true },
+    { label: 'Arrange Icons', icon: 'folder', onClick: icons.arrange },
+    { label: 'Refresh', icon: 'computer', onClick: () => setRefreshes((n) => n + 1) },
+    { separator: true },
+    { label: 'Snow', icon: 'image', checked: snow, onClick: toggleSnow },
+    { label: 'Sound', icon: 'chip', checked: !sound.muted, onClick: sound.toggle },
+    { separator: true },
+    { label: 'About This Computer', icon: 'user', onClick: () => open('about') },
+    { label: 'Shut Down', icon: 'power', onClick: () => useStore.getState().shutdown() },
+  ]
+
+  const iconMenu = (id: AppId): MenuItem[] => {
+    const many = selected.has(id) && selected.size > 1
+    const targets = many ? LAUNCHABLE.filter((x) => selected.has(x)) : [id]
+    return [
+      { label: many ? `Open ${targets.length} Items` : 'Open', icon: APPS[id].icon, onClick: () => targets.forEach((t) => open(t)) },
+    ]
+  }
 
   // ref guard: StrictMode runs mount effects twice in dev
   const booted = useRef(false)
@@ -153,6 +215,7 @@ export function Desktop() {
       {/* laid out at w×h desktop px, scaled up/down to fill the rect */}
       <div
         className="desk-ui"
+        ref={deskRef}
         style={
           {
             width: w,
@@ -163,12 +226,13 @@ export function Desktop() {
           } as CSSProperties
         }
       >
-        <div className="wallpaper" onPointerDown={startMarquee}>
+        <div className="wallpaper" onPointerDown={startMarquee} onContextMenu={(e) => openMenu(e, desktopMenu)}>
           <BrailleArt art={NIX_ASCII} className="wallpaper-logo" />
-          <Snow />
+          {snow && <Snow />}
         </div>
 
-        <div className="icons">
+        {/* keyed so Refresh re-mounts it, replaying its flicker-in */}
+        <div className={`icons ${refreshes ? 'refresh' : ''}`} key={refreshes}>
           {LAUNCHABLE.map((id) => (
             <button
               key={id}
@@ -191,6 +255,11 @@ export function Desktop() {
                 if (matchMedia('(pointer: coarse)').matches) open(id)
               }}
               onDoubleClick={() => open(id)}
+              onContextMenu={(e) => {
+                e.stopPropagation()
+                if (!selected.has(id)) setSelected(new Set([id]))
+                openMenu(e, iconMenu(id))
+              }}
               onKeyDown={(e) => {
                 if (e.key !== 'Enter') return
                 if (selected.size > 1) selected.forEach((s) => open(s))
@@ -218,6 +287,8 @@ export function Desktop() {
         {windows.map((w) => (
           <Window key={w.id} win={w} />
         ))}
+
+        {menu && <ContextMenu {...menu} bounds={{ w, h: h - TASKBAR_H }} onClose={closeMenu} />}
 
         <Taskbar />
       </div>

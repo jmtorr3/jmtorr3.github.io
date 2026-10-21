@@ -143,6 +143,15 @@ export function useDesktopIcons(opts: {
       }
     },
     isDragging: (id: AppId) => !!drag?.ids.includes(id),
+    // put every icon back in the default grid (desktop right-click > Arrange Icons)
+    arrange: () => {
+      setSaved({})
+      try {
+        localStorage.removeItem(KEY)
+      } catch {
+        // storage blocked; nothing saved anyway
+      }
+    },
     handlers,
     // true (once) when the click event is just the end of a drag
     consumeClick: () => {

@@ -193,7 +193,7 @@ export function playSpinUp(seconds = 1.35) {
   }
 }
 
-// ---- Mochi face bleeps: tiny chiptune voices, one per expression ----
+// ---- Slumpy face bleeps: tiny chiptune voices, one per expression ----
 
 type Note = [at: number, dur: number, from: number, to: number, type?: OscillatorType, gain?: number]
 
@@ -417,7 +417,7 @@ export function playBump(speed: number) {
   noise(c, t, 0.04, 'lowpass', 1200, env(c, t, 0.15 * g, 0.001, 0.035))
 }
 
-// Mochi bouncing off the edge of the Konsole after a fling; strength 0..1
+// Slumpy bouncing off the edge of the Konsole after a fling; strength 0..1
 export function playBoing(strength: number) {
   const c = audio()
   if (!c) return

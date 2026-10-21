@@ -9,8 +9,8 @@ import { useStore } from '../../store'
 import { plain } from '../richText'
 import { LAUNCHABLE, type AppId } from './registry'
 import { openProject } from './Explorer'
-import { MochiFace, type Expression } from '../../scene/MochiFace'
-import { MochiCam } from '../MochiCam'
+import { SlumpyFace, type Expression } from '../../scene/SlumpyFace'
+import { SlumpyCam } from '../SlumpyCam'
 import { playFaceSound } from '../sound'
 
 // tiny virtual filesystem built from src/data
@@ -93,7 +93,7 @@ const isChat = (line: string) => {
 	return GREETING.test(t) || QUESTION.test(t) || t.endsWith('?') || t.split(/\s+/).length >= 4
 }
 
-const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'ls', 'mochi', 'neofetch', 'open', 'poweroff', 'pwd', 'shutdown', 'sudo', 'whoami']
+const COMMANDS = ['cat', 'cd', 'clear', 'date', 'echo', 'exit', 'help', 'ls', profile.host, 'neofetch', 'open', 'poweroff', 'pwd', 'shutdown', 'sudo', 'whoami']
 
 // longest start shared by every candidate
 const commonPrefix = (xs: string[]) =>
@@ -132,7 +132,7 @@ function complete(line: string, cwd: string): { line: string; options: string[] 
 	return { line, options: matches.length > 1 ? matches.map((m) => m.trimEnd()) : [] }
 }
 
-// how Mochi reacts to a command (unknown commands and errors get 'confused')
+// how Slumpy reacts to a command (unknown commands and errors get 'confused')
 const REACTIONS: Record<string, Expression> = {
 	help: 'thinking',
 	ls: 'happy',
@@ -150,7 +150,7 @@ const REACTIONS: Record<string, Expression> = {
 	exit: 'sad',
 	shutdown: 'cry',
 	poweroff: 'cry',
-	mochi: 'love',
+	[profile.host]: 'love', // the computer is named after the host
 	hi: 'happy',
 	hello: 'happy',
 }
@@ -158,7 +158,7 @@ const REACTIONS: Record<string, Expression> = {
 function reactionFor(cmdline: string, out: string | null): Expression | null {
 	const line = cmdline.trim().toLowerCase()
 	if (!line) return null
-	if (/mochi|love|<3/.test(line) && !line.startsWith('sudo')) return 'love'
+	if ((line.includes(profile.host) || /love|<3/.test(line)) && !line.startsWith('sudo')) return 'love'
 	if (out && /not found|No such|missing|Not a directory|Is a directory/.test(out)) return 'confused'
 	return REACTIONS[line.split(/\s+/)[0]] ?? 'confused'
 }
@@ -175,7 +175,7 @@ const help = () => `available commands:
   open <app>        open a window: ${LAUNCHABLE.join(', ')}
   open <project>    open a project by folder name
   neofetch          system info
-  mochi             say hi to mochi
+  ${profile.host.padEnd(18)}say hi to ${profile.host}
   (Tab completes commands, files and app names)
   shutdown          power off and step away from the desk`
 
@@ -197,9 +197,9 @@ export function Terminal({ winId }: { winId: string }) {
 	const bodyRef = useRef<HTMLDivElement>(null)
 	const focused = useStore((s) => s.focused === winId)
 
-	// Mochi watches you type: eyes follow the text, reacts to each command,
+	// Slumpy watches you type: eyes follow the text, reacts to each command,
 	// dozes off when you stop for a while and startles awake when you start again
-	const [face] = useState(() => new MochiFace({ idle: false, transparent: true }))
+	const [face] = useState(() => new SlumpyFace({ idle: false, transparent: true }))
 	const lastTyped = useRef(performance.now())
 	// last actual keystroke or command (not when the window opened), for following
 	const typedAt = useRef(-Infinity)
@@ -224,7 +224,7 @@ export function Terminal({ winId }: { winId: string }) {
 		face.glance(Math.max(-10, Math.min(10, -10 + value.length * 0.7)), 5)
 		if (Math.random() < 0.15) face.poke()
 	}
-	// while you're typing (and just after), Mochi floats over to hover above the cursor
+	// while you're typing (and just after), Slumpy floats over to hover above the cursor
 	const konsoleRef = useRef<HTMLDivElement>(null)
 	const follow = () => {
 		const k = konsoleRef.current
@@ -341,8 +341,8 @@ export function Terminal({ winId }: { winId: string }) {
 				return 'Broadcast message: the system is going down NOW!'
 			case 'sudo':
 				return `${profile.user} is not in the sudoers file. This incident will be reported.`
-			case 'mochi':
-				return '(\u25d5\u203f\u25d5) hi! i live in this computer.'
+			case profile.host:
+				return `(\u25d5\u203f\u25d5) hi! i'm ${profile.host}, this computer.`
 			default:
 				if (isChat(cmdline)) return `${cmd}: command not found: I'm not an LLM`
 				return `${cmd}: command not found`
@@ -425,7 +425,7 @@ export function Terminal({ winId }: { winId: string }) {
 					/>
 				</div>
 			</div>
-			<MochiCam
+			<SlumpyCam
 				face={face}
 				follow={follow}
 				onClick={() => {

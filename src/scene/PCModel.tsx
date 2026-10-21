@@ -4,7 +4,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
-import { MochiFace, FACE_W, FACE_H, type Expression } from './MochiFace'
+import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
 import { useStore } from '../store'
 import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump } from '../os/sound'
 import { DeskProps } from './deskProps'
@@ -67,8 +67,8 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const material = makePicoMaterial(map)
     meshes.forEach((m) => (m.material = material))
 
-    // the screen glows with the Mochi face (black while the desktop is up)
-    const face = new MochiFace()
+    // the screen glows with the Slumpy face (black while the desktop is up)
+    const face = new SlumpyFace()
     const screen = meshes[SCREEN_MESH_INDEX]
     let screenBox: THREE.Box3 | null = null
     if (screen) {

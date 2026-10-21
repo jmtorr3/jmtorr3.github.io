@@ -121,7 +121,7 @@ function pickMood(): Expression {
   return 'happy'
 }
 
-export class MochiFace {
+export class SlumpyFace {
   readonly texture: THREE.CanvasTexture
   readonly canvas: HTMLCanvasElement
   // called when a new expression appears ('wake' when the eyes first open), for sounds

@@ -1,23 +1,23 @@
 import { useEffect, useRef } from 'react'
-import type { MochiFace } from '../scene/MochiFace'
+import type { SlumpyFace } from '../scene/SlumpyFace'
 import { playBoing } from './sound'
 
 type Point = { x: number; y: number }
 
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
 
-// The Mochi face as a little sprite floating over an app (the Konsole uses it).
+// The Slumpy face as a little sprite floating over an app (the Konsole uses it).
 // It wanders around its parent on its own; when `follow` returns a point (the
 // top-left it should sit at, in the parent's px), it hurries over there instead.
 // It can be dragged: wherever it's dropped becomes its spot, where it stays
 // (it still pops over while `follow` wants it, then comes back). Fling it and it
 // flies off, bouncing around the edges until it slows to a stop.
-export function MochiCam({
+export function SlumpyCam({
   face,
   follow,
   onClick,
 }: {
-  face: MochiFace
+  face: SlumpyFace
   follow?: () => Point | null
   onClick?: () => void
 }) {
@@ -179,5 +179,5 @@ export function MochiCam({
     }
   }, [face])
 
-  return <div className="mochi-cam" ref={host} aria-hidden />
+  return <div className="slumpy-cam" ref={host} aria-hidden />
 }
