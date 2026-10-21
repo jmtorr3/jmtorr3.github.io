@@ -730,6 +730,25 @@ button.card:hover {
   margin: 0 0 10px;
 }
 
+.stack {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 14px;
+}
+
+/* a faint light edge so dark logos (Lua's navy) still show on the dark window */
+.stack img {
+  height: 22px;
+  width: auto;
+  filter: drop-shadow(0 0 1px rgb(255 255 255 / 0.55));
+}
+
+.stack-sep {
+  color: var(--text-faint);
+}
+
 .about-hero {
   display: flex;
   gap: 16px;

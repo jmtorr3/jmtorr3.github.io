@@ -345,6 +345,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           return
         }
         playSpinUp() // the 'oooo' while the face looks surprised and the camera zooms in
+        model.props.poofHome() // the keyboard and mouse go back where they belong
         setMode('zooming')
       }}
     />

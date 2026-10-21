@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { profile } from '../../data/profile'
-import { education, coursework } from '../../data/about'
+import { education, coursework, stack } from '../../data/about'
 import { rich } from '../richText'
 import { useStore } from '../../store'
 import { addMenuItems, copyText, openUrl } from '../appMenu'
@@ -58,6 +58,17 @@ export function About() {
       </section>
 
       <p className="hero-bio">{rich(profile.bio)}</p>
+
+      <div className="stack" aria-label="Stack">
+        {stack.map((group, i) => (
+          <Fragment key={i}>
+            {i > 0 && <span className="stack-sep">·</span>}
+            {group.map((t) => (
+              <img key={t.name} src={t.icon} alt={t.name} title={t.name} height={22} />
+            ))}
+          </Fragment>
+        ))}
+      </div>
 
       <div className="btn-row">
         <a className="btn primary" href={profile.github} target="_blank" rel="noreferrer">

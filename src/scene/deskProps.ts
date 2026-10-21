@@ -2,8 +2,9 @@ import * as THREE from 'three'
 import type { DeviceKind } from '../data/devices'
 
 // The keyboard and mouse (Chiba and Hanzo, see data/devices) can be picked up and
-// dropped around the desk. Left out of place for a while, they vanish in a puff
-// and pop back in at home; shutting down the desktop glides them back too.
+// dropped around the desk. Left out of place for a while, or when the PC is
+// clicked on, they vanish in a puff and pop back in at home; shutting down the
+// desktop glides them back too.
 
 // while something is held, the camera doesn't orbit (CameraRig checks this)
 export const grabState = { active: false }
@@ -148,6 +149,21 @@ export class DeskProps {
     }
   }
 
+  // poof home right away, any that are out of place
+  poofHome() {
+    for (const p of this.props) {
+      if (p.state !== 'rest' && p.state !== 'fall') continue
+      if ((p.state === 'rest' ? p.anchor : p.mesh.position).distanceTo(p.rest) > AWAY_DIST) this.startPoof(p)
+    }
+  }
+
+  private startPoof(p: Prop) {
+    p.state = 'poof'
+    p.poofT = 0
+    p.away = 0
+    this.onPoof?.(p, p.mesh.position, 'vanish')
+  }
+
   update(dt: number, ray: THREE.Ray) {
     this.time += dt
     for (const p of this.props) {
@@ -156,12 +172,7 @@ export class DeskProps {
       if (p.state === 'rest' || p.state === 'fall') {
         const at = p.state === 'rest' ? p.anchor : pos // (the resting mouse wiggles around its anchor)
         p.away = at.distanceTo(p.rest) > AWAY_DIST ? p.away + dt : 0
-        if (p.away > POOF_AFTER) {
-          p.state = 'poof'
-          p.poofT = 0
-          p.away = 0
-          this.onPoof?.(p, pos, 'vanish')
-        }
+        if (p.away > POOF_AFTER) this.startPoof(p)
       } else if (p.state === 'held') p.away = 0
 
       if (p.state === 'poof') {
