@@ -457,3 +457,101 @@ export function playLoginChime() {
   ;[523, 659, 784, 1047].forEach((f, i) => tone(c, t + i * 0.09, 0.5, 'triangle', f, f, env(c, t + i * 0.09, 0.06, 0.01, 0.48)))
   tone(c, t, 0.9, 'sine', 262, 262, env(c, t, 0.05, 0.15, 0.75))
 }
+
+// Slumpy talking, Animal Crossing style ("animalese"), in a small cute voice:
+// every letter is a quick high chirp that bounces upward, a soft round tone
+// plus a little vowel color (two formants; consonants borrow the next vowel's,
+// with a tiny click or hiss in front). The phrase sings up at the end and the
+// last letter is held a bit, like "hellooo~". Returns false if sound can't
+// play yet (no tap or key so far).
+const FORMANTS: Record<string, [number, number]> = {
+  a: [800, 1200],
+  e: [500, 1900],
+  i: [320, 2300],
+  o: [500, 850],
+  u: [350, 750],
+  y: [320, 2300],
+}
+const PLOSIVES = 'bdgkpt'
+const HISSES = 'cfhjsxz'
+const VOICE = 640 // Hz: high and small
+const STEP = 0.07 // seconds per letter
+
+export function speak(text: string, pitch = 1) {
+  const c = audio()
+  if (!c) return false
+  const letters = [...text.toLowerCase()]
+  const spoken = letters.filter((ch) => /[a-z]/.test(ch)).length
+  let t = c.currentTime + 0.03
+  let n = 0
+  letters.forEach((ch, i) => {
+    if (ch === ' ') return void (t += STEP * 0.7)
+    if (!/[a-z]/.test(ch)) return
+    const vowel = letters.slice(i).find((x) => x in FORMANTS) ?? 'a'
+    const [f1, f2] = FORMANTS[ch] ?? FORMANTS[vowel]
+    const k = n / Math.max(1, spoken - 1)
+    const last = ++n === spoken
+    const len = last ? STEP * 1.8 : STEP
+    // each letter its own note, wobbling around the voice, singing up at the end
+    const f0 = VOICE * pitch * (1 + (((ch.charCodeAt(0) * 7) % 5) - 2) * 0.05) * (1 + 0.45 * k * k)
+
+    const out = c.createGain()
+    out.gain.setValueAtTime(0, t)
+    out.gain.linearRampToValueAtTime(0.18, t + 0.01)
+    out.gain.setValueAtTime(0.18, t + len * 0.55)
+    out.gain.exponentialRampToValueAtTime(0.0001, t + len * 0.97)
+    out.connect(c.destination)
+    const voice = (type: OscillatorType, into: AudioNode) => {
+      const o = c.createOscillator()
+      o.type = type
+      // the bounce: each chirp starts low and springs up onto the note
+      o.frequency.setValueAtTime(f0 * 0.86, t)
+      o.frequency.exponentialRampToValueAtTime(f0 * 1.04, t + 0.045)
+      o.frequency.exponentialRampToValueAtTime(f0, t + len)
+      o.connect(into)
+      o.start(t)
+      o.stop(t + len)
+      return o
+    }
+    // soft round body
+    const body = c.createGain()
+    body.gain.value = 0.55
+    body.connect(out)
+    const tri = voice('triangle', body)
+    // a held last letter gets a little wobble
+    if (last) {
+      const lfo = c.createOscillator()
+      lfo.frequency.value = 9
+      const depth = c.createGain()
+      depth.gain.value = 25 // cents
+      lfo.connect(depth).connect(tri.detune)
+      lfo.start(t)
+      lfo.stop(t + len)
+    }
+    // vowel color
+    for (const [f, q, g] of [[f1, 5, 1], [f2, 7, 0.5]] as const) {
+      const bp = c.createBiquadFilter()
+      bp.type = 'bandpass'
+      bp.frequency.value = f
+      bp.Q.value = q
+      const lvl = c.createGain()
+      lvl.gain.value = g * 1.2
+      bp.connect(lvl).connect(out)
+      voice('sawtooth', bp)
+    }
+    if (PLOSIVES.includes(ch)) noise(c, t, 0.012, 'highpass', 2500, env(c, t, 0.07, 0.001, 0.011))
+    else if (HISSES.includes(ch)) noise(c, t, 0.03, 'highpass', 4500, env(c, t, 0.04, 0.004, 0.026))
+    t += len
+  })
+  return true
+}
+
+// speak() right after a tap: the browser may still be switching sound on from
+// that same tap, so wait a moment for it rather than staying quiet
+export function speakSoon(text: string, pitch = 1) {
+  if (speak(text, pitch) || !ctx || useSound.getState().muted) return
+  const asked = performance.now()
+  void ctx.resume().then(() => {
+    if (performance.now() - asked < 500) speak(text, pitch)
+  })
+}

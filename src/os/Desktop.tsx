@@ -19,7 +19,7 @@ import { FaceScreen } from './FaceScreen'
 import { HOME } from './vfs'
 import { useSlumpy } from './slumpy'
 import { useDesktopIcons } from './useDesktopIcons'
-import { playPowerOn, playPowerOff, playClick, useSound } from './sound'
+import { playPowerOn, playPowerOff, playClick, useSound, speak } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { LoginScreen } from './LoginScreen'
 
@@ -231,8 +231,12 @@ export function Desktop() {
     booted.current = true
   }, [])
   useEffect(() => {
-    if (poweringOff) playPowerOff()
-  }, [poweringOff])
+    if (!poweringOff) return
+    playPowerOff()
+    // waves goodbye on the way out
+    speak('bye bye!')
+    slumpy.react('happy', 1.5)
+  }, [poweringOff, slumpy])
 
   return (
     <div

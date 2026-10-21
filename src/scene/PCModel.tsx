@@ -6,7 +6,7 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
 import { useStore } from '../store'
-import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof } from '../os/sound'
+import { unlockAudio, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
 
@@ -313,16 +313,33 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
 
   useEffect(() => {
     // the face bleeps as it changes expression (the spin-up covers the zoom)
+    let talkingUntil = 0
     model.face.onChange = (expr) => {
       lights.current.faceLeft = 0.5
-      if (useStore.getState().mode === 'room') playFaceSound(expr)
+      if (useStore.getState().mode === 'room' && performance.now() > talkingUntil) playFaceSound(expr)
     }
+    // "hellooo!" once the loading screen is gone, if the browser already allows
+    // sound here (usually it waits for a tap; then he just says it when the PC
+    // is clicked on)
+    let greeted = false
+    const greet = () => {
+      if (greeted || useStore.getState().mode !== 'room') return
+      if (!speak('hellooo!')) return
+      greeted = true
+      talkingUntil = performance.now() + 900
+      model.face.react('happy', 1.6)
+    }
+    let tryNow = window.setTimeout(() => {
+      unlockAudio() // only starts if the browser already allows sound here
+      tryNow = window.setTimeout(greet, 150)
+    }, 600)
     // browsers only allow sound after an interaction: any first tap or drag in the room counts
     const unlock = () => unlockAudio()
     window.addEventListener('pointerdown', unlock, { once: true })
     window.addEventListener('keydown', unlock, { once: true })
     return () => {
       model.face.onChange = undefined
+      clearTimeout(tryNow)
       window.removeEventListener('pointerdown', unlock)
       window.removeEventListener('keydown', unlock)
     }
@@ -387,6 +404,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           return
         }
         playSpinUp() // the 'oooo' while the face looks surprised and the camera zooms in
+        speakSoon('hellooo!') // and says hi on the way in
         model.props.poofHome() // the keyboard and mouse go back where they belong
         setMode('zooming')
       }}
