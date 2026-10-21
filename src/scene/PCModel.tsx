@@ -6,9 +6,10 @@ import { makePicoMaterial } from './PicoMaterial'
 import { makeScreenMaterial } from './ScreenMaterial'
 import { SlumpyFace, FACE_W, FACE_H, type Expression } from './SlumpyFace'
 import { useStore } from '../store'
-import { unlockAudio, playPowerOn, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, speak, speakSoon } from '../os/sound'
+import { unlockAudio, playBoing, playPowerOn, playSpinUp, playFaceSound, playFart, playPickup, playLand, playBump, playPoof, playClick, speak, speakSoon } from '../os/sound'
 import { DeskProps } from './deskProps'
 import { poofAt } from './DustPuff'
+import { brainHatch, makeHatch } from './Brain'
 import { restoreCursor, type HoverKind } from './cursor'
 import { devices } from '../data/devices'
 import { profile } from '../data/profile'
@@ -23,6 +24,9 @@ const MOUSE_RANGE = { side: 0.12, depth: 0.09 }
 // easter egg: the round fan grille on the back of the case, as texels in the
 // 128px atlas (with a texel of slack so it's easy to hit on a phone)
 const FAN_TEXELS = { x0: 60, x1: 67, y0: 51, y1: 58 }
+// easter egg: the back of the monitor (the big box behind the screen) has a hatch
+// in it: his brain pops out (see Brain)
+const MONITOR_BACK_MESH_INDEX = 8
 // picking up the keyboard and mouse is a mouse/trackpad thing; on touch screens
 // dragging orbits the camera and tapping them turns the PC on like the rest of it
 const CAN_GRAB = !matchMedia('(pointer: coarse)').matches
@@ -94,12 +98,15 @@ const hitFan = (e: ClickEvent) => {
   return x >= FAN_TEXELS.x0 && x <= FAN_TEXELS.x1 && y >= FAN_TEXELS.y0 && y <= FAN_TEXELS.y1
 }
 
-// the right end of the front panel (the atlas reuses some of these texels on
-// other faces, so it has to be the front-facing side: the PC faces -z)
+// which way the clicked face points along z: -1 the front (the PC faces -z), +1 the back
 const _n = new THREE.Vector3()
+const facing = (e: ClickEvent) => (e.face ? _n.copy(e.face.normal).transformDirection(e.object.matrixWorld).z : 0)
+
+// the right end of the front panel (the atlas reuses some of these texels on
+// other faces, so it has to be the front-facing side)
 const hitPowerPanel = (e: ClickEvent) => {
   if (!e.uv || !e.face) return false
-  if (_n.copy(e.face.normal).transformDirection(e.object.matrixWorld).z > -0.5) return false
+  if (facing(e) > -0.5) return false
   const x = Math.floor(e.uv.x * 128)
   const y = Math.floor(e.uv.y * 128)
   const t = POWER_PANEL_TEXELS
@@ -161,7 +168,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     const button = new THREE.Mesh(new THREE.BoxGeometry(size, size, depth), makePicoMaterial(tex))
     button.position.set(at.x, at.y, at.z - depth / 2) // sticking out of the panel
     root.add(button)
-    return { root, meshes, face, material, mouse, props, screenBox, button }
+    // the hatch in the back of the monitor the brain comes out of
+    const hatch = makeHatch(meshes[MONITOR_BACK_MESH_INDEX], material)
+    root.add(hatch.group)
+    return { root, meshes, face, material, mouse, props, screenBox, button, hatch }
   }, [scene])
 
   // the happy face is for pointing at the PC itself, not for messing with the
@@ -461,6 +471,12 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     else powerOff()
   }
   useEffect(() => clearTimers, [])
+  useEffect(() => {
+    brainHatch.current = model.hatch
+    return () => {
+      brainHatch.current = null
+    }
+  }, [model])
   // shut down to restart (`reboot` in the Konsole): back in the room, it comes right back on
   useEffect(() => {
     if (mode !== 'room' || !poweredOff || !rebooting) return
@@ -543,10 +559,18 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
           return
         }
         unlockAudio()
+        const hitMonitorBack = (e: ClickEvent) =>
+          (e.object === model.meshes[MONITOR_BACK_MESH_INDEX] && facing(e) > 0.5) || e.object === model.hatch.door || e.object === model.hatch.hole
         if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
         // off, or booting (the log finishes and heads into the sign-in by itself):
         // only the power button does anything
         if (useStore.getState().poweredOff || useStore.getState().booting) return
+        if (hitMonitorBack(e)) {
+          useStore.getState().showBrain()
+          playBoing(1)
+          model.face.react('thinking', 4.2) // (the brain's up for about that long)
+          return
+        }
         if (hitFan(e)) {
           // the fan blows out along the face it's on
           const dir = (e.face?.normal ?? new THREE.Vector3(0, 0, 1)).clone().transformDirection(e.object.matrixWorld)

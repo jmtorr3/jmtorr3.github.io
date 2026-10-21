@@ -47,6 +47,7 @@ interface State {
   signingIn: boolean // the welcome screen after power-on (shows Slumpy)
   // easter egg: someone clicked the fan on the back; where, and which way it blows
   fart: { n: number; at: [number, number, number]; dir: [number, number, number] } | null
+  brain: number // easter egg: bumped when the back of the monitor is clicked (his brain pops out)
   hoverDevice: DeviceKind | null // the keyboard or mouse under the pointer in the room (the hint names it)
   screen: ScreenInfo | null
   // desktop size in its own layout px; the Desktop is drawn at `scale`× that on screen
@@ -60,6 +61,7 @@ interface State {
   setPoweredOff: (off: boolean) => void // the power button, in the room
   spunTooFast: () => void
   doFart: (at: [number, number, number], dir: [number, number, number]) => void
+  showBrain: () => void
   setHoverDevice: (d: DeviceKind | null) => void
   showMenu: (clientX: number, clientY: number, items: MenuItem[]) => void
   hideMenu: () => void
@@ -86,6 +88,7 @@ export const useStore = create<State>((set, get) => ({
   booting: false,
   spins: 0,
   fart: null,
+  brain: 0,
   hoverDevice: null,
   menu: null,
   startOpen: false,
@@ -106,6 +109,7 @@ export const useStore = create<State>((set, get) => ({
   showMenu: (clientX, clientY, items) => set({ menu: { clientX, clientY, items } }),
   hideMenu: () => set({ menu: null }),
   doFart: (at, dir) => set((s) => ({ fart: { n: (s.fart?.n ?? 0) + 1, at, dir } })),
+  showBrain: () => set((s) => ({ brain: s.brain + 1 })),
   setHoverDevice: (hoverDevice) => get().hoverDevice !== hoverDevice && set({ hoverDevice }),
   setScreen: (screen) => set({ screen }),
   setDesk: (w, h, scale) => set({ desk: { w, h, scale } }),

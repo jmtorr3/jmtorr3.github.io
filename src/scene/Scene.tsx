@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { PCModel, type HoverKind } from './PCModel'
 import { setHover, restoreCursor } from './cursor'
 import { DustPuff } from './DustPuff'
+import { Brain } from './Brain'
 import { PicoPostFX } from './PicoPostFX'
 import { CameraRig } from './CameraRig'
 import { useStore } from '../store'
@@ -36,6 +37,7 @@ export function Scene() {
       <Suspense fallback={null}>
         <PCModel onHover={setHovered} />
         <DustPuff />
+        <Brain />
       </Suspense>
       <CameraRig />
       {/* off: only the power button lights him up (not the keyboard or mouse), and
