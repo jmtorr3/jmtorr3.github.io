@@ -40,6 +40,7 @@ export type Expression =
   | 'desktop' // the desktop, in color (see paintDesktop): still signed in, back in the room
   | 'glitch'
   | 'panic' // wide eyes darting around, sweating, teeth chattering, shaking (`rm -rf /*`)
+  | 'missing' // panicking, looking all over for Chiba or Hanzo (unplugged): see missing
   | 'hypno'
   | 'off'
 
@@ -263,6 +264,8 @@ export class SlumpyFace {
   bootLog: { at: number; text: string }[] = []
   // what 'prompt' shows after its "> "
   typed = ''
+  // who 'missing' is looking for (their names)
+  missing: string[] = []
   // draws 'desktop' straight onto the canvas (FACE_W×FACE_H, in color)
   paintDesktop?: (ctx: CanvasRenderingContext2D, t: number, face: SlumpyFace) => void
   // another face that's showing him right now (the desktop's, on the little desktop
@@ -537,6 +540,19 @@ export class SlumpyFace {
     }
   }
 
+  // panicking ('panic', 'missing'): a jagged mouth, teeth chattering, and sweat
+  // drops running off both sides, over and over
+  private panicking(cx: number, cy: number) {
+    const chatter = Math.floor(this.t * 14) % 2
+    for (let i = 0; i < 22; i++) this.rect(cx - 11 + i, cy + 20 + ((i + chatter * 2) % 4 < 2 ? 0 : 2), 1, 2)
+    for (const [dx, offset] of [[-38, 0], [38, 0.45]]) {
+      const fall = (this.t * 1.6 + offset) % 1
+      const y = cy - 16 + fall * 22
+      this.rect(cx + dx, y - 2, 1, 2)
+      this.rect(cx + dx - 1, y, 3, 3)
+    }
+  }
+
   // eyes that aren't plain pills just shut to a line while blinking
   private shut(cx: number, cy: number) {
     this.rect(cx - 8, cy, 16, 2)
@@ -580,6 +596,14 @@ export class SlumpyFace {
         return this.pill(cx, cy + 2, EYE_W + 2, Math.max(2, Math.round(7 * this.open)), 3)
       case 'surprised':
         return this.pill(cx, cy - 2, EYE_W + 4, Math.max(2, Math.round((EYE_H + 4) * this.open)), 9)
+      case 'missing': {
+        // wide open and hollow like panicking, but looking side to side, all over, for them
+        this.pill(cx, cy - 2, EYE_W + 6, EYE_H + 6, 10)
+        this.pill(cx, cy - 2, EYE_W + 1, EYE_H + 1, 8, 0)
+        const px = Math.round(Math.sin(this.t * 4.5) * 4)
+        const py = Math.round(Math.sin(this.t * 2.1) * 2)
+        return this.rect(cx + px - 2, cy - 2 + py - 2, 4, 5)
+      }
       case 'panic': {
         // wide open and hollow, with tiny pupils darting around (both the same way)
         this.pill(cx, cy - 2, EYE_W + 6, EYE_H + 6, 10)
@@ -660,19 +684,16 @@ export class SlumpyFace {
       case 'surprised':
         if (this.open > 0.5) this.bitmap(MOUTH_O, cx, cy + 22, 1)
         return
-      case 'panic': {
-        // a jagged mouth, teeth chattering
-        const chatter = Math.floor(this.t * 14) % 2
-        for (let i = 0; i < 22; i++) this.rect(cx - 11 + i, cy + 20 + ((i + chatter * 2) % 4 < 2 ? 0 : 2), 1, 2)
-        // sweat drops running off both sides, over and over
-        for (const [dx, offset] of [[-38, 0], [38, 0.45]]) {
-          const fall = (this.t * 1.6 + offset) % 1
-          const y = cy - 16 + fall * 22
-          this.rect(cx + dx, y - 2, 1, 2)
-          this.rect(cx + dx - 1, y, 3, 3)
-        }
-        return
+      case 'missing': {
+        // where they are? (taking turns, if they're both gone), blinking along the top
+        const name = this.missing[Math.floor(this.t / 1.6) % Math.max(1, this.missing.length)] ?? ''
+        const msg = `WHERE'S ${name}?`
+        // (low enough that the monitor's frame doesn't cover it, above his eyes)
+        if (Math.floor(this.t * 3) % 3) this.text(msg, Math.round((FACE_W - (msg.length * CHAR_W - 1)) / 2), cy - 27)
+        return this.panicking(cx, cy)
       }
+      case 'panic':
+        return this.panicking(cx, cy)
       case 'happy':
       case 'love':
       case 'wink':
@@ -1014,7 +1035,7 @@ export class SlumpyFace {
       if (expr === 'excited') fy = -Math.round(Math.abs(Math.sin(this.t * 9)) * 4)
       if (expr === 'laugh') fy = (Math.floor(this.t * 12) % 2) * 2
       if (expr === 'music') fx = Math.round(Math.sin(this.t * 4) * 3)
-      if (expr === 'panic') {
+      if (expr === 'panic' || expr === 'missing') {
         // trembling
         const shake = Math.floor(this.t * 30)
         fx = (shake % 2) * 2 - 1

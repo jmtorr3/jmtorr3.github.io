@@ -27,7 +27,7 @@ export function App() {
               : off
                 ? 'press the power button'
                 : missing.length
-                  ? `plug ${missing.join(' and ')} back in (back of the case)`
+                  ? `plug ${missing.join(' and ')} back in: ${TOUCH ? 'tap' : 'click'} ${missing.length > 1 ? 'their plugs' : 'its plug'} (back of the case)`
                   : TOUCH ? 'tap the computer · tap the keyboard to talk' : 'click the computer'}
         </div>
       )}

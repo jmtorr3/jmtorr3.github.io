@@ -320,6 +320,10 @@ textarea,
   text-align: center;
 }
 
+.devices-missing.alone {
+  background: var(--bg);
+}
+
 .devices-missing .missing-face {
   width: 160px;
   height: 128px;

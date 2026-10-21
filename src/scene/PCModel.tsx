@@ -21,7 +21,7 @@ import { isDecember } from '../os/occasion'
 import { chatReply, SIGN_IN_COMMANDS } from '../os/chat'
 import { openRoomKeyboard } from './RoomKeyboard'
 import { restoreCursor, type HoverKind } from './cursor'
-import { devices } from '../data/devices'
+import { devices, DEVICE_KINDS } from '../data/devices'
 import { profile } from '../data/profile'
 
 const URL = '/models/pc.gltf'
@@ -234,6 +234,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
   const rebooting = useStore((s) => s.rebooting)
   const booting = useStore((s) => s.booting)
   const session = useStore((s) => s.session) // signed in to the desktop (see stepAway)
+  const unplugged = useStore((s) => s.unplugged)
   const setBooting = (booting: boolean) => useStore.setState({ booting, leaning: booting })
   const bootStart = useRef(0) // when the boot log started (performance.now())
   const hoverAt = (obj: THREE.Object3D) => {
@@ -288,6 +289,11 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     else if (mode === 'exiting' || poweredOff || (mode === 'desktop' && !booting)) expr = 'off'
     else if (booting) expr = 'boot'
     else if (mode === 'zooming') expr = 'surprised'
+    // Chiba or Hanzo unplugged: panicking, looking all over for them
+    else if (unplugged.keyboard || unplugged.mouse) {
+      expr = 'missing'
+      model.face.missing = DEVICE_KINDS.filter((k) => unplugged[k]).map((k) => devices[k].name)
+    }
     else if (saver) expr = 'starfield'
     else if (typing) expr = 'prompt'
     else if (asleep) expr = 'asleep'
@@ -301,7 +307,7 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     invalidate()
     // leaving the desktop puts the keyboard and mouse back where they belong
     if (mode === 'exiting') model.props.reset()
-  }, [mode, hovered, asleep, typing, saver, booting, poweredOff, session, model, invalidate])
+  }, [mode, hovered, asleep, typing, saver, booting, poweredOff, session, unplugged, model, invalidate])
 
   // the screensaver: the room left alone (no pointer, keys or wheel) for a while.
   // Anything at all and he wakes up with a start.
@@ -693,6 +699,18 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
     return () => window.removeEventListener('press-power', onPress)
   }) // every render: pressPower closes over this render's state
 
+  // zoomed right in on his screen, from the front (see CameraRig): straight into the
+  // desktop, like clicking him (only when that would)
+  useEffect(() => {
+    const onZoom = () => {
+      const s = useStore.getState()
+      if (s.mode !== 'room' || isOff(s) || s.booting || s.rebooting) return
+      signIn()
+    }
+    window.addEventListener('zoom-into-screen', onZoom)
+    return () => window.removeEventListener('zoom-into-screen', onZoom)
+  }) // every render: signIn closes over this render's state
+
   // typing in the room: Chiba clacks and its keys go down, the drive light
   // flickers, and his screen shows the line as it's typed. Enter: his face comes
   // back and answers it. Escape (or leaving it alone) drops it.
@@ -887,7 +905,10 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
         unlockAudio()
         const hitMonitorBack = (e: ClickEvent) =>
           ((MONITOR_REAR_MESH_INDICES.some((i) => e.object === model.meshes[i]) || e.object === model.hatch.frame) && facing(e) > 0.5) || e.object === model.hatch.door || e.object === model.hatch.hole
-        if (model.usb.find(e.object)) return // (plugs are pulled, not clicked)
+        // a plug: pulled, not clicked (with a mouse, a click on one that's out puts it
+        // back: see UsbCables); on touch, where they can't be carried, a tap puts it back
+        const plug = model.usb.find(e.object)
+        if (plug) return CAN_GRAB ? undefined : model.usb.plugIn(plug)
         if (e.object === model.button || (!CAN_GRAB && e.object === model.meshes[CASE_MESH_INDEX] && hitPowerPanel(e))) return pressPower()
         // booting (or zooming in after it): a click backs out to the room, awake
         if (useStore.getState().booting) return cancelBoot()

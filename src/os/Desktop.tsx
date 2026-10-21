@@ -149,7 +149,8 @@ const readSnow = () => {
 const MISSING_SECONDS = 5
 const and = (names: string[]) => (names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0])
 
-function DevicesMissing({ missing }: { missing: DeviceKind[] }) {
+// alone: logged off (coming in from the room), so it's just the error, no desktop behind it
+function DevicesMissing({ missing, alone }: { missing: DeviceKind[]; alone: boolean }) {
   const [left, setLeft] = useState(MISSING_SECONDS)
   useEffect(() => {
     const id = setInterval(() => setLeft((n) => Math.max(0, n - 1)), 1000)
@@ -157,7 +158,7 @@ function DevicesMissing({ missing }: { missing: DeviceKind[] }) {
   }, [])
   const names = missing.map((k) => devices[k].name)
   return (
-    <div className="devices-missing" role="alertdialog" aria-label="Devices missing">
+    <div className={`devices-missing ${alone ? 'alone' : ''}`} role="alertdialog" aria-label="Devices missing">
       <FaceScreen className="missing-face" />
       <div className="missing-box">
         <div className="missing-title">⚠ Device error</div>
@@ -540,9 +541,10 @@ export function Desktop() {
         )}
 
         <Taskbar />
-        {!signedIn && <LoginScreen onDone={finishLogin} />}
+        {/* (no signing in without a keyboard and mouse: just the error, see DevicesMissing) */}
+        {!signedIn && !missing.length && <LoginScreen onDone={finishLogin} />}
         {panic && <KernelPanic />}
-        {missing.length > 0 && <DevicesMissing missing={missing} />}
+        {missing.length > 0 && <DevicesMissing missing={missing} alone={!resumed} />}
       </div>
       <div className="crt-overlay" />
     </div>

@@ -36,6 +36,10 @@ const MIN_ROOM_DISTANCE = 2.2
 // the PC, so it never clips in), out to this; and how much a wheel notch zooms
 const MAX_ROOM_DISTANCE = 8.5
 const WHEEL_ZOOM = 0.0015
+// zoomed all the way in, in front of the screen, and still zooming in (by about
+// this much more, as a fraction of the distance): in you go, into the desktop
+const ZOOM_INTO_SCREEN = 0.3
+const FRONT = 0.75 // how square on to the screen counts as in front of it (cosine)
 // how far up/down the user can orbit, as angles from straight up (radians)
 const MIN_POLAR = 0.35
 const MAX_POLAR = 1.45 // just above the desk
@@ -120,8 +124,9 @@ export function CameraRig() {
   // recent turning (fades out over about a second) and when it last got dizzy
   const spin = useRef({ amount: 0, lastYaw: 0, dizzyAt: -Infinity })
   const lean = useRef(0) // 0..1, leaning in to read the boot log
-  // zoom: the room camera's distance times this (eased toward goal)
-  const zoom = useRef({ k: 1, goal: 1 })
+  // zoom: the room camera's distance times this (eased toward goal); min: as far in
+  // as it goes; push: how much further in it's been asked to go, there
+  const zoom = useRef({ k: 1, goal: 1, min: 0, push: 0 })
   // a phone's keyboard up (talking to him): the PC, keyboard and mouse lift into the
   // part of the screen above it (lift, 0..1), backing off (fit, ×distance) to fit there
   const lift = useRef({ k: 0, fit: 1 })
@@ -142,16 +147,32 @@ export function CameraRig() {
     return () => events.forEach((ev) => window.removeEventListener(ev, active))
   }, [])
 
-  // can the camera see the screen (and the face on it)? false from behind or edge-on
-  const faceVisible = () => {
+  // how square on to the screen the camera is (1 straight in front, 0 edge-on, below 0 behind)
+  const facing = () => {
     const screen = useStore.getState().screen
-    if (!screen) return true
-    return _v.copy(camera.position).sub(screen.center).normalize().dot(screen.normal) > 0.35
+    if (!screen) return 1
+    return _v.copy(camera.position).sub(screen.center).normalize().dot(screen.normal)
   }
+  // can the camera see the screen (and the face on it)? false from behind or edge-on
+  const faceVisible = () => facing() > 0.35
 
   useEffect(() => {
     const el = gl.domElement
     const o = orbit.current
+    // zooming by a factor (under 1: in). Already in as far as it goes, right in
+    // front of the screen, and pushing on in: into the desktop (see PCModel)
+    const zoomBy = (f: number) => {
+      const z = zoom.current
+      z.goal *= f
+      const atMin = z.min > 0 && z.k <= z.min * 1.04
+      if (f < 1 && atMin && facing() > FRONT) {
+        z.push -= Math.log(f)
+        if (z.push > ZOOM_INTO_SCREEN) {
+          z.push = 0
+          window.dispatchEvent(new Event('zoom-into-screen'))
+        }
+      } else if (f > 1) z.push = 0
+    }
     // two fingers: pinching zooms (and stops the orbit the first finger started)
     const pinch = () => {
       const [a, b] = [...fingers.current.values()]
@@ -177,7 +198,7 @@ export function CameraRig() {
         fingers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
         if (fingers.current.size === 2) {
           const now = pinch()
-          if (spread > 0 && now > 0 && useStore.getState().mode === 'room') zoom.current.goal *= spread / now
+          if (spread > 0 && now > 0 && useStore.getState().mode === 'room') zoomBy(spread / now)
           spread = now
           return
         }
@@ -215,7 +236,7 @@ export function CameraRig() {
     const wheel = (e: WheelEvent) => {
       if (useStore.getState().mode !== 'room') return
       e.preventDefault()
-      zoom.current.goal *= Math.exp(e.deltaY * WHEEL_ZOOM * (e.ctrlKey ? 4 : 1))
+      zoomBy(Math.exp(e.deltaY * WHEEL_ZOOM * (e.ctrlKey ? 4 : 1)))
     }
     el.addEventListener('pointerdown', down)
     el.addEventListener('pointermove', move)
@@ -278,7 +299,8 @@ export function CameraRig() {
     // zoomed in or out, never into the PC or off into the distance (the goal's
     // held to what's reachable, so zooming back the other way responds at once)
     const z = zoom.current
-    z.goal = THREE.MathUtils.clamp(z.goal, MIN_ROOM_DISTANCE / sph.radius, MAX_ROOM_DISTANCE / sph.radius)
+    z.min = MIN_ROOM_DISTANCE / sph.radius
+    z.goal = THREE.MathUtils.clamp(z.goal, z.min, MAX_ROOM_DISTANCE / sph.radius)
     z.k += (z.goal - z.k) * (1 - Math.exp(-delta * 10))
     sph.radius *= z.k
     sph.radius *= 1 + (lift.current.fit - 1) * lift.current.k
@@ -316,6 +338,8 @@ export function CameraRig() {
     if (mode !== lastMode.current) {
       lastMode.current = mode
       t.current = 0
+      // (going in, the zoom resets: back out, it's the usual view again)
+      if (mode === 'zooming') Object.assign(zoom.current, { k: 1, goal: 1, push: 0 })
       from.current.pos.copy(camera.position)
       from.current.target.copy(lookAt.current)
       // zooming in while it's still spinning: carry that motion into the move
