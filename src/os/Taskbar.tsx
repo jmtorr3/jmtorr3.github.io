@@ -8,6 +8,7 @@ import { FaceScreen } from './FaceScreen'
 import { useSound, unlockAudio, speak } from './sound'
 import { useSlumpy } from './slumpy'
 import { toggleFit, useFit } from './fitScreen'
+import { FullscreenToggle } from './FullscreenToggle'
 import { isCompact } from '../scene/screenFit'
 
 // on touch screens, focusing the search box would pop up the on-screen keyboard
@@ -196,6 +197,7 @@ export function Taskbar() {
       </div>
 
       <div className="tray">
+        <FullscreenToggle />
         <SoundToggle />
         <Clock />
       </div>

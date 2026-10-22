@@ -118,49 +118,46 @@ textarea,
   touch-action: none;
 }
 
-/* fullscreen toggle, bottom-right of the browser window (FullscreenButton) */
-.fs-corner {
+/* the room's exit (RoomExit): bottom-right, closes the app window or the tab */
+.room-exit {
   position: fixed;
-  right: 0;
-  bottom: 0;
-  z-index: 100001; /* over the desktop and its CRT overlay */
+  right: 12px;
+  bottom: 12px;
+  z-index: 100001; /* over the scene and its CRT overlay */
   display: flex;
+  flex-direction: column;
   align-items: flex-end;
-  justify-content: flex-end;
-  /* the whole corner catches the hover that brings a faded button back */
-  width: 96px;
-  height: 96px;
-  padding: 12px;
+  gap: 6px;
 }
 
-.fs-corner.above-taskbar {
-  bottom: var(--taskbar-h, 48px);
-}
-
-.fs-btn {
-  pointer-events: auto;
-  display: grid;
-  place-items: center;
-  width: 36px;
+.room-exit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   height: 36px;
-  padding: 0;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
   color: var(--accent-bright);
   background: color-mix(in srgb, var(--bg) 80%, transparent);
   border: 1px solid var(--accent-dim);
   cursor: var(--cursor-pointer);
-  transition:
-    opacity 0.4s,
-    border-color 0.2s;
+  transition: border-color 0.2s;
 }
 
-.fs-btn:hover {
+.room-exit-btn:hover {
   border-color: var(--accent);
   color: #fff;
 }
 
-.fs-btn.hidden {
-  opacity: 0;
-  pointer-events: none;
+.room-exit-note {
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg, #ddd);
+  background: var(--bg); /* (solid: it can sit over the room hint for a moment) */
+  border: 1px solid var(--accent-dim);
 }
 
 .hint {
@@ -178,6 +175,13 @@ textarea,
   text-shadow: 2px 2px 0 #000;
   pointer-events: none;
   animation: blink 1.2s steps(2) infinite;
+}
+
+/* phones: the room hint spans the width, so it goes up above the exit */
+@media (max-width: 600px) {
+  .hint {
+    bottom: 60px;
+  }
 }
 
 /* phones: the hidden text box that takes typing for Slumpy in the room (see
@@ -2369,6 +2373,13 @@ button.card:hover {
 
 .tray-btn:hover {
   color: #fff;
+}
+
+/* the fullscreen toggle's pixel brackets, lined up with the font icons beside it */
+.tray-fs {
+  display: inline-grid;
+  place-items: center;
+  line-height: 0;
 }
 
 /* Konqueror: a local page, drawn on white like the old web */

@@ -2,7 +2,7 @@ import { Scene } from './scene/Scene'
 import { Desktop } from './os/Desktop'
 import { AppHost } from './os/appHost'
 import { useStore } from './store'
-import { FullscreenButton } from './FullscreenButton'
+import { RoomExit } from './RoomExit'
 import { devices } from './data/devices'
 import { PowerHint } from './scene/PowerHint'
 import { RoomKeyboard } from './scene/RoomKeyboard'
@@ -33,11 +33,11 @@ export function App() {
         </div>
       )}
       {mode === 'room' && <PowerHint />}
+      {mode === 'room' && <RoomExit />}
       {mode === 'room' && TOUCH && <RoomKeyboard />}
       {mode === 'desktop' && <Desktop />}
       {/* the apps in its windows keep running in the room (see appHost) */}
       <AppHost />
-      <FullscreenButton />
     </>
   )
 }
