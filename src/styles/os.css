@@ -118,48 +118,6 @@ textarea,
   touch-action: none;
 }
 
-/* the room's exit (RoomExit): bottom-right, closes the app window or the tab */
-.room-exit {
-  position: fixed;
-  right: 12px;
-  bottom: 12px;
-  z-index: 100001; /* over the scene and its CRT overlay */
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-}
-
-.room-exit-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  height: 36px;
-  padding: 0 12px;
-  font: inherit;
-  font-size: 13px;
-  color: var(--accent-bright);
-  background: color-mix(in srgb, var(--bg) 80%, transparent);
-  border: 1px solid var(--accent-dim);
-  cursor: var(--cursor-pointer);
-  transition: border-color 0.2s;
-}
-
-.room-exit-btn:hover {
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.room-exit-note {
-  max-width: min(280px, calc(100vw - 24px));
-  padding: 6px 10px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--fg, #ddd);
-  background: var(--bg); /* (solid: it can sit over the room hint for a moment) */
-  border: 1px solid var(--accent-dim);
-}
-
 .hint {
   position: fixed;
   left: 50%;
@@ -175,13 +133,6 @@ textarea,
   text-shadow: 2px 2px 0 #000;
   pointer-events: none;
   animation: blink 1.2s steps(2) infinite;
-}
-
-/* phones: the room hint spans the width, so it goes up above the exit */
-@media (max-width: 600px) {
-  .hint {
-    bottom: 60px;
-  }
 }
 
 /* phones: the hidden text box that takes typing for Slumpy in the room (see
