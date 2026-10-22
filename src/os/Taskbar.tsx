@@ -165,7 +165,8 @@ export function Taskbar() {
                   <Icon name="computer" size={20} />
                 </button>
               )}
-              <span className="start-foot-gap" />
+              {/* (only beside the Fit button: on phones Log Off / Shut Down share the footer equally) */}
+              {!isCompact(window.innerWidth, window.innerHeight) && <span className="start-foot-gap" />}
               <button onClick={logOff}>
                 <Icon name="logout" size={20} /> Log Off
               </button>
