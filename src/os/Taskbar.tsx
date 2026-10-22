@@ -154,8 +154,15 @@ export function Taskbar() {
             </div>
             <div className="start-foot">
               {!isCompact(window.innerWidth, window.innerHeight) && (
-                <button className={`start-fit ${fit ? 'on' : ''}`} onClick={() => (toggleFit(), setMenu(false))} title="the desktop fills your whole monitor, at its shape" aria-pressed={fit}>
-                  <Icon name="computer" size={20} /> {fit ? 'Back in the monitor' : 'Fit to screen'}
+                // (just an icon: the label didn't fit beside Log Off / Shut Down)
+                <button
+                  className={`start-fit ${fit ? 'on' : ''}`}
+                  onClick={() => (toggleFit(), setMenu(false))}
+                  title={fit ? 'Back in the monitor (Esc)' : 'Fit to screen: the desktop fills your whole monitor'}
+                  aria-label={fit ? 'Back in the monitor' : 'Fit to screen'}
+                  aria-pressed={fit}
+                >
+                  <Icon name="computer" size={20} />
                 </button>
               )}
               <span className="start-foot-gap" />

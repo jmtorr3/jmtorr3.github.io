@@ -2116,8 +2116,13 @@ button.card:hover {
 .start-foot-gap {
   flex: 1;
 }
+.start-fit {
+  padding: 5px !important;
+}
 .start-fit.on {
   color: var(--accent-bright);
+  background: var(--accent-glow) !important;
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .start-foot {
   display: flex;
