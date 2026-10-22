@@ -7,6 +7,8 @@ import { systemOS } from '../data/system'
 import { FaceScreen } from './FaceScreen'
 import { useSound, unlockAudio, speak } from './sound'
 import { useSlumpy } from './slumpy'
+import { toggleFit, useFit } from './fitScreen'
+import { isCompact } from '../scene/screenFit'
 
 // on touch screens, focusing the search box would pop up the on-screen keyboard
 const TOUCH = matchMedia('(pointer: coarse)').matches
@@ -102,6 +104,8 @@ export function Taskbar() {
   const apps = LAUNCHABLE.filter(matches)
   const extras = START_EXTRAS.filter(matches)
 
+  const fit = useFit((s) => s.fit)
+
   const launch = (id: AppId) => {
     open(id)
     setMenu(false)
@@ -149,6 +153,12 @@ export function Taskbar() {
               ))}
             </div>
             <div className="start-foot">
+              {!isCompact(window.innerWidth, window.innerHeight) && (
+                <button className={`start-fit ${fit ? 'on' : ''}`} onClick={() => (toggleFit(), setMenu(false))} title="the desktop fills your whole monitor, at its shape" aria-pressed={fit}>
+                  <Icon name="computer" size={20} /> {fit ? 'Back in the monitor' : 'Fit to screen'}
+                </button>
+              )}
+              <span className="start-foot-gap" />
               <button onClick={logOff}>
                 <Icon name="logout" size={20} /> Log Off
               </button>

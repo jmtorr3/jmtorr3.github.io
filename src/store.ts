@@ -136,7 +136,18 @@ export const useStore = create<State>((set, get) => ({
   showBrain: () => set((s) => ({ brain: s.brain + 1 })),
   setHoverDevice: (hoverDevice) => get().hoverDevice !== hoverDevice && set({ hoverDevice }),
   setScreen: (screen) => set({ screen }),
-  setDesk: (w, h, scale) => set({ desk: { w, h, scale } }),
+  // (a smaller desktop, e.g. leaving Fit to screen: windows that would end up off it come back into view)
+  setDesk: (w, h, scale) =>
+    set((s) => ({
+      desk: { w, h, scale },
+      windows: s.windows.map((win) => {
+        const ww = Math.min(win.w, w - 16)
+        const wh = Math.min(win.h, h - TASKBAR_H - 16)
+        const x = Math.max(0, Math.min(win.x, w - ww - 8))
+        const y = Math.max(0, Math.min(win.y, h - TASKBAR_H - wh - 8))
+        return ww === win.w && wh === win.h && x === win.x && y === win.y ? win : { ...win, w: ww, h: wh, x, y }
+      }),
+    })),
 
   open: (app, opts = {}) => {
     const def = APPS[app]

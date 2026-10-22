@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react'
 import { useStore, TASKBAR_H, slumpyLocation, type Win } from '../store'
 import { SlumpyCam } from './SlumpyCam'
 import { useSlumpy } from './slumpy'
@@ -6,6 +6,7 @@ import { APPS } from './apps/registry'
 import { Icon } from './Icon'
 import { menuItemsFor } from './appMenu'
 import type { MenuItem } from './ContextMenu'
+import { appSlot, parkSlot, requestClose } from './appHost'
 
 const MIN_W = 220
 const MIN_H = 140
@@ -27,11 +28,51 @@ function WindowSlumpy({ winId }: { winId: string }) {
 }
 
 export function Window({ win }: { win: Win }) {
-  const { focus, close, minimize, toggleMax, move, resize } = useStore.getState()
+  const { minimize, toggleMax, move, resize } = useStore.getState()
   const focused = useStore((s) => s.focused === win.id)
   const drag = useRef<{ sx: number; sy: number; x: number; y: number; w: number; h: number; mode: 'move' | 'resize' } | null>(null)
   const def = APPS[win.app]
-  const App = def.component
+  const frame = useRef<HTMLDivElement>(null)
+  const body = useRef<HTMLDivElement>(null)
+
+  // the app itself runs in appHost (it outlives the desktop): take its container
+  // while this window's on screen, hand it back when the desktop goes away
+  useLayoutEffect(() => {
+    const el = body.current!
+    el.append(appSlot(win.id))
+    return () => {
+      if (appSlot(win.id).parentElement === el) parkSlot(win.id)
+    }
+  }, [win.id])
+
+  // focus and the right-click menu, on the element itself: the app's React events
+  // bubble to appHost, not to this component
+  useEffect(() => {
+    const el = frame.current!
+    const down = () => useStore.getState().focused !== win.id && useStore.getState().focus(win.id)
+    // on the page, after React (which listens lower down) has run the app's handlers:
+    // they add their items (appMenu), or stop the event to have no menu at all
+    const menu = (e: MouseEvent) => {
+      if (!el.contains(e.target as Node)) return
+      e.preventDefault()
+      const s = useStore.getState()
+      s.focus(win.id)
+      const w = s.windows.find((x) => x.id === win.id)
+      const controls: MenuItem[] = [
+        { label: 'Minimize', onClick: () => useStore.getState().minimize(win.id) },
+        { label: w?.maximized ? 'Restore' : 'Maximize', onClick: () => useStore.getState().toggleMax(win.id) },
+        { label: 'Close', onClick: () => requestClose(win.id) },
+      ]
+      const app = menuItemsFor(e)
+      s.showMenu(e.clientX, e.clientY, app.length ? [...app, { separator: true }, ...controls] : controls)
+    }
+    el.addEventListener('pointerdown', down)
+    window.addEventListener('contextmenu', menu)
+    return () => {
+      el.removeEventListener('pointerdown', down)
+      window.removeEventListener('contextmenu', menu)
+    }
+  }, [win.id])
 
   const start = (mode: 'move' | 'resize') => (e: RPointerEvent) => {
     if (win.maximized || e.button !== 0) return
@@ -68,21 +109,9 @@ export function Window({ win }: { win: Win }) {
 
   return (
     <div
+      ref={frame}
       className={`window ${focused ? 'focused' : ''} ${win.maximized ? 'maximized' : ''}`}
       style={{ ...style, display: win.minimized ? 'none' : undefined }}
-      onPointerDown={() => !focused && focus(win.id)}
-      onContextMenu={(e) => {
-        // whatever the app added for what was clicked, then the window controls
-        e.preventDefault()
-        focus(win.id)
-        const controls: MenuItem[] = [
-          { label: 'Minimize', onClick: () => minimize(win.id) },
-          { label: win.maximized ? 'Restore' : 'Maximize', onClick: () => toggleMax(win.id) },
-          { label: 'Close', onClick: () => close(win.id) },
-        ]
-        const app = menuItemsFor(e.nativeEvent)
-        useStore.getState().showMenu(e.clientX, e.clientY, app.length ? [...app, { separator: true }, ...controls] : controls)
-      }}
       role="dialog"
       aria-label={win.title}
     >
@@ -102,15 +131,13 @@ export function Window({ win }: { win: Win }) {
           <button aria-label="Maximize" onClick={() => toggleMax(win.id)}>
             {win.maximized ? '❐' : '□'}
           </button>
-          <button aria-label="Close" className="close" onClick={() => close(win.id)}>
+          <button aria-label="Close" className="close" onClick={() => requestClose(win.id)}>
             ×
           </button>
         </div>
       </div>
       <div className="window-main">
-        <div className="window-body">
-          <App winId={win.id} props={win.props} />
-        </div>
+        <div className="window-body" ref={body} />
         {!OWN_SLUMPY.has(win.app) && <WindowSlumpy winId={win.id} />}
       </div>
       {!win.maximized && (

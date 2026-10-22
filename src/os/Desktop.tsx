@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  useLayoutEffect,
 } from 'react'
 import { fitScreen, isCompact } from '../scene/screenFit'
 import { useStore, TASKBAR_H, slumpyLocation } from '../store'
@@ -24,6 +25,7 @@ import { useDesktopIcons, deskIcons, type DeskId } from './useDesktopIcons'
 import { playPowerOn, playPowerOff, playClick, playKeyClack, playFaceSound, useSound, speak } from './sound'
 import { ContextMenu, type MenuItem } from './ContextMenu'
 import { LoginScreen } from './LoginScreen'
+import { animateFit, toggleFit, useFit } from './fitScreen'
 
 const COARSE = matchMedia('(pointer: coarse)').matches
 const PINCH_OUT = 0.6 // fingers pinched in to this much of how far apart they started: back to the room
@@ -48,9 +50,11 @@ function uiScale(w: number, h: number, compact: boolean) {
   return Math.round(Math.min(2.5, Math.max(min, s)) * 50) / 50
 }
 
-// sit exactly on the monitor's screen opening, so the desktop keeps the model's aspect ratio
+// sit exactly on the monitor's screen opening, so the desktop keeps the model's aspect
+// ratio; or fill the whole window at its own aspect ("Fit to screen", see fitScreen)
 function useScreenRect() {
   const screen = useStore((s) => s.screen)
+  const fit = useFit((s) => s.fit)
   const setDesk = useStore((s) => s.setDesk)
   const [vp, setVp] = useState(readViewport)
 
@@ -68,7 +72,7 @@ function useScreenRect() {
 
   const compact = isCompact(vp.w, vp.h)
   const rect =
-    compact || !screen
+    compact || fit || !screen
       ? (vp.vv ?? { left: 0, top: 0, width: vp.w, height: vp.h })
       : fitScreen(screen, vp.w, vp.h).rect
   const scale = uiScale(rect.width, rect.height, compact)
@@ -364,6 +368,46 @@ export function Desktop() {
     return items
   }
 
+  // the mouse clicks (on the desktop and in every window: apps render through
+  // appHost, so their events don't bubble here in React, but they do in the DOM)
+  const rootRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = rootRef.current!
+    const down = () => playClick()
+    const up = () => playClick(true)
+    el.addEventListener('pointerdown', down, true)
+    el.addEventListener('pointerup', up, true)
+    return () => {
+      el.removeEventListener('pointerdown', down, true)
+      el.removeEventListener('pointerup', up, true)
+    }
+  }, [])
+
+  // Fit to screen switched: glide between the monitor's screen and the whole window
+  const fit = useFit((s) => s.fit)
+  // Esc goes back into the monitor, unless something else wanted it: a text field,
+  // a menu, or an app that handled it (they preventDefault: checked once the key's
+  // gone round every listener, apps' included)
+  useEffect(() => {
+    if (!fit) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      const t = e.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return
+      if (useStore.getState().menu) return
+      setTimeout(() => !e.defaultPrevented && useFit.getState().fit && toggleFit())
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fit])
+  const lastRect = useRef(rect)
+  const lastFit = useRef(fit)
+  useLayoutEffect(() => {
+    if (fit !== lastFit.current && !compact && rootRef.current) animateFit(rootRef.current, lastRect.current, rect)
+    lastFit.current = fit
+    lastRect.current = rect
+  })
+
   // ref guard: StrictMode runs mount effects twice in dev
   const booted = useRef(false)
   useEffect(() => {
@@ -438,9 +482,8 @@ export function Desktop() {
   return (
     <div
       className={`desktop ${poweringOff ? 'crt-off' : fromBoot || resumed ? 'boot-in' : 'crt-on'} ${compact ? 'compact' : ''} ${unplugged.mouse ? 'no-mouse' : ''}`}
+      ref={rootRef}
       style={rect}
-      onPointerDownCapture={() => playClick()}
-      onPointerUpCapture={() => playClick(true)}
       onAnimationEnd={(e) => {
         if (e.target === e.currentTarget && fromBoot && !poweringOff) useStore.setState({ booting: false, leaning: false })
         if (e.target === e.currentTarget && poweringOff) {

@@ -318,7 +318,8 @@ export function Terminal({ winId, props }: { winId: string; props?: Record<strin
 	const [hIdx, setHIdx] = useState(-1)
 	const inputRef = useRef<HTMLInputElement>(null)
 	const bodyRef = useRef<HTMLDivElement>(null)
-	const focused = useStore((s) => s.focused === winId)
+	// on screen and focused (in the room it keeps running, see appHost; back at the desk the prompt takes the keys again)
+	const focused = useStore((s) => s.focused === winId && s.mode === 'desktop')
 	const slumpyHere = useStore((s) => slumpyLocation(s) === 'konsole')
 
 	// Slumpy watches you type: eyes follow the text, reacts to each command,

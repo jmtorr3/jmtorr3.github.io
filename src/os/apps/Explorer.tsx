@@ -65,7 +65,7 @@ export function Explorer({ winId, props }: { winId: string; props?: Record<strin
   const [path, setPath] = useState((props?.path as string) ?? PROJECTS_DIR)
   // dotfiles stay out of sight unless asked for (right-click, or Ctrl+H), like real Dolphin
   const [showHidden, setShowHidden] = useState(false)
-  const focused = useStore((s) => s.focused === winId)
+  const focused = useStore((s) => s.focused === winId && s.mode === 'desktop') // (no shortcuts from the room)
   useEffect(() => {
     if (!focused) return
     const onKey = (e: KeyboardEvent) => {

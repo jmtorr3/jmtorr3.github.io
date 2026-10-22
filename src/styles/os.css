@@ -547,6 +547,13 @@ textarea,
   cursor: var(--cursor);
 }
 
+.ctx-hint {
+  margin-left: auto;
+  padding-left: 24px;
+  color: var(--text-faint);
+  font-size: 0.9em;
+}
+
 .ctx-check {
   width: 12px;
   color: var(--accent);
@@ -750,6 +757,22 @@ textarea,
 .window-body > * {
   flex: 1;
   min-height: 0;
+}
+
+/* an app's container (os/appHost): a window takes it while it's on screen; in
+   the room it waits, still running, in the hidden parking spot */
+.app-slot {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+.app-slot > * {
+  flex: 1;
+  min-height: 0;
+}
+.app-parking {
+  display: none;
 }
 
 .resize-handle {
@@ -2090,6 +2113,12 @@ button.card:hover {
   background: var(--border);
 }
 
+.start-foot-gap {
+  flex: 1;
+}
+.start-fit.on {
+  color: var(--accent-bright);
+}
 .start-foot {
   display: flex;
   justify-content: flex-end;
