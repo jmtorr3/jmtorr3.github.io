@@ -261,6 +261,38 @@ const etc = () =>
   })
 
 function build(): VDir {
+  // The creator's things live in their home folder; the guest's Documents (and
+  // Pictures, for the projects' screenshots) show the very same files, so they're
+  // easy to find whichever way you look
+  const aboutFile = file(
+    [
+      `${profile.name} — ${profile.role}`,
+      `based in ${profile.location}`,
+      '',
+      plain(profile.bio),
+      '',
+      `${education.degree}, ${education.school} (${education.date})`,
+      ...coursework.map((c) => `  - ${c}`),
+    ].join('\n'),
+    'user',
+    () => open('about'),
+    APPS.about.label,
+  )
+  const skillsFile = file(
+    skillGroups.map((g) => `${g.category}:\n  ${g.skills.map((s) => s.name).join(', ')}`).join('\n\n'),
+    'chip',
+    () => open('skills'),
+    APPS.skills.label,
+  )
+  const contactFile = file(contactLinks.map((l) => `${l.label.padEnd(9)} ${l.value}`).join('\n'), 'mail', () => open('contact'), APPS.contact.label)
+  const resumeDir = dir(
+    Object.fromEntries(
+      resumes.map((r) => [r.file.split('/').pop()!, file(`${r.title}\n${r.blurb}\n\nopen ${r.file}`, 'text', () => open('resume', { resume: r.id }), APPS.resume.label)]),
+    ),
+  )
+  const projectsDir = projectDir('projects')
+  const otherDir = projectDir('other')
+  const pictures = dir(Object.fromEntries(projects.filter((p) => p.images?.length).map((p) => [slugOf(p), dir(imageFiles(p))])))
   const desktop = Object.fromEntries(
     LAUNCHABLE.map((id) => [
       launcherName(id),
@@ -293,8 +325,23 @@ function build(): VDir {
     etc: etc(),
     home: dir({
       [profile.user]: dir({
-        'readme.txt': file(`you're a guest on ${profile.host}. ${profile.creator}'s stuff is in ${CREATOR_HOME}:\n  cd ${CREATOR_HOME}`),
+        'readme.txt': file(
+          `you're a guest on ${profile.host}. make yourself at home.\n\nwho made me, and what they've made: ~/Documents (or ${CREATOR_HOME}:\n  cd ${CREATOR_HOME})`,
+        ),
         Desktop: dir({ ...desktop, 'README.md': file(README) }), // (the desktop's README icon)
+        // the same folders as SlumpyOS' home
+        Documents: dir({
+          'About the creator.txt': aboutFile,
+          'Skills.txt': skillsFile,
+          'Contact.txt': contactFile,
+          Resume: resumeDir,
+          Projects: projectsDir,
+          Other: otherDir,
+        }),
+        Downloads: dir({}),
+        Music: dir({}),
+        Pictures: pictures,
+        Videos: dir({}),
         // easter egg: only `ls -a` shows it
         '.secret': file(
           [
@@ -340,38 +387,45 @@ function build(): VDir {
       [profile.creator]: dir({
         // Slumpy saying hi to whoever finds it (the Konsole starts here)
         'README.md': file(README),
-        'about.txt': file(
+        'about.txt': aboutFile,
+        'skills.txt': skillsFile,
+        'contact.txt': contactFile,
+        resume: resumeDir,
+        projects: projectsDir,
+        other: otherDir,
+      }),
+      // the computer's own folder, as in SlumpyOS (Slumpy's, nobody else's)
+      [profile.host]: dir({
+        'README.md': file(README),
+        'todo.txt': file(
           [
-            `${profile.name} — ${profile.role}`,
-            `based in ${profile.location}`,
+            'TODO',
             '',
-            plain(profile.bio),
-            '',
-            `${education.degree}, ${education.school} (${education.date})`,
-            ...coursework.map((c) => `  - ${c}`),
+            '  [x] get a face',
+            '  [x] get a brain',
+            '  [x] say hi to the guest',
+            `  [ ] teach ${devices.keyboard.name} to sit (he only naps)`,
+            `  [ ] find out where ${devices.mouse.name} hides the crumbs`,
+            '  [ ] learn to whistle',
+            '  [ ] nap (after lunch)',
           ].join('\n'),
-          'user',
-          () => open('about'),
-          APPS.about.label,
         ),
-        'skills.txt': file(
-          skillGroups.map((g) => `${g.category}:\n  ${g.skills.map((s) => s.name).join(', ')}`).join('\n\n'),
-          'chip',
-          () => open('skills'),
-          APPS.skills.label,
+        'nice_things.txt': file(
+          [
+            'nice things to remember:',
+            '',
+            '  - every guest is a new friend',
+            '  - a reboot fixes most moods',
+            "  - it's ok to be a little slow",
+            `  - ${devices.keyboard.name} is a very good dog`,
+            '  - *wiggles*',
+          ].join('\n'),
         ),
-        'contact.txt': file(contactLinks.map((l) => `${l.label.padEnd(9)} ${l.value}`).join('\n'), 'mail', () => open('contact'), APPS.contact.label),
-        resume: dir(
-          Object.fromEntries(
-            resumes.map((r) => [r.file.split('/').pop()!, file(`${r.title}\n${r.blurb}\n\nopen ${r.file}`, 'text', () => open('resume', { resume: r.id }), APPS.resume.label)]),
-          ),
-        ),
-        projects: projectDir('projects'),
-        other: projectDir('other'),
       }),
     }),
     root: { ...dir({}), locked: true },
     sbin: { ...usrSbin, link: 'usr/sbin' },
+    mnt: dir({}), // (as in SlumpyOS: where a real computer's drives would be)
     tmp: dir({}),
     usr: dir({ bin: usrBin, local: dir({ bin: dir({}) }), sbin: usrSbin }),
     var: dir({

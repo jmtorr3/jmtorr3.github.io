@@ -29,6 +29,8 @@ export function openImage(slug: string, index: number) {
 const PLACES: { label: string; icon: IconName; path: string }[] = [
   { label: 'Home', icon: 'user', path: HOME },
   { label: 'Desktop', icon: 'computer', path: `${HOME}/Desktop` },
+  { label: 'Documents', icon: 'notepad', path: `${HOME}/Documents` },
+  { label: 'Pictures', icon: 'image', path: `${HOME}/Pictures` },
   { label: profile.creator, icon: 'folder', path: CREATOR_HOME },
   { label: 'Projects', icon: 'folder', path: PROJECTS_DIR },
   { label: 'Other', icon: 'folder', path: `${CREATOR_HOME}/other` },
