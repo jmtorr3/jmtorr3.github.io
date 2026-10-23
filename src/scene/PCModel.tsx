@@ -525,12 +525,14 @@ export function PCModel({ onHover }: { onHover: (kind: HoverKind) => void }) {
       // camera's right and forward, flattened onto the desk
       camera.getWorldDirection(m.away).setY(0).normalize()
       m.right.crossVectors(m.away, THREE.Object3D.DEFAULT_UP).normalize()
-      const follow = mode === 'room' ? 1 : 0 // rests in place once you sit at the screen
+      // rests in place once you sit at the screen, and on phones and tablets (a finger
+      // isn't a mouse: it'd jump to wherever you tap)
+      const follow = mode === 'room' && CAN_GRAB ? 1 : 0
       m.goal
         .copy(model.mouse.anchor)
         .addScaledVector(m.right, pointer.x * MOUSE_RANGE.side * follow)
         .addScaledVector(m.away, pointer.y * MOUSE_RANGE.depth * follow)
-      m.goal.y -= m.pressed && mode === 'room' ? 0.012 : 0 // clicks press it down a hair
+      m.goal.y -= m.pressed && mode === 'room' && CAN_GRAB ? 0.012 : 0 // clicks press it down a hair
       model.mouse.mesh.position.lerp(m.goal, 1 - Math.exp(-dt * 14))
     }
 
