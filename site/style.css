@@ -1,0 +1,110 @@
+/* jmtorr3.github.io: a plain, fast, readable portfolio. No JavaScript, light and dark, prints cleanly. */
+:root {
+  --bg: #fbfbfa;
+  --fg: #1c1d21;
+  --muted: #5b5f68;
+  --line: #e3e3e0;
+  --card: #ffffff;
+  --accent: #1f6feb;
+  --accent-fg: #ffffff;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111317;
+    --fg: #e7e8ea;
+    --muted: #9aa0aa;
+    --line: #262a31;
+    --card: #171a1f;
+    --accent: #58a6ff;
+    --accent-fg: #0b0d10;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0 auto;
+  max-width: 780px;
+  padding: 48px 20px 64px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+a { color: var(--accent); text-underline-offset: 2px; }
+code { font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 16px; top: 16px; background: var(--card); padding: 6px 10px; }
+
+/* header */
+.hero { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 40px; }
+.avatar { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+h1 { margin: 0; font-size: 2rem; line-height: 1.2; letter-spacing: -0.01em; }
+.role { margin: 4px 0 12px; color: var(--muted); font-weight: 500; }
+.summary { margin: 0 0 16px; }
+.links { display: flex; flex-wrap: wrap; gap: 8px; }
+.button {
+  display: inline-block; padding: 7px 14px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--card); color: var(--fg); text-decoration: none; font-size: 0.93rem; font-weight: 500;
+}
+.button:hover { border-color: var(--accent); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.tailored { margin: 12px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+/* sections */
+h2 {
+  margin: 48px 0 16px; padding-bottom: 6px; border-bottom: 1px solid var(--line);
+  font-size: 1.15rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+}
+.project { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.project:last-child { border-bottom: 0; }
+.project header { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; }
+h3 { margin: 0; font-size: 1.08rem; }
+.sub { display: block; font-weight: 400; color: var(--muted); font-size: 0.95rem; }
+.meta { margin: 0; color: var(--muted); font-size: 0.88rem; white-space: nowrap; }
+.project ul { margin: 10px 0; padding-left: 20px; }
+.project li { margin: 4px 0; }
+.project.small p { margin: 8px 0; }
+.tech { margin: 8px 0 0; color: var(--muted); font-size: 0.88rem; }
+.plinks { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 14px; font-size: 0.93rem; font-weight: 500; }
+
+/* the door into jmtorr3.sh */
+.door {
+  display: flex; gap: 20px; align-items: center; justify-content: space-between;
+  margin: 40px 0 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+}
+.door p { margin: 0; }
+.door-title { font-weight: 600; margin-bottom: 4px !important; }
+.door .button { white-space: nowrap; flex-shrink: 0; }
+
+.skills { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; margin: 0; }
+.skills dt { font-weight: 600; }
+.skills dd { margin: 0; }
+.edu { margin: 0 0 6px; }
+.coursework { margin: 0; color: var(--muted); font-size: 0.93rem; }
+
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.88rem; }
+
+/* phones */
+@media (max-width: 600px) {
+  body { padding-top: 28px; }
+  .hero { flex-direction: column; gap: 16px; }
+  .avatar { width: 88px; height: 88px; }
+  .project header { flex-direction: column; gap: 2px; }
+  .door { flex-direction: column; align-items: flex-start; }
+  .skills { grid-template-columns: 1fr; }
+  .skills dd { margin-bottom: 8px; }
+}
+
+/* printing: a tidy summary with the link addresses written out */
+@media print {
+  :root { --bg: #fff; --fg: #000; --muted: #444; --line: #ccc; --card: #fff; --accent: #000; }
+  body { max-width: none; padding: 0; font-size: 11pt; }
+  .avatar, .door, .skip, .tailored { display: none; }
+  .button { border: 0; padding: 0 10px 0 0; background: none !important; color: #000 !important; }
+  .links a[href^="http"]::after, .plinks a::after { content: " (" attr(href) ")"; font-size: 0.8em; font-weight: 400; }
+  .project { break-inside: avoid; }
+  h2 { margin-top: 24px; }
+}

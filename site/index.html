@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jorge Manuel Torre · Systems &amp; Security Engineer</title>
+  <meta name="description" content="Jorge Manuel Torre: systems and security engineer (B.S. Computer Science, Virginia Tech). Linux kernel programming, reverse engineering, LLM safety research, full-stack web and self-hosted infrastructure.">
+  <link rel="canonical" href="https://jmtorr3.github.io/">
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+
+  <meta property="og:type" content="profile">
+  <meta property="og:title" content="Jorge Manuel Torre · Systems &amp; Security Engineer">
+  <meta property="og:description" content="Linux kernel programming, reverse engineering, LLM safety research, full-stack web and self-hosted infrastructure.">
+  <meta property="og:url" content="https://jmtorr3.github.io/">
+  <meta property="og:image" content="https://jmtorr3.github.io/avatar.jpg">
+  <meta name="twitter:card" content="summary">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "Jorge Manuel Torre",
+    "jobTitle": "Systems & Security Engineer",
+    "url": "https://jmtorr3.github.io/",
+    "image": "https://jmtorr3.github.io/avatar.jpg",
+    "email": "mailto:jorgetorre06@gmail.com",
+    "address": { "@type": "PostalAddress", "addressLocality": "Ashburn", "addressRegion": "VA", "addressCountry": "US" },
+    "alumniOf": { "@type": "CollegeOrUniversity", "name": "Virginia Tech" },
+    "sameAs": ["https://github.com/jmtorr3", "https://www.linkedin.com/in/jmt1006/", "https://jmtorr3.sh/"]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#projects">Skip to projects</a>
+
+  <header class="hero">
+    <img class="avatar" src="avatar.jpg" alt="Jorge Manuel Torre" width="112" height="112">
+    <div>
+      <h1>Jorge Manuel Torre</h1>
+      <p class="role">Systems &amp; Security Engineer · Ashburn, VA</p>
+      <p class="summary">
+        Systems programmer and full-stack developer focused on low-level security and infrastructure:
+        Linux kernel programming, reverse engineering, LLM safety research, and self-hosted services I build and run myself.
+        B.S. Computer Science, Virginia Tech (May 2026).
+      </p>
+      <nav class="links" aria-label="Contact and resume">
+        <a class="button primary" href="resume/Jorge_Manuel_Torre_Resume_SWE.pdf">Resume (PDF)</a>
+        <a class="button" href="https://github.com/jmtorr3">GitHub</a>
+        <a class="button" href="https://www.linkedin.com/in/jmt1006/">LinkedIn</a>
+        <a class="button" href="mailto:jorgetorre06@gmail.com">jorgetorre06@gmail.com</a>
+      </nav>
+      <p class="tailored">
+        Tailored resumes:
+        <a href="resume/Jorge_Manuel_Torre_Resume_SWE.pdf">SWE / Full-Stack</a> ·
+        <a href="resume/Jorge_Manuel_Torre_Resume_Systems.pdf">Systems / Low-Level</a> ·
+        <a href="resume/Jorge_Manuel_Torre_Resume_ML.pdf">ML / AI</a>
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <section id="projects" aria-labelledby="projects-h">
+      <h2 id="projects-h">Projects</h2>
+
+      <article class="project">
+        <header>
+          <h3>CHUD <span class="sub">Catastrophic Harmful Update Detection · LLM Safety Capstone</span></h3>
+          <p class="meta">Spring 2026</p>
+        </header>
+        <ul>
+          <li>Senior capstone extending the LoX defense (Perin et al., COLM 2025) with a more realistic threat model: an iterative LoRA-based fine-tuning attack on Llama-2-7b that interleaves benign GSM8k samples with adversarial BeaverTails samples to drive catastrophic forgetting in safety-critical subspaces.</li>
+          <li>Built an Attack Success Rate (ASR) evaluation pipeline using Llama-Guard-3-8b as a judge model, calibrated against AdvBench (99% accuracy, 2% FNR) and BeaverTails; ran 30+ ASR experiments across attack mixes and learning-rate sweeps.</li>
+          <li>Identified a robustness gap in LoX: direct harmful fine-tuning reaches 91–96% ASR on Chat-aligned Llama-2 and LoX cuts it to 37–63%, but the iterative mixed-data attack restores 89% ASR.</li>
+          <li>Provisioned dual VT GPU cluster environments (x86-64 and aarch64) for the team's training pipeline; owned QLoRA fine-tuning evaluation.</li>
+        </ul>
+        <p class="tech">Python · PyTorch · LoRA · Llama-2-7b · Llama-Guard-3-8b · Unsloth</p>
+        <p class="plinks"><a href="https://github.com/jmtorr3/CHUD">Code</a> <a href="https://github.com/jmtorr3/CHUD/blob/main/CHUD.pdf">Report</a></p>
+      </article>
+
+      <article class="project">
+        <header>
+          <h3>Celeste-RL <span class="sub">Deep Reinforcement Learning for a Precision Platformer</span></h3>
+          <p class="meta">Spring 2026</p>
+        </header>
+        <ul>
+          <li>Controlled comparison of five RL methods (DQN, Behavioral Cloning, Hybrid, Curriculum, Dueling DQN + curiosity) trained to play Celeste Classic room 0 on the Pyleste emulator.</li>
+          <li>Showed that state representation mattered more than algorithm choice: replacing raw PICO-8 tile IDs with a 5-class semantic encoding raised plain DQN completion from 8% to 57–68% with no other change.</li>
+          <li>Shipped a reproducible pipeline: batched evaluation, automated comparison plots, a side-by-side gameplay GIF generator, a results website, and a debugging devlog covering 9 iteration phases.</li>
+        </ul>
+        <p class="tech">PyTorch · Python · NumPy · matplotlib · CUDA · React · Vite</p>
+        <p class="plinks"><a href="https://github.com/jmtorr3/celeste-rl">Code</a> <a href="https://jmtorr3.github.io/celeste-rl-web/">Website</a> <a href="https://jmtorr3.github.io/celeste-rl-web/Celeste_RL__A_Controlled_Comparison_of_Reinforcement_Learning_Methods_on_a_Precision_Platformer.pdf">Report</a> <a href="https://jmtorr3.github.io/celeste-rl-web/CELESTERL-LATEST.pdf">Presentation</a></p>
+      </article>
+
+      <article class="project">
+        <header>
+          <h3>Garage64 <span class="sub">Custom Entity Model Studio</span></h3>
+          <p class="meta">August 2025 – Present</p>
+        </header>
+        <ul>
+          <li>Self-hosted web application for creating custom Minecraft vehicle models and texture packs in the OptiFine Custom Entity Model (CEM) format.</li>
+          <li>Interactive React and Three.js 3D editor with real-time vehicle customization through modular part swapping and texture painting.</li>
+          <li>Django REST API for entity metadata, asset configurations and project persistence; automated export pipeline that generates jem and jpm asset files.</li>
+          <li>Containerized with Docker Compose for local development and deployment.</li>
+        </ul>
+        <p class="tech">React · Three.js · Django · SQLite · Docker</p>
+        <p class="plinks"><a href="https://g64.jmtorr3.sh/">Live demo</a> <a href="https://github.com/system32entertainment/Garage64">Code</a></p>
+      </article>
+
+      <article class="project">
+        <header>
+          <h3>personal-blog <span class="sub">Full-Stack Blogging Platform</span></h3>
+          <p class="meta">Spring 2026</p>
+        </header>
+        <ul>
+          <li>Designed, built, deployed and operate a self-hosted blogging platform on infrastructure I manage: Django REST API, React frontend, PostgreSQL, Dockerized services and an Nginx reverse proxy.</li>
+          <li>JWT-authenticated admin with a draft/publish workflow, cover image upload, block-based post editing, and a public chat for visitor messages.</li>
+          <li>REST API that serves posts, media and metadata, keeping content management separate from presentation.</li>
+        </ul>
+        <p class="tech">React · Vite · Django REST Framework · PostgreSQL · Docker · Nginx</p>
+      </article>
+
+      <article class="project">
+        <header>
+          <h3>Reverse Engineering Pokémon Black <span class="sub">Nintendo DS Memory &amp; Cheat Analysis</span></h3>
+          <p class="meta">Winter 2024</p>
+        </header>
+        <ul>
+          <li>Decoded the Action Replay opcode format and used working cheats as known-good memory patches to trace which addresses drive specific in-game behavior.</li>
+          <li>Mapped player movement speed to a live ARM instruction at <code>0x02197FC4</code> and traced the wild encounter system to a preloaded slot table at <code>0x02250010</code>, verified by injecting species IDs.</li>
+          <li>Documented the Gen 5 in-RAM Pokémon data layout (220-byte encrypted blocks) by cross-checking RAM dumps against PKHeX, as groundwork for a standalone save editor.</li>
+        </ul>
+        <p class="tech">ARM Assembly · DeSmuME · NO$GBA · PKHeX · Action Replay</p>
+      </article>
+
+      <article class="project">
+        <header>
+          <h3>Experimental Home Lab <span class="sub">Self-Hosted Infrastructure</span></h3>
+          <p class="meta">2021 – Present</p>
+        </header>
+        <ul>
+          <li>Proxmox-based home lab for hosting, experimenting and learning systems concepts hands-on.</li>
+          <li>Segmented network with an OPNsense firewall: public demos run on an isolated subnet, reached for administration only through a VPN jump host, and published through outbound-only Cloudflare Tunnels with no open ports.</li>
+          <li>Reproducible NixOS environments for Linux kernel programming, system-level testing and self-hosted services.</li>
+        </ul>
+        <p class="tech">Proxmox · NixOS · Debian · Docker · OPNsense · Tailscale · Cloudflare Tunnel</p>
+      </article>
+
+      <article class="project">
+        <header>
+          <h3>ParkGrid <span class="sub">Campus Parking Solution</span></h3>
+          <p class="meta">Winter 2025</p>
+        </header>
+        <ul>
+          <li>Took the project through three phases: a 2-person hackathon prototype, a 5-person class project as tech lead, and a December 2025 production rebuild co-led with my hackathon partner, owning infrastructure and correctness end to end.</li>
+          <li>Migrated from SQLite to PostgreSQL, containerized the stack with Docker, and enforced ACID transactions to fix race conditions under concurrent sensor writes.</li>
+          <li>Moved the build to Vite to resolve npm vulnerabilities, wrote the backend test suite, and fixed Redis + WebSocket state-sync bugs in the live dashboard.</li>
+        </ul>
+        <p class="tech">React · Django · PostgreSQL · Docker · Redis · Django Channels · Vite · JWT</p>
+        <p class="plinks"><a href="https://github.com/jmtorr3/smart-parking">Code</a> <a href="https://drive.google.com/file/d/1i2iBi6BwchyWwZEsMr-X2uHa96rrrGug/view?usp=sharing">Video</a></p>
+      </article>
+
+      <article class="project small">
+        <header>
+          <h3>Garage32 <span class="sub">Minecraft CEM Texture Pack · Project Lead · 600+ downloads</span></h3>
+        </header>
+        <p>A Minecraft texture pack that turns boats into fully modeled cars using Custom Entity Models, with multiple car models across wood-type variants.</p>
+        <p class="plinks"><a href="https://modrinth.com/resourcepack/garage32">Modrinth</a> <a href="https://github.com/jmtorr3/Garage32">Code</a></p>
+      </article>
+    </section>
+
+    <aside class="door" aria-label="Interactive portfolio">
+      <div>
+        <p class="door-title">Want the fun version?</p>
+        <p>My portfolio is also an interactive retro desktop: open the apps, read the blog, and try the Garage64 demo in its own window.</p>
+      </div>
+      <a class="button primary" href="https://jmtorr3.sh/">Explore jmtorr3.sh →</a>
+    </aside>
+
+    <section id="skills" aria-labelledby="skills-h">
+      <h2 id="skills-h">Skills</h2>
+      <dl class="skills">
+        <dt>Languages</dt>
+        <dd>C, Python, Rust, TypeScript, Lua, SQL, Assembly (ARM, x86-64, RISC-V), Bash</dd>
+        <dt>Systems &amp; Security</dt>
+        <dd>Linux kernel programming, reverse engineering, Ghidra</dd>
+        <dt>ML / AI</dt>
+        <dd>Fine-tuning (LoRA, QLoRA), LLM safety &amp; alignment, reinforcement learning, PyTorch</dd>
+        <dt>Web &amp; Frameworks</dt>
+        <dd>React, Three.js, Vite, Django, Node.js</dd>
+        <dt>Infrastructure</dt>
+        <dd>Docker, NixOS, Proxmox, OPNsense, Linux (Debian, Ubuntu), PostgreSQL, Nginx, Git</dd>
+      </dl>
+    </section>
+
+    <section id="education" aria-labelledby="education-h">
+      <h2 id="education-h">Education</h2>
+      <p class="edu"><strong>Virginia Tech</strong> · B.S. Computer Science · May 2026</p>
+      <p class="coursework">Coursework: Linux Kernel Programming, Software Reverse Engineering, Computer Systems, Security of AI, Machine Learning, Principles of Computer Security, Computer Architecture, Data Structures &amp; Algorithms</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Jorge Manuel Torre · <a href="mailto:jorgetorre06@gmail.com">jorgetorre06@gmail.com</a> · <a href="https://github.com/jmtorr3">GitHub</a> · <a href="https://www.linkedin.com/in/jmt1006/">LinkedIn</a> · <a href="https://jmtorr3.sh/">jmtorr3.sh</a></p>
+  </footer>
+</body>
+</html>
