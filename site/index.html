@@ -27,7 +27,7 @@
     "email": "mailto:jorgetorre06@gmail.com",
     "address": { "@type": "PostalAddress", "addressLocality": "Ashburn", "addressRegion": "VA", "addressCountry": "US" },
     "alumniOf": { "@type": "CollegeOrUniversity", "name": "Virginia Tech" },
-    "sameAs": ["https://github.com/jmtorr3", "https://www.linkedin.com/in/jmt1006/", "https://jmtorr3.sh/"]
+    "sameAs": ["https://github.com/jmtorr3", "https://www.linkedin.com/in/jmt1006/", "https://jmtorr3.sh/", "https://blog.jmtorr3.sh/"]
   }
   </script>
 </head>
@@ -132,11 +132,13 @@
           <p class="meta">Spring 2026</p>
         </header>
         <ul>
-          <li>Designed, built, deployed and operate a self-hosted blogging platform on infrastructure I manage: Django REST API, React frontend, PostgreSQL, Dockerized services and an Nginx reverse proxy.</li>
-          <li>JWT-authenticated admin with a draft/publish workflow, cover image upload, block-based post editing, and a public chat for visitor messages.</li>
-          <li>REST API that serves posts, media and metadata, keeping content management separate from presentation.</li>
+          <li>Designed, built, deployed and operate a self-hosted blogging platform on infrastructure I manage: Django REST API, React frontend, PostgreSQL, and Dockerized services behind Nginx.</li>
+          <li>JWT-authenticated editor with a draft/publish workflow, cover image upload and block-based post editing, reachable only over a private Tailscale network, so the public site has no login or admin entry point.</li>
+          <li>Publishing exports posts and their media as static files and pushes them to the public server over a restricted rsync-only SSH key; the public blog has no API, database or server-side code.</li>
+          <li>Added automatic cleanup of orphaned uploads (crops, replaced and unsaved images) with tests for each case.</li>
         </ul>
-        <p class="tech">React · Vite · Django REST Framework · PostgreSQL · Docker · Nginx</p>
+        <p class="tech">React · Vite · Django REST Framework · PostgreSQL · Docker · Nginx · Tailscale · rsync</p>
+        <p class="plinks"><a href="https://blog.jmtorr3.sh/">Live site</a></p>
       </article>
 
       <article class="project">
@@ -207,7 +209,7 @@
   </main>
 
   <footer>
-    <p>Jorge Manuel Torre · <a href="mailto:jorgetorre06@gmail.com">jorgetorre06@gmail.com</a> · <a href="https://github.com/jmtorr3">GitHub</a> · <a href="https://www.linkedin.com/in/jmt1006/">LinkedIn</a> · <a href="https://jmtorr3.sh/">jmtorr3.sh</a></p>
+    <p>Jorge Manuel Torre · <a href="mailto:jorgetorre06@gmail.com">jorgetorre06@gmail.com</a> · <a href="https://github.com/jmtorr3">GitHub</a> · <a href="https://www.linkedin.com/in/jmt1006/">LinkedIn</a> · <a href="https://jmtorr3.sh/">jmtorr3.sh</a> · <a href="https://blog.jmtorr3.sh/">Blog</a></p>
   </footer>
 </body>
 </html>
