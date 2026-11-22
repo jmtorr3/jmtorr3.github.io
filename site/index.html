@@ -32,7 +32,7 @@
   </script>
 </head>
 <body>
-  <a class="skip" href="#projects">Skip to projects</a>
+  <a class="skip" href="#experience">Skip to experience</a>
 
   <header class="hero">
     <img class="avatar" src="avatar.jpg" alt="Jorge Manuel Torre" width="112" height="112">
@@ -60,6 +60,25 @@
   </header>
 
   <main>
+    <section id="experience" aria-labelledby="experience-h">
+      <h2 id="experience-h">Experience</h2>
+
+      <article class="project">
+        <header>
+          <h3>Self-Hosted Infrastructure &amp; Game Server Network <span class="sub">Owner / Operator (self-directed)</span></h3>
+          <p class="meta">January 2019 – Present</p>
+        </header>
+        <ul>
+          <li>Run a Proxmox virtualization host with Debian and NixOS VMs serving a multiplayer Minecraft server network, file sync and cloud storage (Nextcloud, CouchDB, PostgreSQL), and public web demos (<a href="https://jmtorr3.sh/">jmtorr3.sh</a>).</li>
+          <li>Segmented the network with an OPNsense firewall: public demos sit on an isolated subnet with no path to the home LAN, admin access goes only through a Tailscale subnet-router jump host, and sites are published through outbound-only Cloudflare Tunnels with no open inbound ports.</li>
+          <li>Operate a Velocity-proxied Minecraft network (lobby, racing, and experimental servers on PufferPanel); wrote four Paper/Velocity plugins and a Fabric client mod in Java for cross-server routing, server health checks, and in-game track building, and maintain forks of a boat-racing timing plugin and physics mod.</li>
+          <li>Automated operations with Python and Bash tooling (PufferPanel API and RCON clients, staged plugin rollouts, versioned backups) and reproducible NixOS flake environments.</li>
+          <li>Diagnosed and recovered from failures, including a PostgreSQL cluster blocked by a glibc collation mismatch after an OS upgrade and a DNS misconfiguration that took a Cloudflare Tunnel offline after a network change.</li>
+        </ul>
+        <p class="tech">Proxmox · OPNsense · Debian · NixOS · Docker · Tailscale · Cloudflare Tunnel</p>
+      </article>
+    </section>
+
     <section id="projects" aria-labelledby="projects-h">
       <h2 id="projects-h">Projects</h2>
 
@@ -131,19 +150,6 @@
           <li>Documented the Gen 5 in-RAM Pokémon data layout (220-byte encrypted blocks) by cross-checking RAM dumps against PKHeX, as groundwork for a standalone save editor.</li>
         </ul>
         <p class="tech">ARM Assembly · DeSmuME · NO$GBA · PKHeX · Action Replay</p>
-      </article>
-
-      <article class="project">
-        <header>
-          <h3>Experimental Home Lab <span class="sub">Self-Hosted Infrastructure</span></h3>
-          <p class="meta">2021 – Present</p>
-        </header>
-        <ul>
-          <li>Proxmox-based home lab for hosting, experimenting and learning systems concepts hands-on.</li>
-          <li>Segmented network with an OPNsense firewall: public demos run on an isolated subnet, reached for administration only through a VPN jump host, and published through outbound-only Cloudflare Tunnels with no open ports.</li>
-          <li>Reproducible NixOS environments for Linux kernel programming, system-level testing and self-hosted services.</li>
-        </ul>
-        <p class="tech">Proxmox · NixOS · Debian · Docker · OPNsense · Tailscale · Cloudflare Tunnel</p>
       </article>
 
       <article class="project">
