@@ -136,12 +136,12 @@
           <p class="meta">August 2025 – Present</p>
         </header>
         <ul>
-          <li>Self-hosted web application for creating custom Minecraft vehicle models and texture packs in the OptiFine Custom Entity Model (CEM) format.</li>
-          <li>Interactive React and Three.js 3D editor with real-time vehicle customization through modular part swapping and texture painting.</li>
-          <li>Django REST API for entity metadata, asset configurations and project persistence; automated export pipeline that generates jem and jpm asset files.</li>
-          <li>Containerized with Docker Compose for local development and deployment.</li>
+          <li>Building a car customizer for Minecraft's OptiFine Custom Entity Model (CEM) format: compose a base body with swappable parts, paint liveries, preview in real-time 3D, and export a ready-to-use resource pack.</li>
+          <li>Built the first version full-stack (React and Three.js frontend, Django REST API, Docker Compose), then rewrote it as a self-contained TypeScript app with no server that runs as a SlumpyOS app and as a public web demo.</li>
+          <li>Wrote Node.js build scripts that import a Minecraft server's resource pack into the app's catalog, parsing <code>.jem</code>/<code>.jpm</code> models and bundling each car's textures into a single download.</li>
+          <li>Implemented an in-browser CEM renderer and a paint editor that paints directly onto each model's UV layout, with resource-pack export via JSZip.</li>
         </ul>
-        <p class="tech">React · Three.js · Django · SQLite · Docker</p>
+        <p class="tech">TypeScript · React · Three.js · Zustand · Vite · JSZip · Node.js · Django (v1) · Docker (v1)</p>
         <p class="plinks"><a href="https://g64.jmtorr3.sh/">Live demo</a> <a href="https://github.com/system32entertainment/Garage64">Code</a></p>
       </article>
 
