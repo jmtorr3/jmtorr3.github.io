@@ -108,3 +108,59 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
   .project { break-inside: avoid; }
   h2 { margin-top: 24px; }
 }
+
+/* ---- Slumpy: peeks up at the end of the page; clicking him turns this page off like a CRT (slumpy.js) ---- */
+.slumpy { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 32px auto 0; width: max-content; text-decoration: none; }
+.slumpy-pc { image-rendering: pixelated; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25)); }
+.slumpy-bubble { padding: 4px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--fg); font-size: 0.85rem; }
+/* "click me": a blinking standby light, a soft pulsing screen glow, and the eyes blinking (a double blink) */
+.slumpy-eyes { animation: slumpy-blink 3s infinite; transform-origin: 8px 5.5px; }
+@keyframes slumpy-blink { 0%, 86%, 92%, 100% { transform: scaleY(1); } 89%, 95% { transform: scaleY(0.15); } }
+.slumpy-led { animation: slumpy-led 1.2s steps(1) infinite; }
+@keyframes slumpy-led { 0% { fill: #ff5a5f; } 50% { fill: #5a1f21; } }
+.slumpy-pc { animation: slumpy-glow 2.4s ease-in-out infinite; }
+@keyframes slumpy-glow {
+  0%, 100% { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25)) drop-shadow(0 0 0 rgba(88, 166, 255, 0)); }
+  50%      { filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.25)) drop-shadow(0 0 10px rgba(88, 166, 255, 0.85)); }
+}
+.slumpy:hover .slumpy-pc, .slumpy:focus-visible .slumpy-pc { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .slumpy-pc, .slumpy-eyes, .slumpy-led { animation: none; } }
+
+/* with JavaScript: hidden below the bottom edge until you reach the footer */
+.js .slumpy-bottom { position: fixed; right: 28px; bottom: 0; margin: 0; z-index: 10; transform: translateY(105%); transition: transform 0.5s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.js .slumpy-bottom.peek { transform: translateY(38%); }
+.js .slumpy-bottom.peek:hover, .js .slumpy-bottom.peek:focus-visible { transform: translateY(-10px); }
+.js .slumpy-bottom .slumpy-bubble { opacity: 0; transform: translateY(6px); transition: opacity 0.25s, transform 0.25s; }
+.js .slumpy-bottom.peek:hover .slumpy-bubble, .js .slumpy-bottom.peek:focus-visible .slumpy-bubble { opacity: 1; transform: none; }
+.slumpy:focus-visible { outline: none; }
+.slumpy:focus-visible .slumpy-pc { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+/* the one at the top: small, in the header's corner by my name; the bubble shows on hover */
+.hero { position: relative; }
+.slumpy-top { position: absolute; top: 0; right: 0; margin: 0; }
+.slumpy-top .slumpy-pc { transition: transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1); }
+.slumpy-top:hover .slumpy-pc, .slumpy-top:focus-visible .slumpy-pc { transform: translateY(-3px) rotate(-6deg); }
+.slumpy-top .slumpy-bubble {
+  position: absolute; bottom: calc(100% + 2px); right: 0; white-space: nowrap;
+  opacity: 0; transform: translateY(4px); transition: opacity 0.25s, transform 0.25s; pointer-events: none;
+}
+.slumpy-top:hover .slumpy-bubble, .slumpy-top:focus-visible .slumpy-bubble { opacity: 1; transform: none; }
+.hero h1 { padding-right: 56px; }
+
+/* the CRT switch-off: the picture closes in to a bright horizontal line, then to a dot, then dark */
+.crt { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
+.crt::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 100vw; height: 100vh; transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0);
+  box-shadow: 0 0 22px 8px rgba(210, 235, 255, 0), 0 0 0 200vmax #000;
+  animation: crt-off 0.65s cubic-bezier(0.55, 0, 0.75, 0.3) forwards;
+}
+@keyframes crt-off {
+  0%   { width: 100vw; height: 100vh; background: rgba(255, 255, 255, 0); box-shadow: 0 0 22px 8px rgba(210, 235, 255, 0), 0 0 0 200vmax #000; }
+  45%  { width: 100vw; height: 3px; background: #fff; box-shadow: 0 0 22px 8px rgba(210, 235, 255, 0.9), 0 0 0 200vmax #000; }
+  78%  { width: 4px; height: 3px; background: #fff; box-shadow: 0 0 22px 8px rgba(210, 235, 255, 0.9), 0 0 0 200vmax #000; }
+  100% { width: 0; height: 0; background: #fff; box-shadow: 0 0 6px 2px rgba(210, 235, 255, 0), 0 0 0 200vmax #000; }
+}
+
+@media (max-width: 600px) { .js .slumpy-bottom { right: 12px; } .slumpy-bottom .slumpy-pc { width: 64px; height: 60px; } }
+@media print { .slumpy { display: none; } }
